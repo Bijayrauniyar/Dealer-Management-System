@@ -1,0 +1,63 @@
+{
+  "name": "havmor-dms",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "node scripts/check-tailwind-classes.mjs",
+    "lint:tailwind": "node scripts/check-tailwind-classes.mjs",
+    "deploy:check": "npm run lint:tailwind && npm run build",
+    "prepush": "npm run deploy:check && npm run e2e:smoke && npm run e2e:live && npm run e2e:matrix",
+    "prepush:full": "npm run deploy:check && npm run e2e:full",
+    "e2e:smoke": "node scripts/e2e-supabase-smoke.mjs",
+    "e2e:live": "node scripts/e2e-supabase-live.mjs",
+    "e2e:phase1": "node scripts/e2e-phase1-full.mjs",
+    "e2e:matrix": "node scripts/e2e-phase1-matrix.mjs",
+    "e2e:ui:setup": "playwright install chromium",
+    "e2e:ui": "node scripts/ui-e2e-phase1.mjs",
+    "e2e:all": "node scripts/e2e-phase1-matrix.mjs && node scripts/ui-e2e-phase1.mjs",
+    "e2e:full": "node scripts/e2e-supabase-smoke.mjs && node scripts/e2e-supabase-live.mjs && node scripts/e2e-phase1-matrix.mjs && node scripts/ui-e2e-phase1.mjs",
+    "supabase:types": "supabase gen types typescript --linked > src/types/database.types.ts"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@supabase/supabase-js": "^2.104.0",
+    "@tanstack/react-query": "^5.99.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^1.8.0",
+    "papaparse": "^5.5.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-hook-form": "^7.73.1",
+    "react-router-dom": "^6.30.3",
+    "recharts": "^3.8.1",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "autoprefixer": "^10.5.0",
+    "playwright": "^1.58.0",
+    "postcss": "^8.5.10",
+    "supabase": "^2.93.0",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.2",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}

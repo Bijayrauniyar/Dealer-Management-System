@@ -1,0 +1,14 @@
+---
+description: Havmor Playwright/UI E2E scripts — env and credentials via shared helpers
+globs: app/scripts/**/*e2e*.mjs
+alwaysApply: false
+---
+
+# UI / E2E test scripts
+
+- **Env**: Use `loadEnvFile(resolve(appDir, ".env.local"))` from `./lib/e2e-helpers.mjs`. It normalizes `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_SUPABASE_ANON_KEY` and supports process-env fallback when the file is missing (CI).
+- **Login**: Use `loadCreds(resolve(appDir, ".e2e-credentials.local"))` — **last** `E2E_EMAIL` / `E2E_PASSWORD` pair in the file wins (script appends blocks). Do not reimplement credential parsing.
+- **Supabase client**: After `loadEnvFile`, use `env.VITE_SUPABASE_URL` and `env.VITE_SUPABASE_ANON_KEY` with `createClient` (the helper sets `VITE_SUPABASE_ANON_KEY` from publishable key when needed).
+- **UI runs**: Browser scripts need `npm run dev` (or `BASE_URL` pointing at a running app). Prefer `createAuthedClient` when the script only needs an authed API client and tenant id.
+
+Do not read `.env.local` or `.e2e-credentials.local` ad hoc with `readFileSync` in new E2E scripts; extend `e2e-helpers.mjs` if something shared is missing.

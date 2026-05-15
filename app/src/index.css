@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Print styles ────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide everything except the bill content */
+  nav, header, footer,
+  [data-no-print],
+  .sticky-bar,
+  .bottom-tabs {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+    font-size: 12px;
+  }
+
+  /* Ensure bill content fills the page */
+  .page-shell-content {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Remove shadows/cards for print */
+  .shadow-card, .shadow-card-md {
+    box-shadow: none !important;
+  }
+}
+
+:root {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.page {
+  @apply mx-auto w-full max-w-6xl px-4 pb-24 pt-4;
+}

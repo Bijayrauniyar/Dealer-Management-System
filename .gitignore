@@ -1,0 +1,24 @@
+# Env & secrets (never commit real keys)
+.env
+.env.local
+.env.*.local
+**/.env.local
+**/.e2e-credentials.local
+app/.e2e-ui-failure.png
+app/.e2e-smoke.log
+
+# Dependencies & build output
+**/node_modules/
+**/dist/
+*.tsbuildinfo
+app/supabase/.temp/
+
+# OS / editor
+.DS_Store
+**/.DS_Store
+
+# Local toolchain
+.tools/
+
+# Cursor debug logs
+.cursor/*.log

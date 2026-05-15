@@ -1,0 +1,11 @@
+# Use repo-root .gitignore when git is at havmor/ (see docs/deployment.md).
+# If you accidentally ran `git init` inside app/, this file still protects you:
+
+node_modules/
+dist/
+.env.local
+.env.*.local
+.e2e-credentials.local
+.e2e-ui-failure.png
+.e2e-smoke.log
+.DS_Store

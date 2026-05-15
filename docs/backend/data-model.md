@@ -1,0 +1,852 @@
+# Backend data model
+
+> Last updated: 2026-05-14 — reflects UI v1 (React demo with dummy data).  
+> Stack target: **Supabase** (PostgreSQL + Row Level Security + Edge Functions).
+
+**Navigate:** [Docs hub](../README.md) · [Project README](../../README.md) · [Backend checklist](./BACKEND-TODO.md) · [Testing live](./testing-live-supabase.md) · [Migrations](../../app/supabase/README.txt)
+
+---
+
+## Demo app (pre-backend) — client persistence
+
+Until Supabase is live, the React app uses **`src/store/appStore.ts`**: an in-memory model mirrored to **`localStorage`** under key `havmor-demo-v1`.
+
+| Concern | Behaviour |
+|---|---|
+| **What is persisted** | Deep-cloned copies of seed `sales`, `products`, `customers`, `outstanding_bills`, `payments`, `suppliers`. `sales_by_bill` is rebuilt on load from `sales`. |
+| **Mutations** | `commitSale`, `commitPayment`, `commitReturn`, `commitPurchase`, `commitSupplierPayment` update the same shapes the backend will own later; each save writes JSON to `localStorage`. |
+| **Bill numbers** | `getNextBillNo()` scans `sales` for the highest numeric suffix after `tenant_settings.invoice_prefix`. |
+| **Reset** | Settings → **Reset demo data** clears the key and reloads seed JSON from `dummy.ts`. |
+
+**Backend parity:** When wiring Supabase, replace store calls with RPC/mutations that:
+
+1. Insert/update `sales` + `sale_lines`, decrement `products.on_hand`, bump `customers.outstanding` by bill `balance`, upsert `outstanding_bills` / `customer_ledger` as designed below.  
+2. On payment: allocate to open bills (FIFO or user-selected), update `sales.balance` / `paid_now`, `outstanding_bills`, `customers.outstanding`, append `payments`.  
+3. On return: restore stock, reduce bill balance and customer outstanding by **min(credit, open balance on that bill)** (advance credit is a separate ledger in v2 if needed).  
+4. On purchase: increase `products.on_hand` by **received** qty, add to `suppliers.outstanding` by **received value** (invoice vs received shortfalls tracked per `data-model` short-receive section).  
+5. On supplier payment: decrease `suppliers.outstanding` by the amount paid (demo allocates against synthetic open balance).
+
+**Optional FE library:** The store uses React `useSyncExternalStore` today; **`zustand`** (with `persist` middleware) is listed in `package.json` as an optional migration path — same persistence key and shapes.
+
+---
+
+## Tenancy
+
+Every table has a `tenant_id uuid NOT NULL` column.  
+All queries are filtered by `tenant_id` via RLS policies (`auth.uid()` → `users.id` → `users.tenant_id`).
+
+---
+
+## `tenant_settings`
+One row per tenant — stores the full business profile that appears on invoices and the Settings screen.
+
+> **Migration:** Created and backfilled in `app/supabase/migrations/0002_tenant_settings_capital_audit.sql` (one default row per tenant that already existed when the migration runs).
+
+| Column | Type | Notes |
+|---|---|---|
+| tenant_id | uuid PK FK → tenants | 1-to-1 with tenants table |
+| name | text NOT NULL | Trading name — shown on app header |
+| legal_name | text | Full registered name |
+| region | text | Depot / coverage area description |
+| phone | text | Landline |
+| mobile | text | Primary mobile |
+| email | text | |
+| address_line1 | text | Street / locality |
+| address_line2 | text | Ward / area |
+| district | text | |
+| province | text | |
+| country | text DEFAULT 'Nepal' | |
+| pan_number | text | 9-digit Nepal PAN — printed on all invoices |
+| vat_registered | boolean DEFAULT false | |
+| vat_number | text | 9-digit VAT; required if `vat_registered = true` |
+| invoice_prefix | text DEFAULT 'INV' | Prepended to bill numbers |
+| bill_footer | text | Footer text printed on every invoice |
+| overdue_days | integer DEFAULT 7 | Bills past due by this many days are flagged as Overdue |
+| due_soon_days | integer DEFAULT 3 | Bills due within this many days get a reminder |
+| default_markup_pct | integer DEFAULT 15 | Default % markup over buy price used to auto-calculate sell price on new products. Overridable per product. |
+| default_min_qty | integer DEFAULT 20 | Default low-stock threshold applied when creating a new product. Overridable per product. |
+| updated_at | timestamptz | |
+
+> **FE note:** Load once at app boot and cache in React context / Zustand store.  
+> Invalidate cache on save from Settings page.
+
+---
+
+## Core tables
+
+### `customers`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| name | text NOT NULL | |
+| phone | text | |
+| area | text | Short locality name |
+| address | text | Full address — printed on invoices |
+| pan_number | text | क्रेताको पान नं. — VAT/PAN No. printed on bills |
+| credit_limit | numeric DEFAULT 0 | |
+| outstanding | numeric DEFAULT 0 | Denormalised; updated on each sale/payment/return |
+| advance_credit | numeric DEFAULT 0 | Overpayments kept as credit |
+| opening_balance | numeric DEFAULT 0 | Migrated from manual ledger |
+| created_at | timestamptz | |
+
+### `products`
+
+**Pricing model (important for billing):**
+- `mrp` — Maximum Retail Price printed on the product by the manufacturer. Displayed on the sales bill for the customer's reference. Never used in calculations.
+- `cost_price` — What the dealer pays Havmor (the buy price). **Private — never shown on bills or to customers.** Used only for profit/margin calculation in the Company Overview and Dashboard.
+- `selling_price` — The dealer's price charged to their customers, **exclusive of VAT**. This is the `rate` printed on each line of the sales bill.
+- `discount_pct` — Standard percentage discount auto-applied on new bills for this product (0 = none).
+- `vat_applicable` — If true, 13% VAT is added at the bill total level (not per line). The `selling_price` is the VAT-exclusive base.
+- **Auto-calculation rule (FE only, no stored column):** `selling_price = cost_price × (1 + markup_pct / 100)`. `markup_pct` defaults to `tenant_settings.default_markup_pct` but is computed on the fly in the product form; only the final `selling_price` is persisted. Changing the sell price manually back-calculates the effective markup % for display only.
+
+**On a sales bill line:**
+```
+S.N | Particulars | MRP | Qty | Unit | Rate | Disc% | Amount
+```
+- **MRP** — snapshot from `products.mrp` at time of billing. Reference only; never used in calculations.
+- **Rate** — snapshot of `products.selling_price` (excl. VAT) at time of billing.
+- **Disc%** — snapshot of `products.discount_pct` at time of billing. Column shown only when ≥ 1 line has a discount.
+- **Amount** — `qty × rate × (1 − discount_pct / 100)`. Rounded to nearest integer.
+
+Then at bill footer:
+```
+Subtotal (Σ line amounts)
+− Discount (bill-level flat or %, shown as "X% of subtotal" or "flat amount")
++ Bill terms (e.g. Transport charges)
++ VAT 13% (on taxable base = subtotal − discount + bill_terms)
+= Grand Total
+```
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| name | text NOT NULL | |
+| category | text | |
+| uom | text DEFAULT 'PCS' | Unit of Measure: PCS, Box, Ltr, Kg, Pkt, Ctn, Doz |
+| description | text | Flavour, size, pack details |
+| mrp | numeric NOT NULL | MRP on product — shown on bill, not used in calc |
+| cost_price | numeric NOT NULL | Buy price from supplier — private, profit calc only |
+| selling_price | numeric NOT NULL | Our price to customer, excl. VAT |
+| discount_pct | numeric DEFAULT 0 | Standard % discount given on this product |
+| vat_applicable | boolean DEFAULT false | If true, 13% VAT added at bill footer |
+| on_hand | integer DEFAULT 0 | Updated on each sale/purchase/return/damage |
+| min_qty | integer DEFAULT 0 | Low-stock alert threshold — configurable per product |
+| is_active | boolean DEFAULT true | Soft-delete |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+### `suppliers`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| name | text NOT NULL | Trading name |
+| legal_name | text | Full registered company name |
+| contact_person | text | Name of account manager / sales rep |
+| phone | text | |
+| email | text | |
+| address_line1 | text | |
+| address_line2 | text | |
+| district | text | |
+| country | text DEFAULT 'Nepal' | |
+| pan_number | text | Supplier PAN — required for TDS records |
+| vat_number | text | Blank if not VAT registered |
+| payment_terms_days | integer DEFAULT 30 | Credit period in days |
+| outstanding | numeric DEFAULT 0 | Denormalised payable balance |
+| opening_balance | numeric DEFAULT 0 | Migrated from manual ledger |
+| notes | text | Internal notes |
+| created_at | timestamptz | |
+
+---
+
+## Transactions
+
+### `sales`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| customer_id | uuid FK → customers | |
+| bill_no | text | Paper bill reference e.g. "HB-142" |
+| date | date NOT NULL | AD date |
+| miti | text | Bikram Sambat date — computed in FE, stored for printing (e.g. "31/01/2083") |
+| subtotal | numeric NOT NULL | `SUM(sale_lines.line_total)` — i.e. Σ (qty × rate × (1 − discount_pct/100)). Per-line discounts already applied. |
+| discount_type | text CHECK IN ('flat','percent') | nullable |
+| discount_value | numeric | % or flat figure |
+| discount_amount | numeric DEFAULT 0 | Resolved flat deduction |
+| after_discount | numeric NOT NULL | subtotal − discount_amount (taxable base) |
+| bill_terms | text | Label for additional charges e.g. "Transport" |
+| bill_terms_amount | numeric DEFAULT 0 | Add. charges amount |
+| vat_rate | numeric DEFAULT 0 | 0 or 13 |
+| vat_amount | numeric DEFAULT 0 | (after_discount + bill_terms_amount) × vat_rate / 100 |
+| grand_total | numeric NOT NULL | after_discount + bill_terms_amount + vat_amount |
+| notes | text | Remark / internal note |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+### `sale_lines`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| sale_id | uuid FK → sales ON DELETE CASCADE | |
+| product_id | uuid FK → products | |
+| uom | text | Unit of Measure snapshot (PCS, Box, Ltr, etc.) |
+| qty | integer NOT NULL CHECK > 0 | |
+| mrp | numeric DEFAULT 0 | Snapshot of product MRP at billing time — for bill display only, not used in any calculation |
+| rate | numeric NOT NULL | Snapshot of `products.selling_price` (excl. VAT) at billing time |
+| discount_pct | numeric DEFAULT 0 | Snapshot of `products.discount_pct` — per-line product discount % |
+| line_total | numeric GENERATED | `qty × rate × (1 − discount_pct / 100)` — rounds to nearest integer |
+| add_less | numeric DEFAULT 0 | Phase 2: per-line adjustment (+/−) |
+
+> **Important:** `sales.subtotal` = `SUM(sale_lines.line_total)` — per-line discounts are already baked in before the bill-level discount is applied.
+
+**Discount flow (two levels):**
+1. **Product-level discount** (`sale_lines.discount_pct`) — baked into each line amount.
+2. **Bill-level discount** (`sales.discount_type / discount_value / discount_amount`) — applied on the subtotal after per-line discounts.
+
+### `outstanding_bills`
+Tracks per-bill balance (created when `sale.net_total > paid_now`):
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| sale_id | uuid FK → sales | |
+| customer_id | uuid FK → customers | |
+| original_amount | numeric | sale.net_total − paid_at_billing |
+| balance | numeric | Remaining unpaid (decremented by payments) |
+| due_date | date | |
+| status | text CHECK IN ('open','partial','paid') | |
+| created_at | timestamptz | |
+
+---
+
+### `payments`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| customer_id | uuid FK → customers | |
+| amount | numeric NOT NULL | Total amount received |
+| mode | text CHECK IN ('cash','esewa','khalti','fonepay','mobile_banking','cheque') | |
+| reference | text | UTR / cheque no. |
+| cheque_clearing_date | date | Cheque only |
+| advance_amount | numeric DEFAULT 0 | Excess beyond all open bills |
+| date | date NOT NULL | |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+### `payment_allocations`
+One row per bill this payment touches (FIFO):
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| payment_id | uuid FK → payments | |
+| outstanding_bill_id | uuid FK → outstanding_bills | |
+| allocated_amount | numeric NOT NULL | Amount applied to this bill |
+
+**Side effects on payment save:**
+1. Insert `payments`.
+2. For each allocation: insert `payment_allocations`; decrement `outstanding_bills.balance`; set `status = paid` if `balance = 0`.
+3. Decrement `customers.outstanding` by `amount − advance_amount`.
+4. If advance: increment `customers.advance_credit`.
+5. If `mode = cash`: increment today's `daily_cash.cash_receipts`.
+
+---
+
+### `returns`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| customer_id | uuid FK → customers | |
+| sale_id | uuid FK → sales | Bill being returned against |
+| credit_amount | numeric NOT NULL | Σ return_lines credit |
+| reason | text | |
+| date | date NOT NULL | |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+### `return_lines`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| return_id | uuid FK → returns ON DELETE CASCADE | |
+| sale_line_id | uuid FK → sale_lines | Original line |
+| product_id | uuid FK → products | Denormalised |
+| return_qty | integer NOT NULL CHECK > 0 | ≤ sale_lines.qty |
+| rate | numeric NOT NULL | Snapshot of `rate` from original `sale_lines` row |
+| discount_pct | numeric DEFAULT 0 | Snapshot of `discount_pct` from original `sale_lines` row |
+| line_credit | numeric GENERATED | `return_qty × rate × (1 − discount_pct / 100)` — mirrors how the original line amount was calculated |
+
+**Side effects:** increment `products.on_hand`; decrement `customers.outstanding` by `credit_amount` (or apply as credit note).
+
+---
+
+### `damages`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| product_id | uuid FK → products | |
+| qty | integer NOT NULL | |
+| reason | text CHECK IN ('melted','broken_packaging','expired','cold_chain_failure','transport_damage','other') | |
+| notes | text | |
+| date | date NOT NULL | |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+**Side effects:** decrement `products.on_hand` by `qty`.
+
+---
+
+### `purchases`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| supplier_id | uuid FK → suppliers | |
+| invoice_no | text | |
+| date | date NOT NULL | |
+| due_date | date | |
+| total | numeric NOT NULL | |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+### `purchase_lines`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| purchase_id | uuid FK → purchases ON DELETE CASCADE | |
+| product_id | uuid FK → products | |
+| uom | text | unit of measure e.g. "Pcs", "Box" |
+| invoice_qty | integer NOT NULL | qty on supplier invoice |
+| received_qty | integer NOT NULL | qty actually received at warehouse — may be ≤ invoice_qty |
+| short_qty | integer GENERATED | invoice_qty − received_qty (≥ 0) |
+| cost | numeric NOT NULL | cost per unit |
+| line_total | numeric GENERATED | received_qty × cost |
+
+**Short-receive logic:**
+- If `short_qty > 0` the difference is saved against this line.
+- A short-receive record links `supplier_id + invoice_no + product_id + short_qty`.
+- On the *next* purchase against the same supplier, the UI surfaces pending short-receives so the dealer can match and clear them (i.e. "deduct X units from new invoice").
+- Backend: add a `short_receives` table (or a partial-receive view) to track pending short amounts per supplier.
+
+**Side effects:**
+- Increment `products.on_hand` by `received_qty` (not invoice_qty).
+- Increment `suppliers.outstanding` by invoiced amount if credit.
+
+---
+
+### `short_receives` *(pending supplier claims)*
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| purchase_line_id | uuid FK → purchase_lines | |
+| supplier_id | uuid FK → suppliers | |
+| product_id | uuid FK → products | |
+| invoice_no | text | original invoice reference |
+| short_qty | integer | qty not delivered |
+| cost | numeric | cost per unit at time of invoice |
+| short_amount | numeric GENERATED | short_qty × cost |
+| status | text | `pending` / `settled` / `adjusted_in_invoice` |
+| settled_in_purchase_id | uuid FK → purchases nullable | purchase it was finally deducted from |
+| notes | text | |
+| created_at | timestamptz | |
+
+---
+
+### `supplier_payments`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| supplier_id | uuid FK → suppliers | |
+| amount | numeric NOT NULL | |
+| mode | text | |
+| reference | text | |
+| date | date NOT NULL | |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+**Side effects:** decrement `suppliers.outstanding`.
+
+---
+
+### `expenses`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| category | text NOT NULL | e.g. "Vehicle fuel" |
+| amount | numeric NOT NULL | |
+| notes | text | |
+| date | date NOT NULL | |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+**Side effects:** increment `daily_cash.cash_paid_out` if category is cash expense.
+
+---
+
+### `daily_cash`
+One row per day per tenant:
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| date | date NOT NULL UNIQUE per tenant | |
+| opening_balance | numeric | Carried from previous day closing |
+| cash_sales | numeric DEFAULT 0 | Auto-summed from sales where mode=cash |
+| cash_receipts | numeric DEFAULT 0 | Auto-summed from payments where mode=cash |
+| cash_paid_out | numeric DEFAULT 0 | Auto-summed from cash expenses + supplier payments |
+| physical_count | numeric | Entered by user |
+| variance | numeric GENERATED | physical_count − computed_balance |
+| variance_note | text | Required if variance ≠ 0 |
+| status | text CHECK IN ('draft','locked') DEFAULT 'draft' | |
+| locked_at | timestamptz | |
+| created_at | timestamptz | |
+
+---
+
+### `capital_entries`
+Records every investment in the business from day 1 — fixed assets, owner capital, loans, deposits.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| category | enum('fixed_asset','inventory','deposit','owner_capital','loan') | |
+| name | text NOT NULL | e.g. "Deep freezer Haier 500L" |
+| amount | numeric NOT NULL | Original / purchase amount |
+| current_value | numeric | Book value after depreciation (defaults to `amount`, updated manually) |
+| date | date NOT NULL | Date of purchase / investment |
+| notes | text nullable | |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+**Side effects on save by category:**
+
+| Category | Side effects |
+|---|---|
+| `owner_capital` | Increment `bank_balance.balance` or `daily_cash.owner_inject` for that date — owner brought cash in |
+| `loan` | Increment `bank_balance.balance` by `amount`; add to `loan_outstanding` (tracked via `loan_repayments` table) |
+| `fixed_asset` | No cash side effect (asset already physically acquired); recorded for balance sheet only |
+| `inventory` | Increment `products.on_hand` for the relevant product (or link to a purchase record) |
+| `deposit` | Decrement `bank_balance.balance` or `daily_cash.cash_paid_out`; deposit appears as asset |
+
+---
+
+### `bank_balance`
+Tracks business bank account balance (manually updated — no bank API integration in v1):
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| balance | numeric NOT NULL DEFAULT 0 | Current bank balance |
+| as_of_date | date NOT NULL | Date of last manual update |
+| notes | text | e.g. "After NMB transfer on 14 May" |
+| updated_by | uuid FK → users | |
+| updated_at | timestamptz | |
+
+> v2: Replace with bank statement import / open banking API.
+
+---
+
+### `loan_repayments`
+Tracks EMI / partial repayments against a loan capital entry:
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| capital_entry_id | uuid FK → capital_entries | Must be category='loan' |
+| amount | numeric NOT NULL | EMI or lump sum repaid |
+| mode | text | Cash / Bank transfer |
+| reference | text | Bank ref / receipt no. |
+| date | date NOT NULL | |
+| created_by | uuid FK → users | |
+| created_at | timestamptz | |
+
+`loan_outstanding = capital_entries.amount − SUM(loan_repayments.amount)`
+
+---
+
+### `schemes`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| name | text NOT NULL | |
+| product_id | uuid FK → products | |
+| discount_type | text CHECK IN ('percent','flat') | |
+| discount_value | numeric NOT NULL | |
+| start_date | date NOT NULL | |
+| end_date | date NOT NULL | |
+| notes | text | |
+| created_at | timestamptz | |
+
+---
+
+## Dashboard queries (period KPIs)
+
+```sql
+-- Total sales (period) — grand_total is after_discount + bill_terms + VAT
+SELECT SUM(grand_total) FROM sales
+WHERE tenant_id = $1 AND date BETWEEN $from AND $to;
+
+-- Net profit (period) — returns reduce net revenue
+SELECT
+  COALESCE((SELECT SUM(grand_total)    FROM sales      WHERE tenant_id=$1 AND date BETWEEN $from AND $to), 0)
+- COALESCE((SELECT SUM(credit_amount)  FROM returns    WHERE tenant_id=$1 AND date BETWEEN $from AND $to), 0)
+- COALESCE((SELECT SUM(total)          FROM purchases  WHERE tenant_id=$1 AND date BETWEEN $from AND $to), 0)
+- COALESCE((SELECT SUM(amount)         FROM expenses   WHERE tenant_id=$1 AND date BETWEEN $from AND $to), 0)
+AS net_profit;
+
+-- Outstanding aging buckets
+SELECT
+  CASE
+    WHEN CURRENT_DATE - ob.due_date BETWEEN 0  AND 7  THEN '0-7'
+    WHEN CURRENT_DATE - ob.due_date BETWEEN 8  AND 30 THEN '8-30'
+    WHEN CURRENT_DATE - ob.due_date BETWEEN 31 AND 60 THEN '31-60'
+    ELSE '60+'
+  END AS bucket,
+  SUM(ob.balance) AS amount
+FROM outstanding_bills ob
+WHERE ob.tenant_id = $1 AND ob.status != 'paid'
+GROUP BY bucket;
+```
+
+---
+
+## Company overview query (balance sheet)
+
+```sql
+-- ── ASSETS ───────────────────────────────────────────────────────────────────
+
+-- 1. Fixed assets (book value)
+SELECT SUM(current_value) FROM capital_entries
+WHERE tenant_id=$1 AND category='fixed_asset';
+
+-- 2. Security deposits
+SELECT SUM(current_value) FROM capital_entries
+WHERE tenant_id=$1 AND category='deposit';
+
+-- 3. Stock at cost (LIVE — computed from products)
+SELECT SUM(p.on_hand * p.cost_price) FROM products p
+WHERE p.tenant_id=$1;
+
+-- 4. Cash in hand (latest locked or draft daily_cash)
+SELECT physical_count FROM daily_cash
+WHERE tenant_id=$1 ORDER BY date DESC LIMIT 1;
+
+-- 5. Bank balance (latest manual update)
+SELECT balance FROM bank_balance
+WHERE tenant_id=$1 ORDER BY as_of_date DESC LIMIT 1;
+
+-- 6. Customer outstanding (receivable)
+SELECT SUM(outstanding) FROM customers WHERE tenant_id=$1;
+
+
+-- ── LIABILITIES ──────────────────────────────────────────────────────────────
+
+-- 7. Supplier payable
+SELECT SUM(outstanding) FROM suppliers WHERE tenant_id=$1;
+
+-- 8. Loan outstanding
+SELECT
+  ce.amount - COALESCE(SUM(lr.amount), 0) AS loan_outstanding
+FROM capital_entries ce
+LEFT JOIN loan_repayments lr ON lr.capital_entry_id = ce.id
+WHERE ce.tenant_id=$1 AND ce.category='loan'
+GROUP BY ce.id;
+
+
+-- ── OWNER EQUITY ─────────────────────────────────────────────────────────────
+
+-- 9. Owner capital invested
+SELECT SUM(amount) FROM capital_entries
+WHERE tenant_id=$1 AND category='owner_capital';
+
+-- 10. Retained earnings (P&L from inception — all time, no date filter)
+--     Returns reduce net revenue (credit notes), so subtract — do not add.
+SELECT
+  COALESCE((SELECT SUM(grand_total)   FROM sales     WHERE tenant_id=$1), 0)
+- COALESCE((SELECT SUM(credit_amount) FROM returns   WHERE tenant_id=$1), 0)
+- COALESCE((SELECT SUM(total)         FROM purchases WHERE tenant_id=$1), 0)
+- COALESCE((SELECT SUM(amount)        FROM expenses  WHERE tenant_id=$1), 0)
+AS retained_earnings;
+
+-- 11. Net worth = Total assets − Total liabilities
+--     Should equal: Owner capital invested + Retained earnings
+--     (If they don't match, there are unrecorded transactions — flag for audit)
+```
+
+> **Recommended:** Wrap this in a Supabase Edge Function `get_company_overview(tenant_id)`
+> that returns all values in a single JSON response for the Company Overview page.
+
+---
+
+## Auth
+
+- **Supabase Auth** with email + password (v1).
+- `users` table: `id` (= `auth.uid()`), `tenant_id`, `role` (`owner` | `accountant`).
+- RLS: all tables `USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()))`.
+- Google OAuth deferred to v2.
+
+---
+
+## Phase 2 — Planned features
+
+> **Status: All items below are planned — not in v1 UI or backend.**  
+> Phase 1 must be fully live and stable before any Phase 2 work begins.
+
+---
+
+### Cross-cutting policy — edits, inclusion in totals, audit, delete
+
+> **Finalised product rules** for ledger-like data that affects **report totals** (capital first; other entities in later waves). Full detail under **Phase 2-C** (capital pilot) and **Phase 2-D** (bills — different pattern).
+
+| Rule | Behaviour |
+|------|-----------|
+| **Include in calculations** | Rows have `included_in_reports` (default **true**). KPIs and company overview sums use only rows where this is true, `deleted_at` is null, and any entity-specific guards apply. |
+| **Excluding from totals** | Turning **off** requires a **short reason** (stored on the row and/or in audit). Row **stays visible** with a badge such as “Excluded from totals” unless **soft-deleted**. |
+| **History** | **Append-only** audit (`*_audit`) is **SELECT-only** for app users. Inserts/updates/deletes on the main table are logged with `before_row` / `after_row` and `changed_by` where implemented. |
+| **Edits — non-amount** | **Allow** direct updates (name, notes, category, dates where allowed). Each change is audited. |
+| **Edits — amounts** | Prefer **adjustment entry** (new row linked to prior entry) **or** an **audited update** behind an RPC that validates business rules. Avoid silent client-only amount changes. |
+| **Delete** | **No hard delete** from the app for financial/historical rows. Use **`deleted_at` soft delete** only; optional RPC `soft_delete_*` so policies stay centralized. |
+
+**Rollout order**
+
+1. **Pilot: capital** (Phase 2-C) — schema in `0002` already has `capital_entries` + `capital_entry_audit`; add inclusion columns + RPCs + UI.
+2. **Sales bills** (Phase 2-D) — **not** the same as “untick from totals”: use **amendment** (`update_sales_bill`) + `sales_bill_audit`, or future **void** with reason; posted bills stay traceable.
+3. **Later waves** (optional, same pattern where it fits): `expenses`, `damages`, purchases (heavier / stock), masters already use `is_active`.
+
+---
+
+### Phase 2-A — In-app notifications & reminders
+
+#### Goal
+Surface actionable alerts inside the app (bell icon) and optionally deliver them via SMS / WhatsApp so the dealer gets reminders even when the app is closed.
+
+> **v1 status:** The `NotificationPanel` UI component is already built with static computed data. Phase 2-A replaces the static logic with a live `notifications` table + Supabase Realtime + optional SMS.
+
+#### Notification event types
+
+| # | Event | Trigger condition | Urgency | Delivery |
+|---|---|---|---|---|
+| 1 | Overdue bill | `outstanding_bills.balance > 0` AND `due_date < NOW() - overdue_days` | High | In-app + optional SMS |
+| 2 | Due soon | `outstanding_bills.balance > 0` AND `due_date BETWEEN NOW() AND NOW() + due_soon_days` | Medium | In-app |
+| 3 | Low stock | `products.on_hand ≤ products.min_qty` | Medium | In-app |
+| 4 | Advance credit idle | `customers.advance_credit > 0` (unused ≥ 7 days) | Low | In-app |
+| 5 | Short receive pending | `short_receives.status = 'pending'` | Medium | In-app |
+| 6 | Daily cash open | Today's `daily_cash.status = 'draft'` after 7 PM | Low | In-app |
+| 7 | Cheque clearing due | `payments.cheque_clearing_date = TODAY` AND `mode = 'cheque'` | High | In-app |
+| 8 | Credit limit breached | `customers.outstanding > customers.credit_limit` | High | In-app |
+| 9 | Scheme expiring soon | `schemes.end_date BETWEEN NOW() AND NOW() + 3 days` | Low | In-app |
+| 10 | Supplier payment overdue | Purchase invoice past `suppliers.payment_terms_days` with open balance | Medium | In-app |
+
+#### `notifications` table
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| type | text | One of the 10 event types above |
+| title | text NOT NULL | Short headline shown in panel |
+| body | text | Detail line |
+| entity_type | text | `sale` / `product` / `customer` / `supplier` / `purchase` / `daily_cash` |
+| entity_id | uuid | FK to the relevant table row |
+| link_path | text | Deep-link path in app e.g. `/app/bills/HB-128` |
+| is_read | boolean DEFAULT false | Marked true when user taps the card |
+| is_urgent | boolean DEFAULT false | Drives red badge in header |
+| created_at | timestamptz | |
+
+#### Backend implementation
+- **pg_cron job** (or Supabase Edge Function cron) runs every 15 minutes, scans all triggers above, and inserts new rows into `notifications` (deduplication: skip if identical `type + entity_id` already exists and `is_read = false`).
+- **Supabase Realtime** subscription on the `notifications` channel → FE badge count updates instantly without polling.
+- Thresholds (`overdue_days`, `due_soon_days`, `min_qty`, credit limit) are read from `tenant_settings` and `products` at cron run time.
+- Bulk-dismiss: `UPDATE notifications SET is_read = true WHERE tenant_id = $1 AND is_read = false`.
+
+#### Optional SMS / WhatsApp delivery
+- Add per-type toggle columns to `tenant_settings` (e.g. `notify_overdue_sms boolean DEFAULT false`).
+- On insert of an urgent notification, trigger an Edge Function `send-sms-alert` that calls **Sparrow SMS** (Nepal) or Twilio.
+- Message template: `"[Havmor] Bill HB-128 for Ghantaghar Stores is overdue by 3 days. Balance: NPR 8,491. Reply STOP to opt out."`
+
+#### FE changes (Phase 2-A)
+- Replace static `buildNotifications()` in `NotificationPanel.tsx` with a Supabase `select` query on the `notifications` table.
+- Subscribe to Supabase Realtime channel for live badge updates.
+- Add Settings toggles for SMS/WhatsApp per notification type.
+
+---
+
+### Phase 2-B — Bill / invoice image capture
+
+#### Goal
+Allow the dealer to photograph a physical Havmor delivery challan or supplier invoice and have it:
+1. Stored for reference (audit trail, dispute resolution)
+2. Auto-extracted into structured data to pre-fill purchase / sale entry forms
+
+#### `bill_images` table
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| entity_type | text CHECK IN ('sale','purchase','expense','damage') | What record it belongs to |
+| entity_id | uuid | FK to the relevant table |
+| storage_path | text NOT NULL | Supabase Storage path (`bills/{tenant_id}/{entity_id}/{uuid}.jpg`) |
+| original_filename | text | |
+| mime_type | text | image/jpeg, image/png, application/pdf |
+| uploaded_at | timestamptz | |
+| extracted_data | jsonb | Raw OCR / AI extraction result (pre-fill suggestion) |
+| extraction_status | text CHECK IN ('pending','done','failed') DEFAULT 'pending' | |
+
+#### Storage
+- Bucket: `bill-images` (private, RLS-protected)
+- Path convention: `{tenant_id}/{entity_type}/{entity_id}/{uuid}.{ext}`
+- Max file size: 10 MB
+
+#### Extraction pipeline
+```
+Upload image → Supabase Storage
+    → trigger Edge Function `extract-bill-image`
+        → call OpenAI Vision / Google Document AI
+        → parse: supplier name, invoice no., date, line items (name, qty, rate), total, PAN/VAT
+        → store result in bill_images.extracted_data (jsonb)
+        → mark extraction_status = 'done'
+    → FE polls / realtime subscription → shows pre-filled form for user to confirm
+```
+
+#### FE changes (Phase 2-B)
+- Add camera / file picker button to `PurchasePage`, `SaleEntryPage`, `ExpensePage`
+- Show extraction preview with editable fields (user can correct OCR errors before saving)
+- After confirmation, save the real record AND link `entity_id` in `bill_images`
+- Display attached images on `BillDetailPage` in a photo strip at the bottom
+
+---
+
+### Phase 2-C — Capital & fixed assets (inclusion, edit, soft delete, history)
+
+#### Goal
+Persist **owner capital, loans, deposits, inventory capitalisation, and fixed assets** in Postgres with:
+
+1. **Current row** — one row per line; **non-amount** fields editable with full audit.
+2. **Include in report totals** — `included_in_reports` (default true). Company overview / capital KPIs sum only **included**, non–soft-deleted rows (see **Cross-cutting policy** above).
+3. **Excluding from totals** — user sets `included_in_reports = false` with a **required reason** (`excluded_reason`); row remains listed with a clear badge.
+4. **Amount / `current_value` changes** — prefer **adjustment row** (e.g. `supersedes_entry_id` or linked note) or **RPC** `upsert_capital_entry` that enforces validation; all changes recorded in `capital_entry_audit`.
+5. **Soft delete only** — set `deleted_at`; no app-driven hard `DELETE` for normal users. Optionally route soft delete through `soft_delete_capital_entry` RPC.
+6. **Append-only history** — existing trigger on `capital_entries` → `capital_entry_audit`; **“View history”** in UI: `select … from capital_entry_audit where capital_entry_id = $1 order by changed_at desc`.
+
+#### Implementation (planned migration, e.g. `0006_capital_inclusion.sql`)
+
+New columns on `capital_entries` (names indicative):
+
+| Column | Type | Notes |
+|---|---|---|
+| `included_in_reports` | boolean NOT NULL DEFAULT true | When false, row excluded from KPI sums |
+| `excluded_reason` | text | Required when `included_in_reports = false` (enforce via CHECK or RPC) |
+| `excluded_at` | timestamptz | Optional; when excluded |
+| `excluded_by` | uuid | Optional; `auth.uid()` |
+| `supersedes_entry_id` | uuid FK | Optional; links **adjustment** / correction row to prior row |
+
+Existing columns (from `0002`): `id`, `tenant_id`, `name`, `category`, `entry_date`, `amount`, `current_value`, `notes`, `deleted_at`, `created_at`, `updated_at`.
+
+#### `capital_entry_audit` (append-only) — unchanged shape
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | Denormalised for RLS-friendly selects |
+| capital_entry_id | uuid | Target row at time of change |
+| action | text NOT NULL | CHECK: `insert`, `update`, `delete` |
+| changed_at | timestamptz NOT NULL DEFAULT now() | |
+| changed_by | uuid | `auth.uid()` when invoked from the app |
+| before_row | jsonb | Full row as JSON before change (`NULL` on insert) |
+| after_row | jsonb | Full row as JSON after change (`NULL` on hard delete) |
+
+> **Implementation:** Keep the existing `SECURITY DEFINER` trigger in `0002`. Add RPCs such as `set_capital_included(p_id, p_included, p_reason)` and optional `soft_delete_capital_entry` for consistent policy.
+
+#### RLS
+- `capital_entries`: same tenant-scoped pattern (`tenant_id = current_tenant_id()`).
+- `capital_entry_audit`: **`SELECT` only** for tenant members.
+
+#### FE changes (Phase 2-C)
+- List: badges **Included** / **Excluded**; show `entry_date`, `created_at`, amounts, category; filter archived / soft-deleted.
+- **Toggle include:** switch + modal **“Reason for excluding from totals?”** when turning off.
+- **Edit:** form for non-amount fields; separate flow for amount (**adjustment** or audited RPC).
+- **History:** read-only modal from `capital_entry_audit`.
+- Wire [`summarizeCapital`](../../app/src/lib/capitalSummary.ts) / [`CompanyOverviewPage`](../../app/src/pages/company/CompanyOverviewPage.tsx) / live fetches to respect `included_in_reports` and `deleted_at`.
+
+#### Schema status
+- Base: **`app/supabase/migrations/0002_tenant_settings_capital_audit.sql`**.
+- Inclusion columns + RPCs: **future migration** (e.g. `0006_…`).
+
+---
+
+### Phase 2-D — Sales bill edit + amendment history
+
+#### Goal
+Allow dealers to **correct an existing sales bill** in live mode (wrong qty, rate, discount, customer, due date) while keeping an **immutable amendment trail** for disputes and audits — **append-only audit** (`before_row` / `after_row`) like `capital_entry_audit`, but **not** the capital “include in totals / exclude with reason” model (see **Policy vs capital** below).
+
+> **Phase 1 status:** Create-only via `create_sales_bill`. The app route `/app/sales/edit/:billNo` exists and works in **demo** (`appStore.commitSale`). In **live** mode, `SaleEntryPage` blocks save with a toast (`"Editing an existing server bill is not supported yet"`). Bill detail still shows an Edit control; that is intentional until 2-D ships.
+
+**Policy vs capital:** Posted bills are **not** controlled by an “include in totals” tick like capital lines. Corrections use **amendment** (same `bill_no`, audited change) or future **void** (`voided_at` / reason), with stock and payment rules enforced in RPC — see **Cross-cutting policy**.
+
+#### Why not Phase 1
+Editing a posted bill is not a single-row update. It must reconcile:
+
+| Concern | On edit |
+|---|---|
+| Stock | Reverse quantities from old `sales_items`, apply new lines (`v_stock` must stay consistent) |
+| Bill totals | Recompute subtotal, discount, VAT, extra charges, `total`, and **open balance** |
+| Payments | `paid` may already be &gt; 0; open = `total − paid` must not go negative without a business rule |
+| Returns | Returns reference `bill_id`; line/product changes must not orphan return rows |
+| Bill number | `bill_no` is stable (identity); edit amends the same bill, does not create a new number |
+
+#### `sales_bill_audit` (append-only, new migration in Phase 2)
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | Denormalised for RLS-friendly selects |
+| sales_bill_id | uuid FK | Target `sales_bills.id` |
+| action | text NOT NULL | CHECK: `insert`, `update`, `delete` |
+| changed_at | timestamptz NOT NULL DEFAULT now() | |
+| changed_by | uuid | `auth.uid()` from the app session |
+| before_row | jsonb | Header + nested lines snapshot before change (`NULL` on insert) |
+| after_row | jsonb | Snapshot after change (`NULL` on hard delete) |
+
+Optional: `change_reason text` (user-entered note on amend) if product wants it on the audit row.
+
+> **Implementation:** Prefer a single **`update_sales_bill`** RPC (security definer or invoker + RLS) that runs header/lines/stock/audit in **one transaction**, similar to `create_sales_bill`. A trigger-only approach on `sales_bills` / `sales_items` is harder because line diffs are multi-table.
+
+#### RPC sketch: `update_sales_bill`
+
+**Inputs (illustrative):** `p_bill_id uuid`, header fields (dates, discount, VAT, terms, notes), `p_lines jsonb` (product_id, qty, rate, …), optional `p_reason text`.
+
+**Steps:**
+1. Load current bill + items; verify `tenant_id` and bill exists.
+2. Validate business rules (e.g. cannot reduce `total` below `paid` without explicit credit handling; or allow only if no returns — product decision).
+3. Apply stock reversal for old lines, then stock out for new lines.
+4. Replace or upsert `sales_items`; update `sales_bills` totals and `paid` / open balance.
+5. Insert `sales_bill_audit` with `action = 'update'`, full `before_row` / `after_row` JSON (header + lines array).
+
+**Grants:** `GRANT EXECUTE … TO authenticated` (same as Phase 1 RPCs).
+
+#### RLS
+- `sales_bill_audit`: **SELECT** for tenant members only; no client INSERT/UPDATE/DELETE (append via RPC/trigger only).
+
+#### FE changes (Phase 2-D)
+- `domainLive`: `updateSalesBillLive` + `fetchSalesBillAuditLive`.
+- `domainHooks`: `commitSale` edit branch calls update RPC when `isSupabaseConfigured` and bill already exists.
+- `SaleEntryPage`: remove live edit guard; load bill from server by `billNo` / id when editing.
+- `BillDetailPage`: **Amendment history** list/modal from `sales_bill_audit`; optionally hide **Edit** until RPC is deployed.
+- E2E: extend `e2e-phase1-matrix.mjs` with edit + audit assertions.
+
+#### Demo mode
+No change required: `appStore.commitSale` already overwrites the bill in `localStorage`. Phase 2-D is **live Supabase only** plus optional demo audit if you mirror audit into local state later.
+
+---
+
+**See also:** [Docs hub](../README.md) · [Backend checklist](./BACKEND-TODO.md) · [Automated E2E](./phase1-use-cases-and-tests.md) · [Manual E2E](./phase1-manual-e2e-checklist.md)
