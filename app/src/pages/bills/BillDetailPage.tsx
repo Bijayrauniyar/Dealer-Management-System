@@ -4,7 +4,7 @@ import type { Sale, BillStatus } from "@/domain/types";
 import { ArrowLeft, Printer, Pencil, CreditCard, RotateCcw } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { BillPrintView } from "@/components/app/BillPrintView";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSaleByBill, useOutstandingBills, usePayments, useCustomers, useDomainBundleLoadState } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
