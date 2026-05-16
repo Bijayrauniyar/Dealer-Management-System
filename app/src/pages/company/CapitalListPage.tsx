@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/app/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CAPITAL_CATEGORIES } from "@/data/dummy";
+import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
 import { summarizeCapital } from "@/lib/capitalSummary";
 import { useCapitalEntries } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";

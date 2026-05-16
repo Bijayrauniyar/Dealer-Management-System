@@ -1,22 +1,24 @@
 /**
- * Unified domain hooks: Supabase when configured, else demo appStore.
+ * Domain hooks — Supabase only (see `isSupabaseConfigured` + `MissingSupabaseEnv`).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { debugLog } from "@/lib/debugLog";
-import {
-  BUSINESS,
-  type BusinessSettings,
-  type CapitalEntry,
-  type Customer,
+import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
+import type {
+  BusinessSettings,
+  CapitalEntry,
+  Customer,
+  ExpenseListItem,
   OutstandingBill,
   Payment,
+  PnlTotals,
   Product,
+  PurchaseListItem,
   Sale,
   Supplier,
-} from "@/data/dummy";
-import * as Demo from "./appStore";
+} from "@/domain/types";
 import {
   CAPITAL_QUERY_KEY,
   DOMAIN_QUERY_KEY,
@@ -33,8 +35,12 @@ import {
   recordDamageLive,
   recordExpenseLive,
   upsertCustomerLive,
+  fetchDashboardPeriodTotalsLive,
+  fetchDailyCashBreakdownLive,
+  upsertDailyCashLive,
+  insertSupplierLive,
 } from "@/lib/live/domainLive";
-import type { CommitPaymentOpts, CommitPurchaseOpts, CommitReturnOpts, CommitSupplierPaymentOpts } from "./appStore";
+import type { CommitPaymentOpts, CommitPurchaseOpts, CommitReturnOpts, CommitSupplierPaymentOpts } from "./commitTypes";
 
 function useCapitalQuery() {
   return useQuery({
@@ -51,20 +57,16 @@ function useDomainBundleQuery() {
     queryFn: async () => {
       try {
         const bundle = await fetchDomainBundle();
-        // #region agent log
         debugLog("H5", "domainHooks.ts:fetchDomainBundle", "bundle loaded", {
           products: bundle.products.length,
           customers: bundle.customers.length,
           sales: bundle.sales.length,
         });
-        // #endregion
         return bundle;
       } catch (e) {
-        // #region agent log
         debugLog("H5", "domainHooks.ts:fetchDomainBundle", "bundle failed", {
           error: e instanceof Error ? e.message : String(e),
         });
-        // #endregion
         throw e;
       }
     },
@@ -73,71 +75,84 @@ function useDomainBundleQuery() {
   });
 }
 
-/** Live: from `tenant_settings`. Demo: static `BUSINESS` in dummy.ts. */
+/** First load / refetch edge: use for bill detail so we don’t flash “not found” or crash on stale route state. */
+export function useDomainBundleLoadState(): "loading" | "error" | "ready" {
+  const q = useDomainBundleQuery();
+  if (!isSupabaseConfigured) return "ready";
+  if (q.isError) return "error";
+  if (q.isPending && !q.data) return "loading";
+  return "ready";
+}
+
 export function useBusinessSettings(): BusinessSettings {
   const q = useDomainBundleQuery();
   return useMemo(
-    () => (isSupabaseConfigured ? (q.data?.business ?? BUSINESS) : BUSINESS),
+    () => (isSupabaseConfigured ? (q.data?.business ?? DEFAULT_BUSINESS_SETTINGS) : DEFAULT_BUSINESS_SETTINGS),
     [q.data?.business],
   );
 }
 
+export function usePnlTotals(): PnlTotals {
+  const q = useDomainBundleQuery();
+  return useMemo(
+    () =>
+      q.data?.pnl ?? {
+        lifetimePurchases: 0,
+        lifetimeExpenses: 0,
+        lifetimeReturnsCredit: 0,
+      },
+    [q.data?.pnl],
+  );
+}
+
+export function useLatestCashClosing(): number {
+  const q = useDomainBundleQuery();
+  return q.data?.latestCashClosing ?? 0;
+}
+
+export function useExpensesList(): ExpenseListItem[] {
+  const q = useDomainBundleQuery();
+  return q.data?.expenses ?? [];
+}
+
+export function usePurchasesList(): PurchaseListItem[] {
+  const q = useDomainBundleQuery();
+  return q.data?.purchases ?? [];
+}
+
 export function useProducts(): Product[] {
   const q = useDomainBundleQuery();
-  const demo = Demo.useProducts();
-  return useMemo(
-    () => (isSupabaseConfigured ? (q.data?.products ?? []) : demo),
-    [q.data?.products, demo],
-  );
+  return q.data?.products ?? [];
 }
 
 export function useCustomers(): Customer[] {
   const q = useDomainBundleQuery();
-  const demo = Demo.useCustomers();
-  return useMemo(
-    () => (isSupabaseConfigured ? (q.data?.customers ?? []) : demo),
-    [q.data?.customers, demo],
-  );
+  return q.data?.customers ?? [];
 }
 
 export function useSuppliers(): Supplier[] {
   const q = useDomainBundleQuery();
-  const demo = Demo.useSuppliers();
-  return useMemo(
-    () => (isSupabaseConfigured ? (q.data?.suppliers ?? []) : demo),
-    [q.data?.suppliers, demo],
-  );
+  return q.data?.suppliers ?? [];
 }
 
 export function useCapitalEntries(): CapitalEntry[] {
   const q = useCapitalQuery();
-  const demo = Demo.useCapitalEntries();
-  return useMemo(
-    () => (isSupabaseConfigured ? (q.data ?? []) : demo),
-    [q.data, demo],
-  );
+  return q.data ?? [];
 }
 
 export function useSales(): Sale[] {
   const q = useDomainBundleQuery();
-  const demo = Demo.useSales();
-  return useMemo(() => (isSupabaseConfigured ? (q.data?.sales ?? []) : demo), [q.data?.sales, demo]);
+  return q.data?.sales ?? [];
 }
 
 export function usePayments(): Payment[] {
   const q = useDomainBundleQuery();
-  const demo = Demo.usePayments();
-  return useMemo(() => (isSupabaseConfigured ? (q.data?.payments ?? []) : demo), [q.data?.payments, demo]);
+  return q.data?.payments ?? [];
 }
 
 export function useOutstandingBills(): OutstandingBill[] {
-  const q = useDomainBundleQuery();
-  const demoObs = Demo.useOutstandingBills();
   const sales = useSales();
-  return useMemo(() => {
-    if (isSupabaseConfigured) return deriveOutstandingBills(sales);
-    return demoObs;
-  }, [sales, demoObs]);
+  return useMemo(() => deriveOutstandingBills(sales), [sales]);
 }
 
 export function useSaleByBill(billNo: string): Sale | undefined {
@@ -145,17 +160,13 @@ export function useSaleByBill(billNo: string): Sale | undefined {
   return useMemo(() => sales.find((s) => s.billNo === billNo), [sales, billNo]);
 }
 
-/** Demo: sync. Live: call before opening new sale form (or use useNextBillNo hook). */
 export function getNextBillNo(): string {
-  if (!isSupabaseConfigured) return Demo.getNextBillNo();
   return "";
 }
 
-/** For new bills in live mode — fetches next number from DB. */
 export function useNextBillNo(isEdit: boolean, existingBillNo?: string) {
   const [no, setNo] = useState(() => {
     if (isEdit && existingBillNo) return existingBillNo;
-    if (!isSupabaseConfigured) return Demo.getNextBillNo();
     return "";
   });
   useEffect(() => {
@@ -164,7 +175,7 @@ export function useNextBillNo(isEdit: boolean, existingBillNo?: string) {
       return;
     }
     if (!isSupabaseConfigured) {
-      setNo(Demo.getNextBillNo());
+      setNo("");
       return;
     }
     let cancelled = false;
@@ -179,47 +190,43 @@ export function useNextBillNo(isEdit: boolean, existingBillNo?: string) {
 }
 
 export async function commitSale(sale: Sale): Promise<string> {
-  if (!isSupabaseConfigured) {
-    Demo.commitSale(sale);
-    return sale.billNo;
-  }
   const r = await commitSaleLive(sale);
   return r.billNo;
 }
 
 export async function commitPayment(opts: CommitPaymentOpts): Promise<void> {
-  if (!isSupabaseConfigured) {
-    Demo.commitPayment(opts);
-    return;
-  }
   await commitPaymentLive(opts);
 }
 
 export async function commitReturn(opts: CommitReturnOpts): Promise<void> {
-  if (!isSupabaseConfigured) {
-    Demo.commitReturn(opts);
-    return;
-  }
   await commitReturnLive(opts);
 }
 
 export async function commitPurchase(opts: CommitPurchaseOpts): Promise<void> {
-  if (!isSupabaseConfigured) {
-    Demo.commitPurchase(opts);
-    return;
-  }
   await commitPurchaseLive(opts);
 }
 
 export async function commitSupplierPayment(opts: CommitSupplierPaymentOpts): Promise<void> {
-  if (!isSupabaseConfigured) {
-    Demo.commitSupplierPayment(opts);
-    return;
-  }
   await commitSupplierPaymentLive(opts);
 }
 
-export { resetToSeed } from "./appStore";
+export async function commitNewSupplier(input: {
+  name: string;
+  phone?: string;
+  address?: string;
+  payable_opening?: number;
+}): Promise<string> {
+  return insertSupplierLive(input);
+}
+
+export async function commitDailyCashClose(input: {
+  cashDate: string;
+  openingBalance: number;
+  closingBalance: number;
+  notes?: string | null;
+}): Promise<void> {
+  await upsertDailyCashLive(input);
+}
 
 export async function commitDamageEntry(input: {
   productId: string;
@@ -227,10 +234,6 @@ export async function commitDamageEntry(input: {
   reason: string;
   notes?: string;
 }): Promise<void> {
-  if (!isSupabaseConfigured) {
-    await new Promise((r) => setTimeout(r, 300));
-    return;
-  }
   await recordDamageLive({
     productId: input.productId,
     qty: input.qty,
@@ -248,9 +251,6 @@ export async function commitCustomer(input: {
   creditLimit: number;
   openingBalance?: number;
 }): Promise<string> {
-  if (!isSupabaseConfigured) {
-    return Demo.commitCustomer({ ...input, panNumber: "" });
-  }
   return upsertCustomerLive({
     id: input.id,
     name: input.name,
@@ -265,13 +265,15 @@ export async function commitCustomer(input: {
 export async function commitExpenseEntry(input: {
   category: string;
   amount: number;
+  date?: string;
   notes?: string;
 }): Promise<void> {
-  if (!isSupabaseConfigured) {
-    await new Promise((r) => setTimeout(r, 300));
-    return;
-  }
-  await recordExpenseLive({ category: input.category, amount: input.amount, notes: input.notes });
+  await recordExpenseLive({
+    category: input.category,
+    amount: input.amount,
+    expenseDate: input.date,
+    notes: input.notes,
+  });
 }
 
 export async function commitCapitalEntry(input: {
@@ -282,9 +284,6 @@ export async function commitCapitalEntry(input: {
   currentValue: number;
   notes?: string;
 }): Promise<string> {
-  if (!isSupabaseConfigured) {
-    return Demo.commitCapitalEntry(input);
-  }
   return insertCapitalEntryLive({
     name: input.name,
     category: input.category,
@@ -295,4 +294,22 @@ export async function commitCapitalEntry(input: {
   });
 }
 
-export { useAppState } from "./appStore";
+/** Dashboard period KPIs (purchases, expenses, returns, damage qty). */
+export function useDashboardPeriodTotals(from: string, to: string) {
+  return useQuery({
+    queryKey: ["dashboard-period", from, to],
+    queryFn: () => fetchDashboardPeriodTotalsLive(from, to),
+    enabled: isSupabaseConfigured && Boolean(from) && Boolean(to),
+    staleTime: 15_000,
+  });
+}
+
+/** Sum of Cash-mode lines for one day (opening from last close before `cashDate`). */
+export function useDailyCashBreakdown(cashDate: string) {
+  return useQuery({
+    queryKey: ["daily-cash-breakdown", cashDate],
+    queryFn: () => fetchDailyCashBreakdownLive(cashDate),
+    enabled: isSupabaseConfigured && Boolean(cashDate),
+    staleTime: 10_000,
+  });
+}

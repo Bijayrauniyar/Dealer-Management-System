@@ -4,29 +4,39 @@ import { PageShell } from "@/components/app/PageShell";
 import { ListRow } from "@/components/app/ListRow";
 import { Card, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/app/KpiCard";
-import { EXPENSES, DASHBOARD } from "@/data/dummy";
-import { usePayments, useSales } from "@/store/domain";
+import { useExpensesList, usePayments, usePnlTotals, usePurchasesList, useSales, useSuppliers } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
 
 const CONFIG: Record<string, { title: string; description: string }> = {
-  "sales":              { title: "Sales (period)",            description: "All sales in selected period" },
-  "purchases":          { title: "Purchases (period)",        description: "Purchases from suppliers" },
-  "expenses":           { title: "Expenses (period)",         description: "Operating expenses" },
-  "returns":            { title: "Returns / Credit (period)", description: "Customer return credits" },
-  "profit":             { title: "Net profit breakdown",      description: "Sales − Purchase − Expenses ± Returns" },
-  "supplier-payable":   { title: "Supplier payable",          description: "Open bills to suppliers" },
-  "damages":            { title: "Damage entries (period)",   description: "Written-off / damaged stock" },
-  "freezer":            { title: "Freezer deposits",          description: "Active scheme / equipment deposits" },
-  "today-sales":        { title: "Today's sales",             description: "Bills raised today" },
-  "today-collection":   { title: "Today's collection",        description: "Payments received today" },
+  sales: { title: "Sales (period)", description: "All sales in selected period" },
+  purchases: { title: "Purchases (period)", description: "Purchases from suppliers" },
+  expenses: { title: "Expenses (period)", description: "Operating expenses" },
+  returns: { title: "Returns / Credit (period)", description: "Customer return credits" },
+  profit: { title: "Net profit breakdown", description: "Sales − Purchase − Expenses ± Returns" },
+  "supplier-payable": { title: "Supplier payable", description: "Open bills to suppliers" },
+  damages: { title: "Damage entries (period)", description: "Written-off / damaged stock" },
+  freezer: { title: "Freezer deposits", description: "Active scheme / equipment deposits" },
+  "today-sales": { title: "Today's sales", description: "Bills raised today" },
+  "today-collection": { title: "Today's collection", description: "Payments received today" },
 };
 
 export const PeriodListPage = () => {
   const { type = "sales" } = useParams();
   const navigate = useNavigate();
-  const SALES     = useSales();
-  const PAYMENTS  = usePayments();
+  const SALES = useSales();
+  const PAYMENTS = usePayments();
+  const expenses = useExpensesList();
+  const purchases = usePurchasesList();
+  const pnl = usePnlTotals();
+  const suppliers = useSuppliers();
   const cfg = CONFIG[type] ?? { title: type, description: "" };
+
+  const suppliersOwing = suppliers
+    .filter((s) => s.outstanding > 0.01)
+    .sort((a, b) => b.outstanding - a.outstanding);
+
+  const lifetimeSales = SALES.reduce((s, x) => s + x.grandTotal, 0);
+  const netProfit = lifetimeSales - pnl.lifetimeReturnsCredit - pnl.lifetimePurchases - pnl.lifetimeExpenses;
 
   return (
     <PageShell>
@@ -38,14 +48,14 @@ export const PeriodListPage = () => {
 
       {type === "profit" && (
         <div className="mb-5 grid grid-cols-2 gap-3">
-          <KpiCard label="Sales"    value={npr(DASHBOARD.totalSales)} />
-          <KpiCard label="Purchase" value={npr(DASHBOARD.totalPurchase)} />
-          <KpiCard label="Expenses" value={npr(DASHBOARD.totalExpenses)} />
-          <KpiCard label="Returns"  value={npr(DASHBOARD.returnsCredit)} variant="success" />
+          <KpiCard label="Sales (all bills loaded)" value={npr(lifetimeSales)} />
+          <KpiCard label="Purchase" value={npr(pnl.lifetimePurchases)} />
+          <KpiCard label="Expenses" value={npr(pnl.lifetimeExpenses)} />
+          <KpiCard label="Returns" value={npr(pnl.lifetimeReturnsCredit)} variant="success" />
           <KpiCard
             label="Net profit"
-            value={npr(DASHBOARD.netProfit)}
-            variant={DASHBOARD.netProfit >= 0 ? "success" : "danger"}
+            value={npr(netProfit)}
+            variant={netProfit >= 0 ? "success" : "danger"}
             className="col-span-2"
           />
         </div>
@@ -66,7 +76,7 @@ export const PeriodListPage = () => {
         </Card>
       )}
 
-      {(type === "today-collection") && (
+      {type === "today-collection" && (
         <Card>
           <CardContent className="p-0 px-4">
             {PAYMENTS.map((p) => (
@@ -84,7 +94,7 @@ export const PeriodListPage = () => {
       {type === "expenses" && (
         <Card>
           <CardContent className="p-0 px-4">
-            {EXPENSES.map((e) => (
+            {expenses.map((e) => (
               <ListRow
                 key={e.id}
                 left={e.category}
@@ -96,9 +106,46 @@ export const PeriodListPage = () => {
         </Card>
       )}
 
-      {!["sales","today-sales","today-collection","expenses","profit"].includes(type) && (
+      {type === "purchases" && (
+        <Card>
+          <CardContent className="p-0 px-4">
+            {purchases.map((p) => (
+              <ListRow
+                key={p.id}
+                left={p.supplierName || p.purchaseNo}
+                right={npr(p.total)}
+                sub={`${fmtDate(p.date)} · ${p.purchaseNo}`}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {type === "supplier-payable" && (
+        <Card>
+          <CardContent className="p-0 px-4">
+            {suppliersOwing.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted">No supplier balances · you&apos;re all caught up.</p>
+            ) : (
+              suppliersOwing.map((s) => (
+                <ListRow
+                  key={s.id}
+                  left={s.name}
+                  right={npr(s.outstanding)}
+                  sub="Tap to record a supplier payment"
+                  onClick={() => navigate("/app/supplier-payments/new")}
+                />
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {!["sales", "today-sales", "today-collection", "expenses", "profit", "purchases", "supplier-payable"].includes(
+        type,
+      ) && (
         <div className="rounded-xl bg-white border border-border-subtle p-8 text-center text-sm text-muted shadow-card">
-          Detailed data will appear here once the backend is connected.
+          Detailed data will appear here when this report is wired to Supabase.
         </div>
       )}
     </PageShell>

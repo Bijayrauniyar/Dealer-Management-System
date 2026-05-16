@@ -9,9 +9,8 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DAMAGE_REASONS } from "@/data/dummy";
+import { DAMAGE_REASONS } from "@/domain/catalogs";
 import { useProducts, commitDamageEntry } from "@/store/domain";
-import { isSupabaseConfigured } from "@/lib/supabase";
 import { toDateInput } from "@/lib/utils";
 
 export const DamagePage = () => {
@@ -29,14 +28,12 @@ export const DamagePage = () => {
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
-      if (isSupabaseConfigured) {
-        await commitDamageEntry({
-          productId,
-          qty: Number(qty) || 0,
-          reason,
-          notes: notes || undefined,
-        });
-      }
+      await commitDamageEntry({
+        productId,
+        qty: Number(qty) || 0,
+        reason,
+        notes: notes || undefined,
+      });
       toast.success("Damage entry recorded.");
       navigate("/app/home");
     } catch (e) {

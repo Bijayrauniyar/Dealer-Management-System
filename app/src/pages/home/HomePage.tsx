@@ -38,13 +38,13 @@ export const HomePage = () => {
   const customers = useMemo(() => {
     let list = [...CUSTOMERS];
     if (custFilter === "overdue") list = list.filter((c) => c.oldestBillDays > OVERDUE_DAYS && c.outstanding > 0);
-    if (custFilter === "dues")    list = list.filter((c) => c.outstanding > 0);
+    if (custFilter === "dues") list = list.filter((c) => c.outstanding > 0);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((c) => c.name.toLowerCase().includes(q) || c.area.toLowerCase().includes(q));
     }
     return list.sort((a, b) => b.outstanding - a.outstanding);
-  }, [search, custFilter]);
+  }, [CUSTOMERS, search, custFilter, OVERDUE_DAYS]);
 
   // ── Stock list ─────────────────────────────────────────────────────────────
   const products = useMemo(() => {
@@ -55,7 +55,7 @@ export const HomePage = () => {
       list = list.filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
     }
     return list.sort((a, b) => a.onHand - b.onHand); // lowest stock first
-  }, [search, stockFilter]);
+  }, [PRODUCTS, search, stockFilter]);
 
   const handleTabChange = (t: Tab) => { setTab(t); setSearch(""); };
 
@@ -80,7 +80,8 @@ export const HomePage = () => {
       {/* ── Outstanding summary bar — tappable ── */}
       {totalOutstanding > 0 && (
         <button
-          onClick={() => navigate("/app/home/overdue")}
+          type="button"
+          onClick={() => navigate("/app/home/outstanding")}
           className="mb-4 w-full rounded-2xl border border-border-subtle bg-white shadow-card px-4 py-3 text-left"
         >
           <div className="flex items-center justify-between">

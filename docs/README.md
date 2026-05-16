@@ -58,6 +58,7 @@ flowchart LR
 | File | When to open it |
 |------|------------------|
 | [backend/phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md) | E2E commands, use-case IDs, what each script asserts |
+| [backend/seed-demo-and-reset.md](backend/seed-demo-and-reset.md) | Demo seed, tenant purge, credentials, npm scripts |
 | [backend/phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.md) | Manual-only coverage, print/UI edge cases, sign-off template |
 
 ### Deployment & CI

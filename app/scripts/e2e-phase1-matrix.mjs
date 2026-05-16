@@ -1,7 +1,7 @@
 /**
  * Phase 1 API test matrix — masters, calculations, balances, stock.
  * Usage: npm run e2e:matrix
- * Requires: .env.local, .e2e-credentials.local, migrations 0001–0003 + 0005
+ * Requires: .env.local, .e2e-credentials.local, migrations 0001–0003 + 0005 + **0006** + **0007**
  */
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -139,6 +139,7 @@ try {
   const vat = 123;
   const extra = 20;
   const expectedTotal = subtotal - discount + vat + extra; // 1093
+  let mainBillTotal = expectedTotal;
   const paidAtBill = 400;
 
   const { data: saleRows, error: saleErr } = await supabase.rpc("create_sales_bill", {
@@ -173,6 +174,36 @@ try {
     r.assertClose(Number(bill?.total) - Number(bill?.paid), expectedTotal - paidAtBill, "sale.open balance");
     if (billNo && !billNo.startsWith(prefix)) r.fail("sale.bill_no prefix", billNo);
     else r.pass("sale.bill_no prefix", billNo);
+  }
+
+  // --- Bill update (migration 0007 update_sales_bill) ---
+  if (billId) {
+    const newDiscount = 40;
+    const expectedAfterUpdate = subtotal - newDiscount + vat + extra;
+    const { error: updErr } = await supabase.rpc("update_sales_bill", {
+      p_bill_id: billId,
+      p_customer_id: customerId,
+      p_bill_date: T,
+      p_payment_mode: "Credit",
+      p_discount: newDiscount,
+      p_items: [{ product_id: productId, qty: 10, rate: 100 }],
+      p_notes: `matrix-${stamp}-upd`,
+      p_vat_amount: vat,
+      p_extra_charges: extra,
+    });
+    if (updErr) r.fail("sale.update", updErr.message);
+    else {
+      r.pass("sale.update");
+      const { data: billU } = await supabase
+        .from("sales_bills")
+        .select("discount, total, paid")
+        .eq("id", billId)
+        .single();
+      r.assertClose(billU?.discount, newDiscount, "sale.update discount");
+      r.assertClose(billU?.total, expectedAfterUpdate, "sale.update total");
+      r.assertClose(billU?.paid, paidAtBill, "sale.update paid unchanged");
+      mainBillTotal = expectedAfterUpdate;
+    }
   }
 
   // --- S7 Multi-line subtotal ---
@@ -252,12 +283,12 @@ try {
     const { data: billAfterPay } = await supabase.from("sales_bills").select("paid, total").eq("id", billId).single();
     r.assertClose(billAfterPay?.paid, paidAtBill + payAmt, "bill.paid after payment");
     const open = Number(billAfterPay?.total) - Number(billAfterPay?.paid);
-    r.assertClose(open, expectedTotal - paidAtBill - payAmt, "bill.open after payment");
+    r.assertClose(open, mainBillTotal - paidAtBill - payAmt, "bill.open after payment");
   }
 
   // --- R1 Return (credit capped) ---
   const creditTry = 500;
-  const openBeforeReturn = expectedTotal - paidAtBill - payAmt;
+  const openBeforeReturn = mainBillTotal - paidAtBill - payAmt;
   const { error: retErr } = await supabase.rpc("apply_goods_return", {
     p_return_date: T,
     p_customer_id: customerId,

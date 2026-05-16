@@ -8,14 +8,15 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { EXPENSE_CATEGORIES } from "@/data/dummy";
+import { EXPENSE_CATEGORIES } from "@/domain/catalogs";
 import { commitExpenseEntry } from "@/store/domain";
-import { isSupabaseConfigured } from "@/lib/supabase";
 import { npr, toDateInput } from "@/lib/utils";
+
+type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 export const ExpensePage = () => {
   const navigate = useNavigate();
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [category, setCategory] = useState<ExpenseCategory>(EXPENSE_CATEGORIES[0]);
   const [amount, setAmount]     = useState("");
   const [date, setDate]         = useState(toDateInput());
   const [notes, setNotes]       = useState("");
@@ -26,13 +27,12 @@ export const ExpensePage = () => {
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
-      if (isSupabaseConfigured) {
-        await commitExpenseEntry({
-          category,
-          amount: Number(amount),
-          notes: notes || undefined,
-        });
-      }
+      await commitExpenseEntry({
+        category,
+        amount: Number(amount),
+        date,
+        notes: notes || undefined,
+      });
       toast.success("Expense saved.");
       navigate("/app/home");
     } catch (e) {
@@ -50,7 +50,7 @@ export const ExpensePage = () => {
       <h1 className="mb-5 text-lg font-semibold">Expense entry</h1>
       <div className="space-y-4">
         <FormField label="Category" required>
-          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+          <Select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
             {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </Select>
         </FormField>

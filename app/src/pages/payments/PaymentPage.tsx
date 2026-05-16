@@ -10,11 +10,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { PAYMENT_MODES, type Sale } from "@/data/dummy";
+import { PAYMENT_MODES } from "@/domain/catalogs";
+import type { Sale } from "@/domain/types";
 import { useCustomers, useSales, commitPayment } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
 
-// Simulated open bills per customer (bill total = outstanding for demo)
+/** Open bills for allocation UI — sourced from live `useSales()` (Supabase). */
 type OpenBill = {
   saleId: string;
   billNo: string;

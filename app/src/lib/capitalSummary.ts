@@ -1,4 +1,4 @@
-import type { CapitalEntry } from "@/data/dummy";
+import type { CapitalEntry } from "@/domain/types";
 
 export function summarizeCapital(entries: CapitalEntry[]) {
   return {

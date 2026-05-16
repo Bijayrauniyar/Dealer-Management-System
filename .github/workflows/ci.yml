@@ -31,4 +31,7 @@ jobs:
         run: npm run lint:tailwind
 
       - name: Production build
+        env:
+          VITE_SUPABASE_URL: https://ci-build-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiJ9.ci-build-placeholder-not-a-secret
         run: npm run build

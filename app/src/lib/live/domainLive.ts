@@ -1,25 +1,67 @@
 /**
- * Supabase reads/writes for Phase 1 (when VITE_SUPABASE_* is set).
- * Maps DB rows ↔ dummy.ts shapes so UI components stay unchanged.
+ * Supabase reads/writes for Phase 1.
+ * Maps DB rows ↔ domain types for the UI.
  */
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
-import {
-  BUSINESS,
-  type BusinessSettings,
-  type CapitalEntry,
-  type Customer,
+import type {
+  BusinessSettings,
+  CapitalEntry,
+  Customer,
+  DailyCashBreakdown,
+  ExpenseListItem,
   OutstandingBill,
   Payment,
+  PnlTotals,
   Product,
+  PurchaseListItem,
   Sale,
   SaleLine,
   Supplier,
   BillStatus,
-} from "@/data/dummy";
+} from "@/domain/types";
+import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
+import type { DashboardPeriodTotals } from "@/domain/defaults";
 
 export const DOMAIN_QUERY_KEY = ["domain", "v1"] as const;
 export const CAPITAL_QUERY_KEY = ["capital", "v1"] as const;
+
+export type DomainBundle = {
+  products: Product[];
+  customers: Customer[];
+  suppliers: Supplier[];
+  sales: Sale[];
+  payments: Payment[];
+  business: BusinessSettings;
+  pnl: PnlTotals;
+  latestCashClosing: number;
+  expenses: ExpenseListItem[];
+  purchases: PurchaseListItem[];
+};
+
+function mapUiPaymentModeToDb(mode: string): "Cash" | "UPI" | "Cheque" | "Bank" | "Other" {
+  if (mode === "Cash") return "Cash";
+  if (mode === "Cheque") return "Cheque";
+  if (["eSewa", "Khalti", "FonePay", "Mobile banking"].includes(mode)) return "UPI";
+  return "Other";
+}
+
+async function tenantIdForCurrentUser(): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  const { data: tu, error: te } = await supabase
+    .from("tenant_users")
+    .select("tenant_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (te) throw te;
+  const tenantId = tu?.tenant_id as string | undefined;
+  if (!tenantId) throw new Error("No tenant for user");
+  return tenantId;
+}
 
 function billStatus(total: number, paid: number): BillStatus {
   const bal = Math.max(0, total - paid);
@@ -321,6 +363,55 @@ export async function commitSaleLive(sale: Sale): Promise<{ billNo: string; id: 
         ? sale.paymentMode || "Cash"
         : "Credit";
 
+  const billNoKey = (sale.billNo ?? "").trim();
+
+  /** Prefer UUID (edit flow) so we never miss the row if bill_no in UI drifted from DB. */
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let existingId: string | undefined;
+
+  if (uuidRe.test(sale.id)) {
+    const { data: byId, error: idErr } = await supabase
+      .from("sales_bills")
+      .select("id")
+      .eq("id", sale.id)
+      .maybeSingle();
+    if (idErr) throw idErr;
+    existingId = byId?.id as string | undefined;
+  }
+
+  if (!existingId && billNoKey) {
+    const { data: byNo, error: noErr } = await supabase
+      .from("sales_bills")
+      .select("id")
+      .eq("bill_no", billNoKey)
+      .maybeSingle();
+    if (noErr) throw noErr;
+    existingId = byNo?.id as string | undefined;
+  }
+
+  if (existingId) {
+    const { data, error } = await supabase.rpc("update_sales_bill", {
+      p_bill_id: existingId,
+      p_customer_id: sale.customerId,
+      p_bill_date: sale.date,
+      p_payment_mode: payMode,
+      p_discount: sale.discountAmount,
+      p_items: items,
+      p_notes: sale.notes || null,
+      p_vat_amount: sale.vatAmount,
+      p_extra_charges: sale.billTermsAmount,
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    const billId = (row as { bill_id?: string; bill_no?: string })?.bill_id ?? existingId;
+    const outNo = (row as { bill_no?: string })?.bill_no ?? billNoKey;
+    // Defer invalidation so React Router can apply navigate() from the save handler first.
+    globalThis.setTimeout(() => {
+      void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+    }, 0);
+    return { billNo: outNo, id: billId };
+  }
+
   const { data, error } = await supabase.rpc("create_sales_bill", {
     p_customer_id: sale.customerId,
     p_bill_date: sale.date,
@@ -336,7 +427,9 @@ export async function commitSaleLive(sale: Sale): Promise<{ billNo: string; id: 
   const row = Array.isArray(data) ? data[0] : data;
   const billId = (row as { bill_id?: string; bill_no?: string })?.bill_id ?? "";
   const billNo = (row as { bill_no?: string })?.bill_no ?? sale.billNo;
-  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  globalThis.setTimeout(() => {
+    void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  }, 0);
   return { billNo, id: billId };
 }
 
@@ -361,7 +454,8 @@ export async function commitPaymentLive(opts: {
     p_allocations: allocs,
   });
   if (error) throw error;
-  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  await queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  await queryClient.refetchQueries({ queryKey: DOMAIN_QUERY_KEY });
 }
 
 export async function commitReturnLive(opts: {
@@ -415,15 +509,59 @@ export async function commitPurchaseLive(opts: {
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
 }
 
-export async function commitSupplierPaymentLive(opts: { supplierId: string; amount: number }): Promise<void> {
+export async function commitSupplierPaymentLive(opts: {
+  supplierId: string;
+  amount: number;
+  paymentDate: string;
+  mode: string;
+  notes?: string | null;
+}): Promise<void> {
+  if (opts.amount <= 0) return;
   const { error } = await supabase.rpc("apply_supplier_payment", {
-    p_payment_date: new Date().toISOString().slice(0, 10),
+    p_payment_date: opts.paymentDate,
     p_supplier_id: opts.supplierId,
     p_amount: opts.amount,
-    p_notes: null,
+    p_notes: opts.notes ?? null,
   });
   if (error) throw error;
+
+  const tenantId = await tenantIdForCurrentUser();
+  const { error: le } = await supabase.from("supplier_payments").insert({
+    tenant_id: tenantId,
+    payment_date: opts.paymentDate,
+    supplier_id: opts.supplierId,
+    amount: opts.amount,
+    mode: mapUiPaymentModeToDb(opts.mode),
+    notes: opts.notes ?? null,
+  });
+  if (le) throw le;
+
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  void queryClient.invalidateQueries({ queryKey: ["daily-cash-breakdown"] });
+}
+
+export async function insertSupplierLive(p: {
+  name: string;
+  phone?: string;
+  address?: string;
+  payable_opening?: number;
+}): Promise<string> {
+  const tenantId = await tenantIdForCurrentUser();
+  const { data, error } = await supabase
+    .from("suppliers")
+    .insert({
+      tenant_id: tenantId,
+      name: p.name.trim(),
+      phone: p.phone?.trim() || null,
+      address: p.address?.trim() || null,
+      payable_opening: p.payable_opening ?? 0,
+      is_active: true,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  return data.id as string;
 }
 
 export async function upsertCustomerLive(p: {
@@ -531,18 +669,21 @@ export async function upsertProductLive(p: {
 export async function recordExpenseLive(input: {
   category: string;
   amount: number;
+  expenseDate?: string;
   paidBy?: string;
   notes?: string;
 }): Promise<void> {
+  const expenseDate = input.expenseDate ?? new Date().toISOString().slice(0, 10);
   const { error } = await supabase.rpc("record_expense", {
-    p_expense_date: new Date().toISOString().slice(0, 10),
+    p_expense_date: expenseDate,
     p_category: input.category,
     p_amount: input.amount,
-    p_paid_by: input.paidBy ?? null,
+    p_paid_by: input.paidBy ?? "Cash",
     p_notes: input.notes ?? null,
   });
   if (error) throw error;
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  void queryClient.invalidateQueries({ queryKey: ["daily-cash-breakdown"] });
 }
 
 export async function recordDamageLive(input: {
@@ -588,65 +729,253 @@ type TenantSettingsRow = {
 };
 
 export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
+  const D = DEFAULT_BUSINESS_SETTINGS;
   return {
-    name: row.name || BUSINESS.name,
-    legalName: row.legal_name ?? BUSINESS.legalName,
-    region: row.region ?? BUSINESS.region,
-    currency: BUSINESS.currency,
-    invoicePrefix: row.invoice_prefix?.trim() || BUSINESS.invoicePrefix,
-    phone: row.phone ?? BUSINESS.phone,
-    mobile: row.mobile ?? BUSINESS.mobile,
-    email: row.email ?? BUSINESS.email,
-    addressLine1: row.address_line1 ?? BUSINESS.addressLine1,
-    addressLine2: row.address_line2 ?? BUSINESS.addressLine2,
-    district: row.district ?? BUSINESS.district,
-    province: row.province ?? BUSINESS.province,
-    country: row.country ?? BUSINESS.country,
-    panNumber: row.pan_number ?? BUSINESS.panNumber,
-    vatRegistered: row.vat_registered ?? BUSINESS.vatRegistered,
-    vatNumber: row.vat_number ?? BUSINESS.vatNumber,
-    billFooter: row.bill_footer ?? BUSINESS.billFooter,
-    overdueDays: row.overdue_days ?? BUSINESS.overdueDays,
-    dueSoonDays: row.due_soon_days ?? BUSINESS.dueSoonDays,
-    defaultMarkupPct: row.default_markup_pct ?? BUSINESS.defaultMarkupPct,
-    defaultMinQty: row.default_min_qty ?? BUSINESS.defaultMinQty,
+    name: row.name || D.name,
+    legalName: row.legal_name ?? D.legalName,
+    region: row.region ?? D.region,
+    currency: D.currency,
+    invoicePrefix: row.invoice_prefix?.trim() || D.invoicePrefix,
+    phone: row.phone ?? D.phone,
+    mobile: row.mobile ?? D.mobile,
+    email: row.email ?? D.email,
+    addressLine1: row.address_line1 ?? D.addressLine1,
+    addressLine2: row.address_line2 ?? D.addressLine2,
+    district: row.district ?? D.district,
+    province: row.province ?? D.province,
+    country: row.country ?? D.country,
+    panNumber: row.pan_number ?? D.panNumber,
+    vatRegistered: row.vat_registered ?? D.vatRegistered,
+    vatNumber: row.vat_number ?? D.vatNumber,
+    billFooter: row.bill_footer ?? D.billFooter,
+    overdueDays: row.overdue_days ?? D.overdueDays,
+    dueSoonDays: row.due_soon_days ?? D.dueSoonDays,
+    defaultMarkupPct: row.default_markup_pct ?? D.defaultMarkupPct,
+    defaultMinQty: row.default_min_qty ?? D.defaultMinQty,
   };
 }
 
 export async function fetchTenantSettingsLive(): Promise<BusinessSettings> {
   const { data, error } = await supabase.from("tenant_settings").select("*").maybeSingle();
   if (error) throw error;
-  if (!data) return { ...BUSINESS };
+  if (!data) return { ...DEFAULT_BUSINESS_SETTINGS };
   return mapTenantSettingsRow(data as TenantSettingsRow);
 }
 
-export async function fetchDomainBundle() {
-  const [products, customers, suppliers, sales, payments, business] = await Promise.all([
+export async function fetchPnlTotalsLive(): Promise<PnlTotals> {
+  const [pu, ex, ret] = await Promise.all([
+    supabase.from("purchases").select("total"),
+    supabase.from("expenses").select("amount"),
+    supabase.from("returns").select("credit_note_amount"),
+  ]);
+  if (pu.error) throw pu.error;
+  if (ex.error) throw ex.error;
+  if (ret.error) throw ret.error;
+  return {
+    lifetimePurchases: (pu.data ?? []).reduce((s, r) => s + Number((r as { total: number }).total), 0),
+    lifetimeExpenses: (ex.data ?? []).reduce((s, r) => s + Number((r as { amount: number }).amount), 0),
+    lifetimeReturnsCredit: (ret.data ?? []).reduce(
+      (s, r) => s + Number((r as { credit_note_amount: number }).credit_note_amount),
+      0,
+    ),
+  };
+}
+
+export async function fetchLatestDailyCashClosingLive(): Promise<number> {
+  const { data, error } = await supabase
+    .from("daily_cash")
+    .select("closing_balance")
+    .order("cash_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? Number((data as { closing_balance: number }).closing_balance) : 0;
+}
+
+/** Cash worksheet lines for a single day (opening from last locked close before that date). */
+export async function fetchDailyCashBreakdownLive(cashDate: string): Promise<DailyCashBreakdown> {
+  const { data: openRow, error: oe } = await supabase
+    .from("daily_cash")
+    .select("closing_balance")
+    .lt("cash_date", cashDate)
+    .order("cash_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (oe) throw oe;
+  const openingBalance = openRow ? Number((openRow as { closing_balance: number }).closing_balance) : 0;
+
+  const { data: billRows, error: be } = await supabase.from("sales_bills").select("id").eq("bill_date", cashDate);
+  if (be) throw be;
+  const billIdsToday = new Set((billRows ?? []).map((b) => (b as { id: string }).id));
+
+  const { data: payRows, error: pe } = await supabase
+    .from("payments")
+    .select("amount, bill_id")
+    .eq("payment_date", cashDate)
+    .eq("mode", "Cash");
+  if (pe) throw pe;
+
+  let cashSalesToday = 0;
+  let cashReceiptsToday = 0;
+  for (const raw of payRows ?? []) {
+    const p = raw as { amount: number; bill_id: string | null };
+    const amt = Number(p.amount);
+    if (!p.bill_id) {
+      cashReceiptsToday += amt;
+      continue;
+    }
+    if (billIdsToday.has(p.bill_id)) cashSalesToday += amt;
+    else cashReceiptsToday += amt;
+  }
+
+  const { data: exRows, error: ee } = await supabase.from("expenses").select("amount, paid_by").eq("expense_date", cashDate);
+  if (ee) throw ee;
+  const expensesCash = (exRows ?? []).reduce((s, r) => {
+    const paidBy = String((r as { paid_by: string | null }).paid_by ?? "").toLowerCase();
+    if (!paidBy || paidBy === "cash") return s + Number((r as { amount: number }).amount);
+    return s;
+  }, 0);
+
+  const { data: supRows, error: se } = await supabase
+    .from("supplier_payments")
+    .select("amount")
+    .eq("payment_date", cashDate)
+    .eq("mode", "Cash");
+  if (se) throw se;
+  const supplierPaymentsCash = (supRows ?? []).reduce((s, r) => s + Number((r as { amount: number }).amount), 0);
+
+  return {
+    openingBalance,
+    cashSalesToday,
+    cashReceiptsToday,
+    expensesCash,
+    supplierPaymentsCash,
+  };
+}
+
+export async function upsertDailyCashLive(p: {
+  cashDate: string;
+  openingBalance: number;
+  closingBalance: number;
+  notes?: string | null;
+}): Promise<void> {
+  const tenantId = await tenantIdForCurrentUser();
+  const { error } = await supabase.from("daily_cash").upsert(
+    {
+      tenant_id: tenantId,
+      cash_date: p.cashDate,
+      opening_balance: p.openingBalance,
+      closing_balance: p.closingBalance,
+      notes: p.notes ?? null,
+    },
+    { onConflict: "tenant_id,cash_date" },
+  );
+  if (error) throw error;
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  void queryClient.invalidateQueries({ queryKey: ["daily-cash-breakdown"] });
+}
+
+export async function fetchExpensesListLive(): Promise<ExpenseListItem[]> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("id, expense_date, category, amount, notes")
+    .order("expense_date", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    id: (r as { id: string }).id,
+    date: (r as { expense_date: string }).expense_date,
+    category: (r as { category: string }).category,
+    amount: Number((r as { amount: number }).amount),
+    notes: ((r as { notes: string | null }).notes as string) ?? "",
+  }));
+}
+
+export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
+  const { data, error } = await supabase
+    .from("purchases")
+    .select("id, purchase_no, purchase_date, total, suppliers(name)")
+    .order("purchase_date", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return (data ?? []).map((raw) => {
+    const r = raw as {
+      id: string;
+      purchase_no: string;
+      purchase_date: string;
+      total: number;
+      suppliers?: { name: string } | { name: string }[] | null;
+    };
+    const sup = Array.isArray(r.suppliers) ? r.suppliers[0] : r.suppliers;
+    return {
+      id: r.id,
+      purchaseNo: r.purchase_no,
+      date: r.purchase_date,
+      total: Number(r.total),
+      supplierName: sup?.name ?? "",
+    };
+  });
+}
+
+/** KPIs for dashboard selected period (exclusive end semantics: use inclusive dates in SQL). */
+export async function fetchDashboardPeriodTotalsLive(from: string, to: string): Promise<DashboardPeriodTotals> {
+  const [pex, eex, rex, dmx] = await Promise.all([
+    supabase.from("purchases").select("total").gte("purchase_date", from).lte("purchase_date", to),
+    supabase.from("expenses").select("amount").gte("expense_date", from).lte("expense_date", to),
+    supabase.from("returns").select("credit_note_amount").gte("return_date", from).lte("return_date", to),
+    supabase.from("damages").select("qty").gte("damage_date", from).lte("damage_date", to),
+  ]);
+  if (pex.error) throw pex.error;
+  if (eex.error) throw eex.error;
+  if (rex.error) throw rex.error;
+  if (dmx.error) throw dmx.error;
+  return {
+    totalPurchase: (pex.data ?? []).reduce((s, r) => s + Number((r as { total: number }).total), 0),
+    totalExpenses: (eex.data ?? []).reduce((s, r) => s + Number((r as { amount: number }).amount), 0),
+    returnsCredit: (rex.data ?? []).reduce(
+      (s, r) => s + Number((r as { credit_note_amount: number }).credit_note_amount),
+      0,
+    ),
+    damageQty: (dmx.data ?? []).reduce((s, r) => s + Number((r as { qty: number }).qty), 0),
+  };
+}
+
+export async function fetchDomainBundle(): Promise<DomainBundle> {
+  const [
+    products,
+    customers,
+    suppliers,
+    sales,
+    payments,
+    business,
+    pnl,
+    latestCashClosing,
+    expenses,
+    purchases,
+  ] = await Promise.all([
     fetchProductsLive(),
     fetchCustomersLive(),
     fetchSuppliersLive(),
     fetchSalesLive(),
     fetchPaymentsLive(),
     fetchTenantSettingsLive(),
+    fetchPnlTotalsLive(),
+    fetchLatestDailyCashClosingLive(),
+    fetchExpensesListLive(),
+    fetchPurchasesListLive(),
   ]);
-  return { products, customers, suppliers, sales, payments, business };
-}
-
-async function tenantIdForCurrentUser(): Promise<string> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not signed in");
-
-  const { data: tu, error: te } = await supabase
-    .from("tenant_users")
-    .select("tenant_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (te) throw te;
-  const tenantId = tu?.tenant_id as string | undefined;
-  if (!tenantId) throw new Error("No tenant for user");
-  return tenantId;
+  return {
+    products,
+    customers,
+    suppliers,
+    sales,
+    payments,
+    business,
+    pnl,
+    latestCashClosing,
+    expenses,
+    purchases,
+  };
 }
 
 export async function fetchCapitalEntriesLive(): Promise<CapitalEntry[]> {

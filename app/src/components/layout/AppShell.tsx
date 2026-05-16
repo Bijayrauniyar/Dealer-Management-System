@@ -16,6 +16,8 @@ const QUICK_ACTIONS = [
   { label: "Payment received",      to: "/app/payments/new" },
   { label: "Expense",               to: "/app/expenses/new" },
   { label: "Purchase",              to: "/app/purchases/new" },
+  { label: "Supplier pay",          to: "/app/supplier-payments/new" },
+  { label: "Daily cash",           to: "/app/daily-cash" },
 ];
 
 export const AppShell = () => {
@@ -37,12 +39,22 @@ export const AppShell = () => {
     <div className="min-h-screen bg-surface-page">
       {/* ── Header ── */}
       <header className="sticky top-0 z-20 border-b border-border-subtle bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
-          <Link to="/app/home" className="group">
-            <p className="text-xs font-medium text-teal-600 group-hover:underline">{business.name}</p>
-            <h1 className="text-base font-semibold text-foreground group-hover:text-teal-600 transition-colors">{business.region}</h1>
+        <div className="mx-auto flex max-w-xl items-start justify-between gap-3 px-4 py-3">
+          <Link to="/app/home" className="group min-w-0 flex-1">
+            <p
+              className="text-xs font-medium leading-snug text-teal-600 group-hover:underline line-clamp-2 break-words"
+              title={business.name}
+            >
+              {business.name}
+            </p>
+            <h1
+              className="mt-0.5 truncate text-base font-semibold text-foreground group-hover:text-teal-600 transition-colors"
+              title={business.region}
+            >
+              {business.region}
+            </h1>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 self-start pt-px">
             <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
               Online
             </span>

@@ -26,7 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useBusinessSettings, useProducts, upsertProductLive } from "@/store/domain";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { npr } from "@/lib/utils";
 
 const UOM_OPTIONS = ["PCS", "Box", "Ltr", "Kg", "Pkt", "Ctn", "Doz"];
@@ -121,26 +121,24 @@ export const ProductFormPage = () => {
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
-      if (isSupabaseConfigured) {
-        let code = `P-${Date.now().toString(36).toUpperCase()}`;
-        if (isEdit && existing) {
-          const { data: row } = await supabase.from("products").select("code").eq("id", existing.id).maybeSingle();
-          if (row?.code) code = row.code as string;
-        }
-        await upsertProductLive({
-          id: isEdit ? existing?.id : undefined,
-          code,
-          name: name.trim(),
-          category,
-          unit: uom,
-          purchase_price: buyPrice,
-          sale_price: sellPrice,
-          mrp,
-          discount_pct: discountPct,
-          vat_applicable: vatApplicable,
-          min_qty: minQty,
-        });
+      let code = `P-${Date.now().toString(36).toUpperCase()}`;
+      if (isEdit && existing) {
+        const { data: row } = await supabase.from("products").select("code").eq("id", existing.id).maybeSingle();
+        if (row?.code) code = row.code as string;
       }
+      await upsertProductLive({
+        id: isEdit ? existing?.id : undefined,
+        code,
+        name: name.trim(),
+        category,
+        unit: uom,
+        purchase_price: buyPrice,
+        sale_price: sellPrice,
+        mrp,
+        discount_pct: discountPct,
+        vat_applicable: vatApplicable,
+        min_qty: minQty,
+      });
       toast.success(isEdit ? `${name} updated.` : `${name} added.`);
       navigate("/app/products");
     } catch (e) {

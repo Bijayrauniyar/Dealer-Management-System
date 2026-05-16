@@ -10,6 +10,7 @@
  *     loading={isSaving}
  *   />
  */
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -19,6 +20,9 @@ type Props = {
   /** Optional secondary button shown above the primary (e.g. "Save & Print") */
   secondaryAction?: string;
   onSecondaryAction?: () => void;
+  /** e.g. open bill preview — always visible above save when set */
+  previewLabel?: string;
+  onPreview?: () => void;
   loading?: boolean;
   disabled?: boolean;
 };
@@ -29,6 +33,8 @@ export const StickyBar = ({
   onAction,
   secondaryAction,
   onSecondaryAction,
+  previewLabel,
+  onPreview,
   loading,
   disabled,
 }: Props) => (
@@ -45,6 +51,18 @@ export const StickyBar = ({
         </div>
       )}
       <div className="flex shrink-0 flex-col gap-2">
+        {previewLabel && onPreview && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onPreview}
+            disabled={disabled}
+            className="w-full gap-1.5"
+          >
+            <Eye size={15} /> {previewLabel}
+          </Button>
+        )}
         {secondaryAction && onSecondaryAction && (
           <Button
             variant="outline"

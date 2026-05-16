@@ -10,11 +10,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { PAYMENT_MODES, type Supplier } from "@/data/dummy";
+import { PAYMENT_MODES } from "@/domain/catalogs";
+import type { Supplier } from "@/domain/types";
 import { useSuppliers, commitSupplierPayment } from "@/store/domain";
 import { npr, fmtDate, toDateInput } from "@/lib/utils";
 
-// Simulated open purchase invoices per supplier
+/** Single allocation bucket from live supplier outstanding (Supabase); not a separate invoice table in v1. */
 type OpenInvoice = {
   id: string;
   invoiceNo: string;
@@ -26,7 +27,6 @@ type OpenInvoice = {
 function getOpenInvoices(supplierId: string, suppliers: Supplier[]): OpenInvoice[] {
   const supplier = suppliers.find((s) => s.id === supplierId);
   if (!supplier || supplier.outstanding === 0) return [];
-  // Demo: one synthetic “open invoice” = full supplier outstanding (scales with store after purchases/payments)
   const amt = supplier.outstanding;
   return [
     {
@@ -57,11 +57,10 @@ export const SupplierPaymentPage = () => {
   const selectedSupplier = SUPPLIERS.find((s) => s.id === supplierId);
   const openInvoices     = getOpenInvoices(supplierId, SUPPLIERS);
 
-  // Pre-select all invoices when supplier changes
+  // Pre-select all invoices when supplier / outstanding changes
   useEffect(() => {
     if (supplierId) setSelectedInvoices(new Set(openInvoices.map((inv) => inv.id)));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supplierId]);
+  }, [supplierId, openInvoices]);
 
   const toggleInvoice = (id: string) =>
     setSelectedInvoices((prev) => {
@@ -90,25 +89,39 @@ export const SupplierPaymentPage = () => {
   const unallocated    = Math.max(0, enteredAmt - totalAllocated);
 
   const handleSave = async () => {
-    if (!supplierId)               { toast.error("Choose a supplier."); return; }
+    if (!supplierId) { toast.error("Choose a supplier."); return; }
     if (!enteredAmt || enteredAmt <= 0) { toast.error("Enter a valid amount."); return; }
+    if (!selectedSupplier || selectedSupplier.outstanding <= 0) {
+      toast.error("This supplier has no outstanding balance to pay.");
+      return;
+    }
     if (openInvoices.length > 0 && selectedInvoices.size === 0) {
-      toast.error("Select at least one invoice."); return;
+      toast.error("Select at least one invoice.");
+      return;
     }
     if (mode === "Cheque" && !reference) { toast.error("Enter cheque number."); return; }
+    const payAmount =
+      openInvoices.length > 0
+        ? totalAllocated
+        : Math.min(enteredAmt, selectedSupplier.outstanding);
+    if (payAmount <= 0) {
+      toast.error("Enter an amount to apply.");
+      return;
+    }
     setSaving(true);
     try {
-      await new Promise((r) => setTimeout(r, 200));
-      const applied =
-        openInvoices.length > 0
-          ? totalAllocated
-          : Math.min(enteredAmt, selectedSupplier?.outstanding ?? 0);
-      if (applied > 0) await commitSupplierPayment({ supplierId, amount: applied });
+      await commitSupplierPayment({
+        supplierId,
+        amount: payAmount,
+        paymentDate: date,
+        mode,
+        notes: reference?.trim() || null,
+      });
       const invNos = openInvoices
         .filter((inv) => selectedInvoices.has(inv.id) && allocation.find((a) => a.id === inv.id)!.allocated > 0)
         .map((inv) => inv.invoiceNo)
         .join(", ");
-      toast.success(`${npr(applied)} paid against ${invNos || "supplier account"}`);
+      toast.success(`${npr(payAmount)} recorded — ${invNos || "supplier account"}`);
       navigate("/app/home");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Payment failed");
@@ -131,9 +144,16 @@ export const SupplierPaymentPage = () => {
             placeholder="Search supplier"
             options={supplierOptions}
             value={supplierId}
-            onChange={(id) => { setSupplierId(id); setAmount(""); }}
-            onClear={() => { setSupplierId(""); setSelectedInvoices(new Set()); }}
+            onChange={(id) => {
+              setSupplierId(id);
+              setAmount("");
+            }}
+            onClear={() => {
+              setSupplierId("");
+              setSelectedInvoices(new Set());
+            }}
             entityLabel="supplier"
+            onCreateNew={() => navigate("/app/suppliers/new")}
           />
         </FormField>
 

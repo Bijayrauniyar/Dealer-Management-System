@@ -3,7 +3,7 @@
  *
  * - Filters the `options` list as you type.
  * - Shows "+ New {entity}" option to inline-create (calls onCreateNew).
- * - In demo mode wires to the dummy data arrays.
+ * - Options come from the parent (e.g. live Supabase-backed lists).
  *
  * Usage:
  *   <EntityPicker

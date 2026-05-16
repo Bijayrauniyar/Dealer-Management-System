@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { signupTenantForCurrentUser } from "@/lib/signupTenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,5 +137,4 @@ function RegisterPageInner() {
   );
 }
 
-export const RegisterPage = () =>
-  isSupabaseConfigured ? <RegisterPageInner /> : <Navigate to="/login" replace />;
+export const RegisterPage = RegisterPageInner;

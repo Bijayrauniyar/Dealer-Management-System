@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSuppliers } from "@/store/domain";
-import type { Supplier } from "@/data/dummy";
+import type { Supplier } from "@/domain/types";
 import { npr } from "@/lib/utils";
 import { usePagination } from "@/lib/usePagination";
 
@@ -150,7 +150,7 @@ export const SuppliersPage = () => {
         >
           <ArrowLeft size={16} /> Back
         </button>
-        <Button size="sm">
+        <Button size="sm" type="button" onClick={() => navigate("/app/suppliers/new")}>
           <Plus size={14} /> Add supplier
         </Button>
       </div>

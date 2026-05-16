@@ -1,20 +1,32 @@
 import { useEffect } from "react";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
-import type { Sale } from "@/data/dummy";
+import type { Sale, BillStatus } from "@/domain/types";
 import { ArrowLeft, Printer, Pencil, CreditCard, RotateCcw } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { BillPrintView } from "@/components/app/BillPrintView";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { type BillStatus } from "@/data/dummy";
-import { useSaleByBill, useOutstandingBills, usePayments, useCustomers } from "@/store/domain";
+import { Card, CardContent } from "@/components/ui/card";
+import { useSaleByBill, useOutstandingBills, usePayments, useCustomers, useDomainBundleLoadState } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
 
-const TODAY = "2026-05-14";
+function saleFromLocationState(raw: unknown, urlBillNo: string | undefined): Sale | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const s = raw as Partial<Sale>;
+  if (typeof s.billNo !== "string" || !Array.isArray(s.lines)) return undefined;
+  const fromUrl = (urlBillNo ?? "").trim();
+  if (fromUrl) {
+    const decoded = decodeURIComponent(fromUrl);
+    if (s.billNo !== decoded && s.billNo !== fromUrl) return undefined;
+  }
+  return s as Sale;
+}
 
 function daysOverdue(dueDate: string) {
-  return Math.floor((new Date(TODAY).getTime() - new Date(dueDate).getTime()) / 86_400_000);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(dueDate);
+  d.setHours(0, 0, 0, 0);
+  return Math.floor((today.getTime() - d.getTime()) / 86_400_000);
 }
 
 const STATUS_CONFIG: Record<BillStatus, { label: string; variant: "success" | "warning" | "danger" | "teal" }> = {
@@ -36,10 +48,13 @@ export const BillDetailPage = () => {
   const PAYMENTS          = usePayments();
   const CUSTOMERS         = useCustomers();
 
-  const stateSale = (location.state as { sale?: Sale } | null)?.sale;
+  const loadState = useDomainBundleLoadState();
+
+  const stateSaleRaw = (location.state as { sale?: unknown } | null)?.sale;
+  const stateSale = saleFromLocationState(stateSaleRaw, billNo);
   const sale      = stateSale ?? storeSale;
   const obEntry   = OUTSTANDING_BILLS.find((b) => b.billNo === billNo);
-  const payments  = PAYMENTS.filter((p) => (p.billNo ?? "").split(", ").includes(billNo ?? ""));
+  const payments  = PAYMENTS.filter((p) => p.billNo === billNo);
   const customer  = sale ? CUSTOMERS.find((c) => c.id === sale.customerId) : undefined;
 
   useEffect(() => {
@@ -49,12 +64,49 @@ export const BillDetailPage = () => {
     }
   }, [searchParams, sale]);
 
+  if (loadState === "loading") {
+    return (
+      <PageShell>
+        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
+          <ArrowLeft size={16} /> Back
+        </button>
+        <p className="mt-16 text-center text-sm text-slate-600">Loading bill…</p>
+      </PageShell>
+    );
+  }
+
+  if (loadState === "error") {
+    return (
+      <PageShell>
+        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
+          <ArrowLeft size={16} /> Back
+        </button>
+        <p className="mt-16 text-center text-sm text-slate-600">Could not load shop data. Check your connection and try again.</p>
+      </PageShell>
+    );
+  }
+
   if (!sale) return (
     <PageShell>
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
+      <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
         <ArrowLeft size={16} /> Back
       </button>
-      <p className="mt-16 text-center text-sm text-muted">Bill not found.</p>
+      <div className="mx-auto mt-16 max-w-sm space-y-3 px-4 text-center">
+        <p className="text-sm text-slate-700">
+          No bill <span className="font-mono font-semibold text-slate-900">{billNo ? decodeURIComponent(billNo) : "—"}</span>{" "}
+          for this shop.
+        </p>
+        <p className="text-xs text-slate-500">
+          It may have been removed (for example after a data reset), or the link is outdated.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate("/app/home")}
+          className="text-sm font-semibold text-teal-600 underline underline-offset-2"
+        >
+          Go to home
+        </button>
+      </div>
     </PageShell>
   );
 

@@ -23,6 +23,11 @@
     "e2e:ui": "node scripts/ui-e2e-phase1.mjs",
     "e2e:all": "node scripts/e2e-phase1-matrix.mjs && node scripts/ui-e2e-phase1.mjs",
     "e2e:full": "node scripts/e2e-supabase-smoke.mjs && node scripts/e2e-supabase-live.mjs && node scripts/e2e-phase1-matrix.mjs && node scripts/ui-e2e-phase1.mjs",
+    "seed:demo": "node scripts/tenant-seed.mjs seed",
+    "seed:demo:reset": "node scripts/tenant-seed.mjs seed --reset",
+    "seed:purge": "node scripts/tenant-seed.mjs purge --yes",
+    "tenant:reset-data": "node scripts/reset-tenant-data.mjs --yes",
+    "e2e:seed:selftest": "node scripts/e2e-tenant-seed-selftest.mjs",
     "supabase:types": "supabase gen types typescript --linked > src/types/database.types.ts"
   },
   "dependencies": {

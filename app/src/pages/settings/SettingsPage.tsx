@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Building2, Phone, MapPin, FileText, Receipt, SlidersHorizontal, RotateCcw } from "lucide-react";
+import { Building2, Phone, MapPin, FileText, Receipt, SlidersHorizontal } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { BUSINESS } from "@/data/dummy";
-import { resetToSeed } from "@/store/domain";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { queryClient } from "@/lib/queryClient";
 import { DOMAIN_QUERY_KEY } from "@/lib/live/domainLive";
@@ -21,245 +19,6 @@ const SectionTitle = ({ icon: Icon, label }: { icon: React.ElementType; label: s
   </div>
 );
 
-function SettingsDemo() {
-  const navigate = useNavigate();
-
-  const [name, setName] = useState(BUSINESS.name);
-  const [legalName, setLegalName] = useState(BUSINESS.legalName);
-  const [region, setRegion] = useState(BUSINESS.region);
-  const [phone, setPhone] = useState(BUSINESS.phone);
-  const [mobile, setMobile] = useState(BUSINESS.mobile);
-  const [email, setEmail] = useState(BUSINESS.email);
-  const [addr1, setAddr1] = useState(BUSINESS.addressLine1);
-  const [addr2, setAddr2] = useState(BUSINESS.addressLine2);
-  const [district, setDistrict] = useState(BUSINESS.district);
-  const [province, setProvince] = useState(BUSINESS.province);
-  const [pan, setPan] = useState(BUSINESS.panNumber);
-  const [vatRegistered, setVatReg] = useState(BUSINESS.vatRegistered);
-  const [vatNumber, setVatNumber] = useState(BUSINESS.vatNumber || BUSINESS.panNumber);
-  const [prefix, setPrefix] = useState(BUSINESS.invoicePrefix);
-  const [billFooter, setBillFooter] = useState(BUSINESS.billFooter);
-  const [overdueDays, setOverdueDays] = useState(BUSINESS.overdueDays);
-  const [dueSoonDays, setDueSoonDays] = useState(BUSINESS.dueSoonDays);
-  const [defaultMarkupPct, setDefaultMarkupPct] = useState(BUSINESS.defaultMarkupPct);
-  const [defaultMinQty, setDefaultMinQty] = useState(BUSINESS.defaultMinQty);
-  const [saving, setSaving] = useState(false);
-
-  const handlePanChange = (v: string) => {
-    setPan(v);
-    if (!vatRegistered || vatNumber === pan) setVatNumber(v);
-  };
-  const handleVatRegToggle = (v: boolean) => {
-    setVatReg(v);
-    if (v && !vatNumber) setVatNumber(pan);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 700));
-    toast.success("Settings saved.");
-    setSaving(false);
-  };
-
-  return (
-    <PageShell stickyBar>
-      <h1 className="mb-1 text-lg font-bold text-foreground">Settings</h1>
-      <p className="mb-5 text-sm text-muted">Business profile &amp; invoice configuration</p>
-
-      <SectionTitle icon={Building2} label="Business identity" />
-      <div className="space-y-4">
-        <FormField label="Trading name" hint="Shown on app header and invoices">
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
-        </FormField>
-        <FormField label="Legal / registered name" hint="Full name as per registration certificate">
-          <Input value={legalName} onChange={(e) => setLegalName(e.target.value)} />
-        </FormField>
-        <FormField label="Region / depot area">
-          <Input value={region} onChange={(e) => setRegion(e.target.value)} />
-        </FormField>
-      </div>
-
-      <SectionTitle icon={Phone} label="Contact details" />
-      <div className="space-y-4">
-        <FormField label="Office / landline phone">
-          <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </FormField>
-        <FormField label="Mobile number">
-          <Input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} />
-        </FormField>
-        <FormField label="Email address">
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </FormField>
-      </div>
-
-      <SectionTitle icon={MapPin} label="Business address" />
-      <div className="space-y-4">
-        <FormField label="Address line 1">
-          <Input value={addr1} onChange={(e) => setAddr1(e.target.value)} placeholder="Street / locality" />
-        </FormField>
-        <FormField label="Address line 2">
-          <Input value={addr2} onChange={(e) => setAddr2(e.target.value)} placeholder="Ward / area" />
-        </FormField>
-        <FormField label="District">
-          <Input value={district} onChange={(e) => setDistrict(e.target.value)} />
-        </FormField>
-        <FormField label="Province">
-          <Input value={province} onChange={(e) => setProvince(e.target.value)} />
-        </FormField>
-      </div>
-
-      <SectionTitle icon={FileText} label="Tax &amp; registration" />
-      <div className="space-y-4">
-        <FormField
-          label="PAN number"
-          hint="9-digit Permanent Account Number (Nepal IRD). Every registered business must have this. Printed on all bills."
-        >
-          <Input
-            value={pan}
-            onChange={(e) => handlePanChange(e.target.value)}
-            placeholder="e.g. 305812456"
-            maxLength={9}
-          />
-        </FormField>
-        <FormField
-          label="VAT registered?"
-          hint="VAT is required once annual turnover exceeds NPR 50 lakh (goods). Your VAT number is the same as your PAN number — just set Yes once you receive the VAT certificate."
-        >
-          <div className="flex gap-3">
-            {[true, false].map((v) => (
-              <button
-                key={String(v)}
-                type="button"
-                onClick={() => handleVatRegToggle(v)}
-                className={`flex-1 rounded-lg border py-2.5 text-sm font-semibold transition-colors ${
-                  vatRegistered === v
-                    ? "border-teal-600 bg-teal-600 text-white"
-                    : "border-border-subtle bg-surface-card text-muted"
-                }`}
-              >
-                {v ? "Yes" : "No"}
-              </button>
-            ))}
-          </div>
-        </FormField>
-        {vatRegistered && (
-          <FormField
-            label="VAT number"
-            hint="In Nepal, your VAT number = your PAN number. Pre-filled automatically."
-          >
-            <Input
-              value={vatNumber}
-              onChange={(e) => setVatNumber(e.target.value)}
-              placeholder="Same as PAN, e.g. 305812456"
-              maxLength={9}
-            />
-          </FormField>
-        )}
-      </div>
-
-      <SectionTitle icon={Receipt} label="Invoice / bill settings" />
-      <div className="space-y-4">
-        <FormField label="Invoice prefix" hint="Prepended to bill numbers — e.g. HB → HB-142">
-          <Input value={prefix} onChange={(e) => setPrefix(e.target.value)} maxLength={6} />
-        </FormField>
-        <FormField label="Currency">
-          <Input value="NPR — Nepalese Rupee" disabled />
-        </FormField>
-        <FormField label="Bill footer text" hint="Printed at bottom of every invoice">
-          <textarea
-            className="w-full rounded-lg border border-border-subtle bg-surface-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
-            rows={3}
-            value={billFooter}
-            onChange={(e) => setBillFooter(e.target.value)}
-          />
-        </FormField>
-      </div>
-
-      <SectionTitle icon={SlidersHorizontal} label="Alerts & thresholds" />
-      <div className="space-y-4">
-        <FormField
-          label="Overdue after (days)"
-          hint="Bills past due by this many days are flagged red as 'Overdue'. Default: 7"
-        >
-          <Input
-            type="number"
-            min={0}
-            max={90}
-            value={overdueDays}
-            onChange={(e) => setOverdueDays(Number(e.target.value))}
-          />
-        </FormField>
-        <FormField
-          label="Due-soon reminder (days)"
-          hint="Show a reminder for bills due within this many days. Default: 3"
-        >
-          <Input
-            type="number"
-            min={0}
-            max={30}
-            value={dueSoonDays}
-            onChange={(e) => setDueSoonDays(Number(e.target.value))}
-          />
-        </FormField>
-        <FormField
-          label="Default sell price markup (%)"
-          hint="When adding a new product, sell price = buy price × (1 + markup%). You can override per product. Default: 15%"
-        >
-          <Input
-            type="number"
-            min={0}
-            max={500}
-            value={defaultMarkupPct}
-            onChange={(e) => setDefaultMarkupPct(Number(e.target.value))}
-          />
-        </FormField>
-        <FormField
-          label="Default low stock threshold (qty)"
-          hint="New products start with this minimum quantity. Change per product if needed. Default: 20"
-        >
-          <Input type="number" min={0} value={defaultMinQty} onChange={(e) => setDefaultMinQty(Number(e.target.value))} />
-        </FormField>
-      </div>
-
-      <div className="mt-8 mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 space-y-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Demo data</p>
-        <p className="text-xs text-amber-700/80">
-          All entries (bills, payments, stock changes) are saved to your browser's local storage. Use "Reset" to wipe
-          everything and restore the original demo data.
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (window.confirm("Reset all demo data? This cannot be undone.")) {
-              resetToSeed();
-              toast.success("Demo data reset to original.");
-            }
-          }}
-          className="border-amber-300 text-amber-700 hover:bg-amber-100"
-        >
-          <RotateCcw size={13} /> Reset demo data
-        </Button>
-      </div>
-
-      <div className="mb-6">
-        <Button
-          variant="secondary"
-          size="full"
-          onClick={() => {
-            toast.info("Signed out (demo).");
-            navigate("/login");
-          }}
-          className="text-danger border-danger/30 hover:bg-red-50"
-        >
-          Sign out
-        </Button>
-      </div>
-
-      <StickyBar action="Save settings" onAction={() => void handleSave()} loading={saving} />
-    </PageShell>
-  );
-}
 
 type TenantSettingsRow = {
   name: string;
@@ -284,7 +43,7 @@ type TenantSettingsRow = {
   default_min_qty: number;
 };
 
-function SettingsLive() {
+export function SettingsPage() {
   const navigate = useNavigate();
   const { tenantId, signOut } = useAuth();
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -544,12 +303,15 @@ function SettingsLive() {
               Sign out
             </Button>
           </div>
-
-          <StickyBar action="Save settings" onAction={() => void handleSave()} loading={saving} />
         </>
       )}
+
+      <StickyBar
+        action="Save settings"
+        onAction={() => void handleSave()}
+        loading={saving}
+        disabled={!loaded || !tenantId || !!loadError}
+      />
     </PageShell>
   );
 }
-
-export const SettingsPage = () => (isSupabaseConfigured ? <SettingsLive /> : <SettingsDemo />);

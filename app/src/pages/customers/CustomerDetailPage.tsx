@@ -7,7 +7,7 @@ import { SectionHeader } from "@/components/app/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type BillStatus, type OutstandingBill } from "@/data/dummy";
+import type { BillStatus, OutstandingBill } from "@/domain/types";
 import { useCustomers, useOutstandingBills, usePayments } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
 import { usePagination } from "@/lib/usePagination";

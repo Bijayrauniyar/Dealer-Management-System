@@ -7,17 +7,14 @@ const anonRaw =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   "";
 
-/** True when Vite env exposes both URL and anon/publishable key (live Supabase mode). */
+/** True when Vite env exposes both URL and anon/publishable key. */
 export const isSupabaseConfigured = Boolean(urlRaw && anonRaw);
 
-if (!isSupabaseConfigured) {
-  console.warn(
-    "Missing Supabase env vars: set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) — running demo mode.",
-  );
-}
-
-/** `createClient` rejects empty strings; demo mode never calls the network when `isSupabaseConfigured` is false. */
+/**
+ * Client is always created so imports resolve. Use `isSupabaseConfigured` + `MissingSupabaseEnv`
+ * before routing authenticated flows. CI/production builds must inject real or placeholder `VITE_*`.
+ */
 export const supabase = createClient(
-  isSupabaseConfigured ? urlRaw : "https://demo.invalid",
-  isSupabaseConfigured ? anonRaw : "demo-anon-placeholder",
+  urlRaw || "https://placeholder.supabase.co",
+  anonRaw || "eyJhbGciOiJIUzI1NiJ9.placeholder-not-configured",
 );

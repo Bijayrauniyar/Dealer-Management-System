@@ -9,13 +9,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CAPITAL_CATEGORIES, type CapitalEntry } from "@/data/dummy";
+import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
+import type { CapitalEntry } from "@/domain/types";
 import { commitCapitalEntry } from "@/store/domain";
 import { npr, toDateInput } from "@/lib/utils";
 
 export const CapitalEntryPage = () => {
   const navigate = useNavigate();
-  const [category, setCategory]       = useState(CAPITAL_CATEGORIES[0].value);
+  const [category, setCategory]       = useState<CapitalEntry["category"]>(CAPITAL_CATEGORIES[0].value);
   const [name, setName]               = useState("");
   const [amount, setAmount]           = useState("");
   const [currentValue, setCurrentValue] = useState("");
@@ -66,7 +67,7 @@ export const CapitalEntryPage = () => {
       <div className="space-y-4">
         {/* ── Category ── */}
         <FormField label="Type" required>
-          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+          <Select value={category} onChange={(e) => setCategory(e.target.value as CapitalEntry["category"])}>
             {CAPITAL_CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}

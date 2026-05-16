@@ -101,6 +101,31 @@ export function createE2eReporter(title) {
   };
 }
 
+/**
+ * Service-role client (bypasses RLS). Use only in trusted local/CI scripts — never in the browser.
+ * Requires SUPABASE_SERVICE_ROLE_KEY in app/.env.local or process.env.
+ */
+export function loadAdminClient(appDir) {
+  const env = loadEnvFile(resolve(appDir, ".env.local"));
+  const url = env.VITE_SUPABASE_URL;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "loadAdminClient: set SUPABASE_SERVICE_ROLE_KEY in app/.env.local (or env) along with VITE_SUPABASE_URL",
+    );
+  }
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+/** Prefer explicit UUID, then TENANT_ID env, else the tenant for the signed-in E2E user. */
+export async function resolveTenantId(appDir, explicitTenantId) {
+  const fromEnv = process.env.TENANT_ID?.trim();
+  const id = (explicitTenantId || fromEnv || "").trim();
+  if (id) return id;
+  const { tenantId } = await createAuthedClient(appDir);
+  return tenantId;
+}
+
 export async function createAuthedClient(appDir) {
   const env = loadEnvFile(resolve(appDir, ".env.local"));
   const creds = loadCreds(resolve(appDir, ".e2e-credentials.local"));

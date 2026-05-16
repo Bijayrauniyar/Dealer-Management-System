@@ -44,7 +44,40 @@ async function pickEntity(page, placeholder, text) {
 }
 
 async function sticky(page, label) {
-  await page.getByRole("button", { name: label }).click();
+  const btn = page.getByRole("button", { name: label });
+  await btn.waitFor({ state: "visible", timeout: 45_000 });
+  for (let i = 0; i < 90; i++) {
+    if (await btn.isEnabled()) break;
+    await page.waitForTimeout(500);
+  }
+  if (!(await btn.isEnabled())) {
+    throw new Error(`Button "${label}" stayed disabled after load`);
+  }
+  await btn.scrollIntoViewIfNeeded();
+  await btn.click();
+}
+
+/** Visible Sonner toasts (errors surface save/RPC failures). */
+async function sonnerText(page) {
+  const loc = page.locator("[data-sonner-toast]");
+  const n = await loc.count().catch(() => 0);
+  const parts = [];
+  for (let i = 0; i < Math.min(n, 4); i++) {
+    const t = (await loc.nth(i).innerText().catch(() => "")).trim();
+    if (t) parts.push(t);
+  }
+  return parts.join(" | ");
+}
+
+/** React Router `navigate()` only updates history — Playwright `waitForURL(..., waitUntil)` often never resolves. */
+async function waitForPathnameMatch(page, predicate, timeoutMs, errLabel) {
+  try {
+    await page.waitForFunction(predicate, { timeout: timeoutMs });
+  } catch {
+    const url = page.url();
+    const toast = await sonnerText(page);
+    throw new Error(`${errLabel}: still at ${url}${toast ? ` | ${toast}` : ""}`);
+  }
 }
 
 async function goMore(page, label) {
@@ -80,6 +113,16 @@ if (!tenantId) {
   process.exit(1);
 }
 ok("API signIn + tenant");
+
+const { data: tenRow } = await supabase.from("tenants").select("status").eq("id", tenantId).maybeSingle();
+if (tenRow?.status !== "active") {
+  console.error(
+    `\nAbort: tenant status is "${tenRow?.status ?? "unknown"}" (needs active for /app/* UI).\n` +
+      `Run in Supabase SQL Editor:\n  update tenants set status = 'active' where id = '${tenantId}';\n` +
+      `Or apply migration 0004 (dev) or re-run create-e2e-user-and-test.mjs with SUPABASE_SERVICE_ROLE_KEY.\n`,
+  );
+  process.exit(1);
+}
 
 // Customer for sale/payment flows (API — avoids picker race before domain bundle loads)
 const { error: cErr } = await supabase.from("customers").insert({
@@ -189,7 +232,12 @@ try {
   const dueField = page.locator("label").filter({ hasText: "Due date" }).locator("..").locator('input[type="date"]');
   if ((await dueField.count()) > 0) await dueField.fill(new Date().toISOString().slice(0, 10));
   await sticky(page, "Save bill");
-  await page.waitForURL(/\/app\/bills\//, { timeout: 20000 });
+  await waitForPathnameMatch(
+    page,
+    () => /^\/app\/bills\/.+/.test(window.location.pathname),
+    20000,
+    "after Save bill",
+  );
   const billNo = decodeURIComponent(page.url().match(/\/bills\/([^?]+)/)?.[1] ?? "");
   const { data: billRow } = await supabase.from("sales_bills").select("total").eq("bill_no", billNo).maybeSingle();
   if (!billRow || Math.abs(Number(billRow.total) - expectedUiTotal) > 0.5) {
@@ -203,18 +251,82 @@ try {
   await page.getByText(footerText).waitFor({ timeout: 10000 });
   ok("4c. bill print footer", footerText);
 
+  // Leave ?print=1 so window.print() can't steal focus / block the next clicks.
+  await page.goto(`${BASE_URL}/app/bills/${encodeURIComponent(billNo)}`, { waitUntil: "domcontentloaded" });
+
   await page.locator("button:has(svg.lucide-pencil)").click();
-  await page.waitForURL(/\/app\/sales\/edit\//, { timeout: 15000 });
+  await waitForPathnameMatch(
+    page,
+    () => /\/app\/sales\/edit\//.test(window.location.pathname),
+    15000,
+    "open bill edit (pencil)",
+  );
   const updateBtn = page.getByRole("button", { name: "Update bill" });
   for (let i = 0; i < 40 && !(await updateBtn.isEnabled()); i++) {
     await page.waitForTimeout(500);
   }
   if (await updateBtn.isEnabled()) {
-    await updateBtn.click();
-    await page.getByText(/not supported yet/i).waitFor({ timeout: 8000 });
-    ok("4d. bill edit blocked (live)");
+    // Change qty so RPC must persist new lines + totals (not a no-op).
+    const qtyEdit = page.locator("div").filter({ hasText: /^Qty$/ }).locator('input[type="number"]').first();
+    await qtyEdit.fill("6");
+    const saleStickyEdit = page.locator(".fixed.bottom-16").filter({
+      has: page.getByRole("button", { name: "Update bill" }),
+    });
+    const grandAfterEditText = await saleStickyEdit
+      .locator("div.flex.items-center")
+      .filter({ has: page.getByText("Grand total", { exact: true }) })
+      .locator("span.font-semibold")
+      .first()
+      .textContent();
+    const expectedAfterEdit = 600; /* 6 × 100, no bill VAT on seeded product */
+    const grandAfterEdit = parseNpr(grandAfterEditText);
+    if (Math.abs(grandAfterEdit - expectedAfterEdit) > 0.5) {
+      throw new Error(`Edit screen grand total expected ${expectedAfterEdit}, got ${grandAfterEdit} (${grandAfterEditText})`);
+    }
+    const rpcWait = page.waitForResponse(
+      (r) => r.url().includes("update_sales_bill") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await sticky(page, "Update bill");
+    let rpcResp;
+    try {
+      rpcResp = await rpcWait;
+    } catch {
+      const toast = await sonnerText(page);
+      throw new Error(
+        `No update_sales_bill response (save may not have run). url=${page.url()}${toast ? ` | ${toast}` : ""}`,
+      );
+    }
+    const rpcBody = await rpcResp.text().catch(() => "");
+    if (!rpcResp.ok()) {
+      const toast = await sonnerText(page);
+      throw new Error(
+        `update_sales_bill HTTP ${rpcResp.status()}: ${rpcBody.slice(0, 800)}${toast ? ` | ${toast}` : ""}`,
+      );
+    }
+    await waitForPathnameMatch(
+      page,
+      () => /^\/app\/bills\/.+/.test(window.location.pathname),
+      15_000,
+      "after Update bill",
+    );
+    if (await page.getByText(/Could not save bill/i).isVisible().catch(() => false)) {
+      throw new Error("Update bill failed (error toast)");
+    }
+    const { data: billEdited } = await supabase
+      .from("sales_bills")
+      .select("total, subtotal")
+      .eq("bill_no", billNo)
+      .maybeSingle();
+    if (!billEdited || Math.abs(Number(billEdited.total) - expectedAfterEdit) > 0.5) {
+      throw new Error(`DB total after edit expected ${expectedAfterEdit}, got ${billEdited?.total}`);
+    }
+    if (Math.abs(Number(billEdited.subtotal) - expectedAfterEdit) > 0.5) {
+      throw new Error(`DB subtotal after edit expected ${expectedAfterEdit}, got ${billEdited?.subtotal}`);
+    }
+    ok("4d. bill edit updates line + DB (update_sales_bill)", billNo);
   } else {
-    ok("4d. bill edit blocked (live)", "Update disabled (bill not hydrated)");
+    ok("4d. bill update", "Update disabled (bill not hydrated)");
   }
 
   ok("4. sale");

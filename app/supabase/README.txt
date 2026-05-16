@@ -42,10 +42,18 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Open: app/supabase/migrations/0005_fix_phase1_rpc_jsonb.sql
    - Copy entire file → Paste → Run → Success.
 
+7. Migration 0006 (supplier_payments ledger — supplier pay + daily cash supplier line)
+   - Open: app/supabase/migrations/0006_supplier_payments_ledger.sql
+   - Copy entire file → Paste → Run → Success.
+
+8. Migration 0007 (update_sales_bill — edit existing bills from the app + API matrix)
+   - Open: app/supabase/migrations/0007_update_sales_bill.sql
+   - Copy entire file → Paste → Run → Success.
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 
-7. Verify (run this small query in SQL Editor):
+9. Verify (run this small query in SQL Editor):
 
    select table_name
    from information_schema.tables
@@ -63,7 +71,7 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
 
    Expect 1 row.
 
-7. Table Editor (left sidebar) → schema "public" → you should see many tables.
+10. Table Editor (left sidebar) → schema "public" → you should see many tables (including supplier_payments after 0006).
 
 --------------------------------------------------------------------------------
 METHOD B — Supabase CLI (optional; tracks migrations in Dashboard)
@@ -87,7 +95,7 @@ Prerequisites: Terminal, Node/npm, database password from
   # Apply all files in supabase/migrations/ (do NOT run "migration new")
   npx supabase db push
 
-  # Verify same SQL as step 6 in Method A
+  # Verify same SQL as the verification step in Method A (table + RPC checks).
 
 --------------------------------------------------------------------------------
 AFTER MIGRATIONS — app testing
@@ -118,4 +126,4 @@ TROUBLESHOOTING
 - SQL error on Run → read line number; common: ran 0002 before 0001, or partial
   failed run; paste error when asking for help.
 
-Order: 0001 → 0002 → 0003 → 0005 (0004 optional dev-only).
+Order: 0001 → 0002 → 0003 → 0005 → 0006 (0004 optional dev-only).

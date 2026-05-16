@@ -14,7 +14,7 @@ export const PageShell = ({ className, stickyBar, ...props }: Props) => (
   <div
     className={cn(
       "mx-auto w-full max-w-xl px-4 pt-4",
-      stickyBar ? "pb-36" : "pb-28",
+      stickyBar ? "pb-44" : "pb-28",
       className,
     )}
     {...props}

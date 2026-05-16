@@ -7,6 +7,7 @@ import { NoTenantPage } from "@/pages/NoTenantPage";
 import { HomePage } from "@/pages/home/HomePage";
 import { AgingDetailPage } from "@/pages/home/AgingDetailPage";
 import { OverduePage } from "@/pages/home/OverduePage";
+import { OutstandingBillsPage } from "@/pages/home/OutstandingBillsPage";
 import { PeriodListPage } from "@/pages/home/PeriodListPage";
 import { SaleEntryPage } from "@/pages/sales/SaleEntryPage";
 import { PaymentPage } from "@/pages/payments/PaymentPage";
@@ -22,6 +23,7 @@ import { CustomersPage } from "@/pages/customers/CustomersPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { CustomerFormPage } from "@/pages/customers/CustomerFormPage";
 import { SuppliersPage } from "@/pages/suppliers/SuppliersPage";
+import { SupplierFormPage } from "@/pages/suppliers/SupplierFormPage";
 import { StockPage } from "@/pages/stock/StockPage";
 import { MorePage } from "@/pages/more/MorePage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
@@ -32,30 +34,27 @@ import { BillDetailPage } from "@/pages/bills/BillDetailPage";
 import { DashboardPage } from "@/pages/dashboard/DashboardPage";
 import { ProductFormPage } from "@/pages/products/ProductFormPage";
 import { ProtectedRoute } from "@/lib/auth";
-import { isSupabaseConfigured } from "@/lib/supabase";
-
-/** When false, Vite env has Supabase URL + key — app uses real auth and protected routes. */
-export const DEMO_MODE = !isSupabaseConfigured;
 
 const AppRoutesInner = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
-    {isSupabaseConfigured && (
-      <>
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/pending-approval" element={<PendingApprovalPage />} />
-        <Route path="/no-tenant" element={<NoTenantPage />} />
-      </>
-    )}
+    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/pending-approval" element={<PendingApprovalPage />} />
+    <Route path="/no-tenant" element={<NoTenantPage />} />
 
     <Route
       path="/app"
-      element={isSupabaseConfigured ? <ProtectedRoute><AppShell /></ProtectedRoute> : <AppShell />}
+      element={
+        <ProtectedRoute>
+          <AppShell />
+        </ProtectedRoute>
+      }
     >
       <Route index element={<Navigate to="home" replace />} />
       <Route path="home" element={<HomePage />} />
       <Route path="home/aging/:bucket" element={<AgingDetailPage />} />
       <Route path="home/overdue" element={<OverduePage />} />
+      <Route path="home/outstanding" element={<OutstandingBillsPage />} />
       <Route path="home/period/:type" element={<PeriodListPage />} />
       <Route path="sales/new" element={<SaleEntryPage />} />
       <Route path="sales/edit/:billNo" element={<SaleEntryPage />} />
@@ -77,6 +76,7 @@ const AppRoutesInner = () => (
       <Route path="customers/edit/:customerId" element={<CustomerFormPage />} />
       <Route path="customers/:id" element={<CustomerDetailPage />} />
       <Route path="suppliers" element={<SuppliersPage />} />
+      <Route path="suppliers/new" element={<SupplierFormPage />} />
       <Route path="stock" element={<StockPage />} />
       <Route path="company" element={<CompanyOverviewPage />} />
       <Route path="capital" element={<CapitalListPage />} />
@@ -85,7 +85,7 @@ const AppRoutesInner = () => (
       <Route path="settings" element={<SettingsPage />} />
     </Route>
 
-    <Route path="*" element={<Navigate to={DEMO_MODE ? "/app/home" : "/login"} replace />} />
+    <Route path="*" element={<Navigate to="/login" replace />} />
   </Routes>
 );
 

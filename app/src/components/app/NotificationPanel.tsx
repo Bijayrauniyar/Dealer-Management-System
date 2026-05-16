@@ -15,9 +15,8 @@ import {
   Truck, BookOpen, CheckCheck, ChevronRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { Product, Sale } from "@/data/dummy";
-import { BUSINESS } from "@/data/dummy";
-import { useProducts, useSales } from "@/store/domain";
+import type { Product, Sale } from "@/domain/types";
+import { useBusinessSettings, useProducts, useSales } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -47,8 +46,8 @@ const daysDiff = (iso: string) => {
 export function buildNotifications(
   sales: Sale[],
   products: Product[],
-  overdueDays = BUSINESS.overdueDays,
-  dueSoonDays = BUSINESS.dueSoonDays,
+  overdueDays: number,
+  dueSoonDays: number,
 ): Notif[] {
   const ns: Notif[] = [];
 
@@ -95,22 +94,6 @@ export function buildNotifications(
       });
     });
 
-  // 4. Short receive pending (demo)
-  ns.push({
-    id: "short-demo", type: "short_receive", tab: "other",
-    title: "Short receive pending",
-    body: "Havmor Logistics · 15 PCS Vanilla 500ml unresolved",
-    linkTo: "/app/purchases", urgent: false,
-  });
-
-  // 5. Daily cash open (demo)
-  ns.push({
-    id: "cash-open", type: "cash_open", tab: "other",
-    title: "Daily cash not closed",
-    body: `${fmtDate(today.toISOString().slice(0, 10))} · still in draft`,
-    linkTo: "/app/daily-cash", urgent: false,
-  });
-
   return ns;
 }
 
@@ -144,9 +127,13 @@ type Props = { onClose: () => void };
 
 export const NotificationPanel = ({ onClose }: Props) => {
   const [activeTab, setActiveTab] = useState<TabId>("all");
-  const sales    = useSales();
+  const business = useBusinessSettings();
+  const sales = useSales();
   const products = useProducts();
-  const all      = useMemo(() => buildNotifications(sales, products), [sales, products]);
+  const all = useMemo(
+    () => buildNotifications(sales, products, business.overdueDays, business.dueSoonDays),
+    [sales, products, business.overdueDays, business.dueSoonDays],
+  );
 
   const filtered = activeTab === "all" ? all : all.filter((n) => n.tab === activeTab);
   const urgent   = filtered.filter((n) => n.urgent);

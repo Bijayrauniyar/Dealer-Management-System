@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { ListRow } from "@/components/app/ListRow";
@@ -27,6 +27,12 @@ export const OverduePage = () => {
         <ArrowLeft size={16} /> Back
       </button>
       <h1 className="mb-4 text-lg font-semibold">Overdue ({OVERDUE_DAYS}+ days) and due &gt; 0</h1>
+      <p className="mb-4 text-xs text-muted">
+        <Link to="/app/home/outstanding" className="font-medium text-teal-600 underline">
+          View all open bills
+        </Link>{" "}
+        (any balance) — this screen only lists accounts past {OVERDUE_DAYS} days with a balance.
+      </p>
       {overdue.length === 0 ? (
         <EmptyState title="No overdue customers" body="All customers are up to date." />
       ) : (

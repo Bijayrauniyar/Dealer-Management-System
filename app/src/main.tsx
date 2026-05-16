@@ -6,6 +6,7 @@ import { queryClient } from "@/lib/queryClient";
 import { AppRouter } from "@/routes/AppRouter";
 import { AuthProvider } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { MissingSupabaseEnv } from "@/components/MissingSupabaseEnv";
 import "./index.css";
 
 const root = (
@@ -17,6 +18,6 @@ const root = (
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {isSupabaseConfigured ? <AuthProvider>{root}</AuthProvider> : root}
+    {isSupabaseConfigured ? <AuthProvider>{root}</AuthProvider> : <MissingSupabaseEnv />}
   </React.StrictMode>,
 );

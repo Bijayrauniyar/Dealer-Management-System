@@ -12,9 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PAYMENT_MODES } from "@/data/dummy";
+import { PAYMENT_MODES } from "@/domain/catalogs";
 import { useProducts, useCustomers, useSaleByBill, commitSale, useNextBillNo } from "@/store/domain";
-import { isSupabaseConfigured } from "@/lib/supabase";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
 
 type Line = {
@@ -142,7 +141,8 @@ export const SaleEntryPage = () => {
   const taxBase        = afterDiscount + termsAmt;
   const vatAmt         = vatEnabled ? Math.round(taxBase * VAT_RATE / 100) : 0;
   const grandTotal     = taxBase + vatAmt;
-  const paidAmt        = Math.min(Number(paidNow) || 0, grandTotal);
+  const recordedPaid   = isEdit && existing ? Number(existing.paidNow) : 0;
+  const paidAmt        = isEdit ? recordedPaid : Math.min(Number(paidNow) || 0, grandTotal);
   const balanceDue     = grandTotal - paidAmt;
 
   // ── Line helpers ────────────────────────────────────────────────────
@@ -155,8 +155,12 @@ export const SaleEntryPage = () => {
   const validate = () => {
     if (!customerId) { toast.error("Choose a customer."); return false; }
     if (lines.every((l) => !l.productId)) { toast.error("Add at least one item."); return false; }
+    if (isEdit && grandTotal + 0.01 < recordedPaid) {
+      toast.error(`New total (${npr(grandTotal)}) can't be less than already collected (${npr(recordedPaid)}).`);
+      return false;
+    }
     if (balanceDue > 0 && !dueDate) { toast.error("Set a due date for the outstanding balance."); return false; }
-    if (isSupabaseConfigured && !isEdit && !billNo) {
+    if (!isEdit && !billNo) {
       toast.error("Bill number is loading — try again in a moment.");
       return false;
     }
@@ -170,7 +174,7 @@ export const SaleEntryPage = () => {
   // Build a Sale object from current form state so BillDetailPage can render
   // it immediately without needing it to exist in the static SALES_BY_BILL map.
   const buildSale = () => ({
-    id:              savedBillNo,
+    id:              isEdit && existing ? existing.id : savedBillNo,
     billNo:          savedBillNo,
     date:            billDate,
     customerId,
@@ -205,23 +209,25 @@ export const SaleEntryPage = () => {
 
   const handleSave = async () => {
     if (!validate()) return;
-    if (isSupabaseConfigured && isEdit) {
-      toast.error("Editing an existing server bill is not supported yet. Create a new bill.");
-      return;
-    }
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
       const sale = buildSale();
       const finalBillNo = await commitSale(sale);
+      navigate(`/app/bills/${encodeURIComponent(finalBillNo)}`, { state: { sale: { ...sale, billNo: finalBillNo } } });
       toast.success(
         isEdit
-          ? `Bill ${finalBillNo} updated`
+          ? `Bill ${finalBillNo} updated · ${npr(grandTotal)}${balanceDue > 0 ? ` · ${npr(balanceDue)} due` : ""}`
           : `Bill ${finalBillNo} saved · ${npr(grandTotal)}${balanceDue > 0 ? ` · ${npr(balanceDue)} due` : " · Fully paid"}`,
       );
-      navigate(`/app/bills/${finalBillNo}`, { state: { sale: { ...sale, billNo: finalBillNo } } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save bill");
+      const msg =
+        e instanceof Error
+          ? e.message
+          : e && typeof e === "object" && "message" in e
+            ? String((e as { message: unknown }).message)
+            : "Could not save bill";
+      toast.error(msg || "Could not save bill");
     } finally {
       setSaving(false);
     }
@@ -229,19 +235,21 @@ export const SaleEntryPage = () => {
 
   const handleSaveAndPrint = async () => {
     if (!validate()) return;
-    if (isSupabaseConfigured && isEdit) {
-      toast.error("Editing an existing server bill is not supported yet.");
-      return;
-    }
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
       const sale = buildSale();
       const finalBillNo = await commitSale(sale);
+      navigate(`/app/bills/${encodeURIComponent(finalBillNo)}?print=1`, { state: { sale: { ...sale, billNo: finalBillNo } } });
       toast.success(isEdit ? "Bill updated — opening print view…" : "Bill saved — opening print view…");
-      navigate(`/app/bills/${finalBillNo}?print=1`, { state: { sale: { ...sale, billNo: finalBillNo } } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save bill");
+      const msg =
+        e instanceof Error
+          ? e.message
+          : e && typeof e === "object" && "message" in e
+            ? String((e as { message: unknown }).message)
+            : "Could not save bill";
+      toast.error(msg || "Could not save bill");
     } finally {
       setSaving(false);
     }
@@ -474,23 +482,34 @@ export const SaleEntryPage = () => {
           </CardContent>
         </Card>
 
-        {/* ── Payment now ── */}
+        {/* ── Payment now (new bills only — use Payments screen to collect on issued bills) ── */}
         <Card>
           <CardContent className="space-y-3 p-4">
             <p className="text-sm font-medium text-foreground">Payment received now</p>
-            <FormField label="Amount received (NPR)" hint={`Grand total: ${npr(grandTotal)}`}>
-              <Input
-                type="number" min={0} max={grandTotal}
-                placeholder="0 = fully on credit"
-                value={paidNow}
-                onChange={(e) => setPaidNow(e.target.value)}
-              />
-            </FormField>
-            {paidAmt > 0 && (
+            {isEdit ? (
+              <p className="text-xs text-muted rounded-lg bg-slate-50 border border-border-subtle px-3 py-2">
+                Already recorded on this bill: <strong className="text-foreground">{npr(recordedPaid)}</strong>.
+                To add more, use <strong>Collect</strong> on the bill detail screen.
+              </p>
+            ) : (
+              <FormField label="Amount received (NPR)" hint={`Grand total: ${npr(grandTotal)}`}>
+                <Input
+                  type="number"
+                  min={0}
+                  max={grandTotal}
+                  placeholder="0 = fully on credit"
+                  value={paidNow}
+                  onChange={(e) => setPaidNow(e.target.value)}
+                />
+              </FormField>
+            )}
+            {!isEdit && paidAmt > 0 && (
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Mode">
                   <Select value={payMode} onChange={(e) => setPayMode(e.target.value)}>
-                    {PAYMENT_MODES.map((m) => <option key={m}>{m}</option>)}
+                    {PAYMENT_MODES.map((m) => (
+                      <option key={m}>{m}</option>
+                    ))}
                   </Select>
                 </FormField>
                 <FormField label="Reference (optional)">
@@ -533,19 +552,11 @@ export const SaleEntryPage = () => {
         </FormField>
       </div>
 
-      {/* Preview floating button — only shows once customer + at least 1 item selected */}
-      {customerId && lines.some((l) => l.productId) && (
-        <div className="mb-3 flex justify-center">
-          <button
-            onClick={() => setPrev(true)}
-            className="flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 shadow-sm hover:bg-teal-100 active:bg-teal-200 transition-colors"
-          >
-            <Eye size={15} /> Preview bill
-          </button>
-        </div>
-      )}
-
       <StickyBar
+        previewLabel={customerId && lines.some((l) => l.productId) ? "Preview bill" : undefined}
+        onPreview={
+          customerId && lines.some((l) => l.productId) ? () => setPrev(true) : undefined
+        }
         rows={[
           ["Subtotal", npr(subtotal)],
           ...(discountAmt > 0 ? [[

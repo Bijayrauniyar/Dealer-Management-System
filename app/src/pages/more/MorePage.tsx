@@ -1,11 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import {
-  ShoppingCart, CreditCard, RotateCcw, AlertTriangle, Package, Truck,
-  DollarSign, Calculator, Tag, LayoutDashboard, Users, Box,
-  BookOpen, Settings, LogOut, BarChart2, Lock,
+  ShoppingCart,
+  CreditCard,
+  RotateCcw,
+  AlertTriangle,
+  Package,
+  Truck,
+  DollarSign,
+  Calculator,
+  Tag,
+  LayoutDashboard,
+  Users,
+  Box,
+  BookOpen,
+  Settings,
+  LogOut,
+  BarChart2,
+  Lock,
 } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
-import { isSupabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
 type NavItem = {
@@ -93,7 +106,7 @@ function MoreGrid({ onItemClick }: { onItemClick: (item: NavItem) => void }) {
   );
 }
 
-function MorePageLive() {
+export const MorePage = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
 
@@ -112,26 +125,4 @@ function MorePageLive() {
       <div className="h-8" />
     </PageShell>
   );
-}
-
-function MorePageDemo() {
-  const navigate = useNavigate();
-
-  const onItemClick = (item: NavItem) => {
-    if (item.label === "Sign out") {
-      navigate("/login", { replace: true });
-      return;
-    }
-    navigate(item.to);
-  };
-
-  return (
-    <PageShell>
-      <h1 className="mb-5 text-lg font-bold text-foreground">More</h1>
-      <MoreGrid onItemClick={onItemClick} />
-      <div className="h-8" />
-    </PageShell>
-  );
-}
-
-export const MorePage = () => (isSupabaseConfigured ? <MorePageLive /> : <MorePageDemo />);
+};

@@ -1,10 +1,20 @@
 # Phase 1 — use cases, calculations, and automated tests
 
-**Navigate:** [Docs hub](../README.md) · [Project README](../../README.md) · [Manual E2E](./phase1-manual-e2e-checklist.md) · [Testing live](./testing-live-supabase.md) · [Data model](./data-model.md)
+**Navigate:** [Docs hub](../README.md) · [Seed & reset](./seed-demo-and-reset.md) · [Project README](../../README.md) · [Manual E2E](./phase1-manual-e2e-checklist.md) · [Testing live](./testing-live-supabase.md) · [Data model](./data-model.md)
 
-Run migrations `0001` → `0002` → `0003` → **`0005`** (RPC fixes) before live tests.
+Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **`0007`** (`update_sales_bill` for live bill edits + matrix) before live tests. Optional: **`0004`** (dev-only signup → active tenant, skips pending approval).
 
 **Manual E2E (everything scripts miss + step-by-step for all features):** [`phase1-manual-e2e-checklist.md`](./phase1-manual-e2e-checklist.md)
+
+---
+
+## Pre-flight (automated tests)
+
+| Gate | Why |
+|------|-----|
+| `tenants.status = 'active'` | `npm run e2e:live` marks a **failure** if the signed-in user’s tenant is still `pending`. Fix: SQL `update tenants set status = 'active' where id = '<tenant_id>';` or apply migration **0004**, or use `SUPABASE_SERVICE_ROLE_KEY` in `create-e2e-user-and-test.mjs`. |
+| `.env.local` + `.e2e-credentials.local` | URL, anon key, and test user email/password (see table below). |
+| `0007` applied | Matrix exercises **`update_sales_bill`**; UI **Edit bill** uses the same RPC. |
 
 ---
 
@@ -19,8 +29,20 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** (RPC fixes) before li
 | `npm run e2e:ui:setup` | Install Playwright Chromium (once) |
 | `npm run e2e:all` | API matrix then UI |
 | `npm run e2e:full` | smoke → live → matrix → UI |
+| `npm run seed:demo` | Insert **curated demo** rows for the signed-in E2E tenant (real RPCs). |
+| `npm run seed:demo:reset` | Same, after **purge** (needs `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`). |
+| `npm run seed:purge` | **Delete all** transactional + master data for that tenant (`--yes` baked in); keeps `tenants` / `tenant_users` / `tenant_settings`. Service role required. |
+| `npm run e2e:seed:selftest` | **Regression:** purge → seed → assert counts + bill total → purge again (needs service role + E2E login). |
 
-Credentials: `app/.e2e-credentials.local` (from `node scripts/create-e2e-user-and-test.mjs`).
+Credentials: `app/.e2e-credentials.local` (from `node scripts/create-e2e-user-and-test.mjs`). Optional `TENANT_ID` for purge when you are not logging in. **Never** expose `SUPABASE_SERVICE_ROLE_KEY` in the browser or git.
+
+### Full verification sequence (recommended before a release)
+
+1. `cd app && npm run deploy:check` — Tailwind class guard + TypeScript + production build.
+2. `npm run e2e:smoke` — Schema and anonymous RPC smoke (uses your `.env.local` session briefly).
+3. Ensure tenant is **active** (see Pre-flight), then `npm run e2e:live`.
+4. `npm run e2e:matrix` — Expect **49/49** when tenant is active (includes **sale.update** via `update_sales_bill`; one row is `tenant.active`; rest cover bill math, payments, returns, purchase, supplier pay, damage, expense, capital, views).
+5. In another terminal: `npm run dev`, then `npm run e2e:ui` — Playwright UI flow (login, settings, customer/product forms, sale grand total, payment, purchase, supplier payment, expense, damage, capital).
 
 ---
 
@@ -118,22 +140,36 @@ After S1 (sell 10), PU1 (buy 50), D1 (damage 2), R1 (return 1):
 
 | Topic | Behaviour |
 |-------|-----------|
-| Edit existing bill (live) | **Blocked in Phase 1** — toast; use new bill. **Phase 2-D:** `update_sales_bill` + `sales_bill_audit` (see `BACKEND-TODO.md`, `data-model.md`) |
-| Demo mode | All data in `localStorage` via `appStore` |
+| **Bill edit (success)** | **0007** `update_sales_bill` — lines, discount, VAT, extra; **`paid` unchanged** (collect more via Payments). Phase 2-D can add audit-only refinements. |
+| Demo mode | Removed — live Supabase only |
 | Customer PAN | Not in DB schema yet |
 | Supplier “New” in UI | Not wired (use SQL/Table Editor) |
 | RPC bugs without 0005 | payment / return / purchase RPCs fail — run `0005_fix_phase1_rpc_jsonb.sql` |
 
 ---
 
+## K. Scenario map (what users do in the app)
+
+| Scenario | Where | Backend / notes |
+|----------|--------|------------------|
+| Home **customers** list empty on first paint | Fixed: list `useMemo` depends on `CUSTOMERS` / `PRODUCTS` | Was a React dependency bug, not Supabase. |
+| Home **outstanding** banner | Taps → **Open bills** (`/app/home/outstanding`) | Lists all `balance > 0` bills; **Overdue** (`/app/home/overdue`) is *only* age &gt; `overdueDays` + balance. |
+| **New bill** | Sales new | `create_sales_bill` |
+| **Edit bill** | Bill detail → pencil | `update_sales_bill` (**0007**); **amount received at billing** is read-only on edit — use **Collect** for more payments. |
+| **Preview bill** | Sale entry sticky bar | “Preview bill” above save; modal + print. |
+| **Payment** | Payments new | `apply_customer_payment`; domain cache **refetches** after save so balances update. |
+| **Demo / reset** | Scripts | `seed:demo`, `seed:purge` — see [seed-demo-and-reset.md](./seed-demo-and-reset.md). |
+
+---
+
 ## J. Test coverage map (what scripts actually assert)
 
-### `e2e:matrix` (API) — **45 checks** — calculation & balance accuracy
+### `e2e:matrix` (API) — **49 checks** — calculation & balance accuracy
 
 | Area | Covered |
 |------|---------|
 | Settings | Footer, prefix, **name, overdue_days, default_markup_pct** round-trip |
-| Sale | S2 maths (1093), partial pay, overpay cap, prefix, **multi-line subtotal (350)** |
+| Sale | S2 maths (1093), **`update_sales_bill`** (discount/total, paid unchanged), partial pay, overpay cap, prefix, **multi-line subtotal (350)** |
 | Payment / return / purchase / supplier pay | Balances + capped credit |
 | Stock | `v_stock.closing` after full flow |
 | Capital | **Insert + read** `capital_entries` |
@@ -147,14 +183,13 @@ After S1 (sell 10), PU1 (buy 50), D1 (damage 2), R1 (return 1):
 | Step | Asserts |
 |------|---------|
 | Core flows | Login, settings, customer/product forms, sale → damage |
-| **4a–4d** | **UI grand total 500 = DB total**; **bill footer on print**; **edit bill blocked** (toast) |
+| **4a–4d** | **UI grand total 500 = DB total**; **bill footer on print**; **edit bill**: line qty **5→6**, sticky grand **600**, **Update bill**, **DB total/subtotal = 600** (`update_sales_bill` / **0007**) |
 | **12–14** | **Capital** add + list; **daily cash** draft toast; **scheme** save (demo/local) |
 
 ### Cannot fully automate yet
 
 | Area | Why |
 |------|-----|
-| **Bill edit (success path)** | Phase **2-D** — only **blocked** behaviour is tested |
 | **Supplier New UI** | No form/route — API insert only |
 | **Notifications** | Static UI; no live table |
 | **Daily cash / scheme DB** | Demo save (timeout), not Supabase |
@@ -170,7 +205,7 @@ After S1 (sell 10), PU1 (buy 50), D1 (damage 2), R1 (return 1):
 
 - Settings round-trip (footer text)
 - Masters: customer, supplier, product insert + product price update
-- Sale S2 maths on `sales_bills` row
+- Sale S2 maths on `sales_bills` row, then **`update_sales_bill`** (discount/total, paid unchanged)
 - Payment reduces open balance
 - Return increases `paid` and caps credit
 - Purchase + supplier payment on `purchases.paid`
@@ -180,10 +215,10 @@ After S1 (sell 10), PU1 (buy 50), D1 (damage 2), R1 (return 1):
 ### `ui-e2e-phase1.mjs` (UI)
 
 - Login, settings save, product form, **customer form**
-- Sale (with due date), payment, return, purchase, supplier pay, expense, damage
+- Sale (with due date), **bill edit: change qty + DB assert totals**, payment, return, purchase, supplier pay, expense, damage
 - Product visible in list
 
-Extend matrix when adding supplier form, bill edit, or PAN field.
+Extend matrix when adding supplier form, **full UI bill-edit flow**, or PAN field.
 
 ---
 
