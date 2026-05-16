@@ -67,7 +67,7 @@ flowchart LR
 |------|------------------|
 | [deployment.md](deployment.md) | Quick-start deploy: GitHub, Supabase, Netlify, secrets |
 | [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Build + lint on every push/PR (no secrets) |
-| [.github/workflows/e2e-smoke.yml](../.github/workflows/e2e-smoke.yml) | Supabase smoke test (needs `VITE_*` secrets) |
+| [.github/workflows/e2e-smoke.yml](../.github/workflows/e2e-smoke.yml) | Supabase smoke — run locally (`npm run e2e:smoke`); optional manual Actions run with secrets |
 
 ### Operational (repo tree)
 

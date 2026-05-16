@@ -167,7 +167,7 @@ cd app && npm run deploy:check   # lint + production build before you push
 | **Netlify** | Import repo; [`netlify.toml`](netlify.toml) sets `base = app`, Node 20, `npm ci && npm run build` |
 | **Secrets** | `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` in Netlify (never commit) |
 | **CI** | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — build on every PR (no secrets) |
-| **Smoke** | [`.github/workflows/e2e-smoke.yml`](.github/workflows/e2e-smoke.yml) — optional Supabase check when Actions secrets are set |
+| **Smoke** | [`.github/workflows/e2e-smoke.yml`](.github/workflows/e2e-smoke.yml) — not run on push; use `npm run e2e:smoke` locally, or **Run workflow** in Actions if secrets are set |
 
 ---
 

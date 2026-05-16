@@ -19,7 +19,7 @@ Do these **once**, in this order:
 | 5 | **Supabase Auth** | Add Netlify URL to **Site URL** + **Redirect URLs** |
 | 6 | **Netlify** | Trigger **Deploy site** (rebuild after env vars) |
 | 7 | **Browser** | Open site → register/login → Settings save → one test sale |
-| 8 | **GitHub** | Add Actions secrets → confirm **CI** + **E2E smoke** workflows green |
+| 8 | **GitHub** | Push triggers **CI** only (lint + build). Run **E2E smoke** locally with credentials when needed (`npm run e2e:smoke` in `app/` — see [§ CI workflows](#ci-workflows-github-actions)) |
 
 **Local preflight (before every release):**
 
@@ -37,11 +37,11 @@ npm run deploy:check         # lint:tailwind + tsc + vite build
 flowchart LR
   GH[GitHub]
   CI[CI workflow]
-  Smoke[E2E smoke]
+  Smoke[E2E smoke local or manual Actions]
   NL[Netlify]
   SB[Supabase]
   GH --> CI
-  GH --> Smoke
+  GH -.-> Smoke
   GH -->|push main| NL
   Smoke --> SB
   NL -->|VITE_* at build| SB
@@ -60,9 +60,9 @@ flowchart LR
 | Workflow | File | Secrets needed | What it runs |
 |----------|------|----------------|--------------|
 | **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | None | `lint:tailwind` + `npm run build` on every push/PR |
-| **E2E smoke** | [`.github/workflows/e2e-smoke.yml`](../.github/workflows/e2e-smoke.yml) | `VITE_SUPABASE_*` (+ optional `E2E_EMAIL` / `E2E_PASSWORD`) | Same lint + Supabase schema/RPC smoke |
+| **E2E smoke** | [`.github/workflows/e2e-smoke.yml`](../.github/workflows/e2e-smoke.yml) | None on push (not triggered). Optional **manual** run: add `VITE_SUPABASE_*` (+ optional `E2E_*`) in Actions | Same lint + Supabase schema/RPC smoke — **default path is local** (`cd app && npm run e2e:smoke` with `.env.local`). |
 
-Add repository secrets: **Settings → Secrets and variables → Actions**.
+Team choice: keep smoke **local-only** (no GitHub secrets) or add secrets and use **Actions → Run workflow** occasionally.
 
 ---
 
@@ -70,9 +70,9 @@ Add repository secrets: **Settings → Secrets and variables → Actions**.
 
 | Secret | Netlify (production build) | GitHub Actions | Local (`app/.env.local`) | Never in git |
 |--------|---------------------------|----------------|---------------------------|--------------|
-| `VITE_SUPABASE_URL` | Yes | Yes (smoke) | Yes | Real values |
-| `VITE_SUPABASE_ANON_KEY` | Yes | Yes (smoke) | Yes | Real values |
-| `E2E_EMAIL` / `E2E_PASSWORD` | No | Optional (smoke login) | `.e2e-credentials.local` | Yes |
+| `VITE_SUPABASE_URL` | Yes | Optional (manual smoke only) | Yes | Real values |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Optional (manual smoke only) | Yes | Real values |
+| `E2E_EMAIL` / `E2E_PASSWORD` | No | Optional (manual smoke login) | `.e2e-credentials.local` | Yes |
 | DB password, `service_role` | No | No | No | Yes — Dashboard/CLI only |
 
 Vite **inlines** `VITE_*` at **build** time. After changing Netlify env vars, **redeploy**.
@@ -164,20 +164,26 @@ If the app behaves like **demo mode** (no `/register`, localStorage): env vars m
 
 ---
 
-## 4. GitHub Actions secrets
+## 4. E2E smoke (local vs optional GitHub)
 
-**Settings → Secrets and variables → Actions → New repository secret:**
+**Recommended:** run smoke **on your machine** so credentials never leave your setup.
 
-| Secret | Required for smoke |
-|--------|-------------------|
+```bash
+cd app
+# .env.local + optionally .e2e-credentials.local — see app/.env.example
+npm run e2e:smoke
+```
+
+Create a smoke test user: `cd app && node scripts/create-e2e-user-and-test.mjs`.
+
+**Optional — same job in GitHub:** add secrets under **Settings → Secrets and variables → Actions**, then **Actions** → **E2E smoke (Supabase)** → **Run workflow**.
+
+| Secret | Required for manual Actions smoke |
+|--------|-----------------------------------|
 | `VITE_SUPABASE_URL` | Yes |
 | `VITE_SUPABASE_ANON_KEY` | Yes |
-| `E2E_EMAIL` | No (enables login checks in smoke) |
+| `E2E_EMAIL` | No (enables login checks) |
 | `E2E_PASSWORD` | No |
-
-Create test user locally: `cd app && node scripts/create-e2e-user-and-test.mjs`.
-
-Manual run: **Actions** → **E2E smoke (Supabase)** → **Run workflow**.
 
 ---
 
@@ -189,7 +195,7 @@ Manual run: **Actions** → **E2E smoke (Supabase)** → **Run workflow**.
 - [ ] Supabase Auth URLs include Netlify + localhost
 - [ ] Register / login / Settings / one sale on production URL
 - [ ] GitHub **CI** workflow green
-- [ ] GitHub **E2E smoke** green (if secrets added)
+- [ ] `npm run e2e:smoke` passes locally when you have Supabase + creds (optional: manual Actions smoke with secrets)
 - [ ] No `service_role` or DB password in repo or `VITE_*`
 - [ ] Supabase backups / PITR before real dealer data ([BACKEND-TODO](backend/BACKEND-TODO.md))
 

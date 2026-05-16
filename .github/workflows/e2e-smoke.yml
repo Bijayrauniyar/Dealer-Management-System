@@ -1,12 +1,9 @@
-# Supabase schema/RPC smoke test (no browser). Requires VITE_* secrets.
-# Build-only CI (no secrets): .github/workflows/ci.yml — see docs/deployment.md
+# Supabase schema/RPC smoke (no browser). Not run on push/PR — use locally with app/.env.local (+ optional .e2e-credentials.local).
+# Optional: run manually in Actions after adding VITE_* (and optional E2E_*) secrets — see docs/deployment.md (E2E smoke section).
+# Push/PR automation (no secrets): .github/workflows/ci.yml
 name: E2E smoke (Supabase)
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
 
 jobs:
