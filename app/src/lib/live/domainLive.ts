@@ -22,6 +22,9 @@ import type {
 } from "@/domain/types";
 import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
 import type { DashboardPeriodTotals } from "@/domain/defaults";
+import { lineAmountFromMrp } from "@/lib/saleLineMath";
+import { saleLineToRpcItem } from "@/lib/uom";
+import { parseUomConversion, parseUomPrices, toDbUomConversion, toDbUomPrices } from "@/lib/uom";
 
 export const DOMAIN_QUERY_KEY = ["domain", "v1"] as const;
 export const CAPITAL_QUERY_KEY = ["capital", "v1"] as const;
@@ -70,14 +73,43 @@ function billStatus(total: number, paid: number): BillStatus {
   return "current";
 }
 
+const PRODUCT_SELECT_FULL =
+  "id, code, name, category, unit, purchase_price, sale_price, opening_stock, mrp, discount_pct, vat_applicable, min_qty, min_qty_pack, is_active, uom_prices, uom_conversion";
+const PRODUCT_SELECT_LEGACY =
+  "id, code, name, category, unit, purchase_price, sale_price, opening_stock, mrp, discount_pct, vat_applicable, min_qty, is_active";
+
+function isMissingColumnError(err: { message?: string } | null, col: string): boolean {
+  const m = err?.message ?? "";
+  return m.includes(col) && (m.includes("does not exist") || m.includes("Could not find"));
+}
+
 export async function fetchProductsLive(): Promise<Product[]> {
-  const { data: rows, error } = await supabase
+  let rows: Record<string, unknown>[] | null = null;
+  let error: { message?: string } | null = null;
+
+  const full = await supabase
     .from("products")
-    .select(
-      "id, code, name, category, unit, purchase_price, sale_price, opening_stock, mrp, discount_pct, vat_applicable, min_qty, is_active",
-    )
+    .select(PRODUCT_SELECT_FULL)
     .eq("is_active", true)
     .order("name");
+  rows = full.data;
+  error = full.error;
+
+  if (
+    error &&
+    (isMissingColumnError(error, "uom_prices") ||
+      isMissingColumnError(error, "uom_conversion") ||
+      isMissingColumnError(error, "min_qty_pack"))
+  ) {
+    const legacy = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT_LEGACY)
+      .eq("is_active", true)
+      .order("name");
+    rows = legacy.data;
+    error = legacy.error;
+  }
+
   if (error) throw error;
 
   const { data: stockRows, error: se } = await supabase.from("v_stock").select("product_id, closing_stock");
@@ -85,20 +117,36 @@ export async function fetchProductsLive(): Promise<Product[]> {
   const stockMap = new Map<string, number>();
   for (const s of stockRows ?? []) stockMap.set(s.product_id as string, Number(s.closing_stock));
 
-  return (rows ?? []).map((r) => ({
-    id: r.id as string,
-    name: r.name as string,
-    category: (r.category as string) ?? "",
-    uom: (r.unit as string) ?? "PCS",
-    mrp: Number(r.mrp ?? 0),
-    costPrice: Number(r.purchase_price),
-    sellingPrice: Number(r.sale_price),
-    discountPct: Number(r.discount_pct ?? 0),
-    vatApplicable: Boolean(r.vat_applicable),
-    onHand: stockMap.get(r.id as string) ?? Number(r.opening_stock),
-    minQty: Number(r.min_qty ?? 20),
-    description: undefined,
-  }));
+  return (rows ?? []).map((r) => {
+    const uom = (r.unit as string) ?? "PCS";
+    const mrp = Number(r.mrp ?? 0);
+    const sellingPrice = Number(r.sale_price);
+    return {
+      id: r.id as string,
+      name: r.name as string,
+      category: (r.category as string) ?? "",
+      uom,
+      mrp,
+      costPrice: Number(r.purchase_price),
+      sellingPrice,
+      uomPrices: parseUomPrices(
+        "uom_prices" in r ? r.uom_prices : null,
+        uom,
+        mrp,
+        sellingPrice,
+      ),
+      uomConversion: parseUomConversion(
+        "uom_conversion" in r ? r.uom_conversion : null,
+        uom,
+      ),
+      discountPct: Number(r.discount_pct ?? 0),
+      vatApplicable: Boolean(r.vat_applicable),
+      onHand: stockMap.get(r.id as string) ?? Number(r.opening_stock),
+      minQty: Number(r.min_qty ?? 20),
+      minQtyPack: "min_qty_pack" in r && r.min_qty_pack != null ? Number(r.min_qty_pack) : undefined,
+      description: undefined,
+    };
+  });
 }
 
 export async function fetchCustomersLive(): Promise<Customer[]> {
@@ -202,7 +250,11 @@ type ItemRow = {
   product_id: string;
   qty: number;
   rate: number;
-  products?: { name: string; unit: string } | { name: string; unit: string }[] | null;
+  unit?: string | null;
+  products?:
+    | { name: string; unit: string; mrp?: number; discount_pct?: number }
+    | { name: string; unit: string; mrp?: number; discount_pct?: number }[]
+    | null;
 };
 
 export async function fetchSalesLive(): Promise<Sale[]> {
@@ -215,10 +267,22 @@ export async function fetchSalesLive(): Promise<Sale[]> {
   const billIds = (bills ?? []).map((b) => (b as unknown as BillRow).id);
   const itemsByBill = new Map<string, ItemRow[]>();
   if (billIds.length) {
-    const { data: items, error: ie } = await supabase
+    let items: unknown[] | null = null;
+    let ie: { message?: string } | null = null;
+    const withUnit = await supabase
       .from("sales_items")
-      .select("bill_id, product_id, qty, rate, products(name, unit)")
+      .select("bill_id, product_id, qty, rate, unit, products(name, unit, mrp, discount_pct)")
       .in("bill_id", billIds);
+    items = withUnit.data;
+    ie = withUnit.error;
+    if (ie && isMissingColumnError(ie, "unit")) {
+      const legacy = await supabase
+        .from("sales_items")
+        .select("bill_id, product_id, qty, rate, products(name, unit, mrp, discount_pct)")
+        .in("bill_id", billIds);
+      items = legacy.data;
+      ie = legacy.error;
+    }
     if (ie) throw ie;
     for (const it of items ?? []) {
       const row = it as unknown as ItemRow;
@@ -240,15 +304,21 @@ export async function fetchSalesLive(): Promise<Sale[]> {
     const afterDisc = sub - disc;
     const vatRate = vatAmt > 0 ? 13 : 0;
     const lines: SaleLine[] = items.map((it) => {
-      const prod = embedOne(it.products as { name: string; unit: string } | { name: string; unit: string }[] | null | undefined);
+      const prod = embedOne(it.products);
+      const mrp = Number(prod?.mrp ?? 0);
+      const discountPct = Number(prod?.discount_pct ?? 0);
+      const qty = Number(it.qty);
+      const rate = Number(it.rate);
+      const pricing = { qty, mrp: mrp > 0 ? mrp : rate, rate, discountPct };
       return {
         productId: it.product_id,
         productName: prod?.name ?? "",
-        uom: prod?.unit ?? "PCS",
-        qty: Number(it.qty),
-        rate: Number(it.rate),
-        discountPct: 0,
-        amount: Number(it.qty) * Number(it.rate),
+        uom: ((it.unit as string)?.trim() || prod?.unit) ?? "PCS",
+        qty,
+        mrp: mrp > 0 ? mrp : rate,
+        rate,
+        discountPct,
+        amount: lineAmountFromMrp(pricing),
       };
     });
 
@@ -350,11 +420,18 @@ export async function peekNextBillNoLive(): Promise<string> {
 }
 
 export async function commitSaleLive(sale: Sale): Promise<{ billNo: string; id: string }> {
-  const items = sale.lines.map((l) => ({
-    product_id: l.productId,
-    qty: l.qty,
-    rate: l.rate,
-  }));
+  const items = sale.lines
+    .filter((l) => l.productId)
+    .map((l) =>
+      saleLineToRpcItem({
+        productId: l.productId,
+        qty: l.qty,
+        mrp: l.mrp,
+        rate: l.rate,
+        discountPct: l.discountPct,
+        uom: l.uom,
+      }),
+    );
 
   const payMode =
     sale.balance <= 0 && sale.paidNow >= sale.grandTotal
@@ -623,9 +700,12 @@ export async function upsertProductLive(p: {
   purchase_price: number;
   sale_price: number;
   mrp: number;
+  uom_prices?: Record<string, { mrp: number; sale_price: number }>;
+  uom_conversion?: { pack_uom: string; factor: number } | null;
   discount_pct: number;
   vat_applicable: boolean;
   min_qty: number;
+  min_qty_pack?: number | null;
 }): Promise<void> {
   const {
     data: { user },
@@ -650,9 +730,12 @@ export async function upsertProductLive(p: {
     purchase_price: p.purchase_price,
     sale_price: p.sale_price,
     mrp: p.mrp,
+    uom_prices: p.uom_prices ?? {},
+    uom_conversion: p.uom_conversion ?? null,
     discount_pct: p.discount_pct,
     vat_applicable: p.vat_applicable,
     min_qty: p.min_qty,
+    min_qty_pack: p.min_qty_pack ?? null,
     is_active: true,
   };
   if (p.id) {
@@ -726,6 +809,7 @@ type TenantSettingsRow = {
   due_soon_days: number | null;
   default_markup_pct: number | null;
   default_min_qty: number | null;
+  default_min_pack_qty: number | null;
 };
 
 export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
@@ -752,6 +836,7 @@ export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
     dueSoonDays: row.due_soon_days ?? D.dueSoonDays,
     defaultMarkupPct: row.default_markup_pct ?? D.defaultMarkupPct,
     defaultMinQty: row.default_min_qty ?? D.defaultMinQty,
+    defaultMinPackQty: row.default_min_pack_qty ?? D.defaultMinPackQty,
   };
 }
 

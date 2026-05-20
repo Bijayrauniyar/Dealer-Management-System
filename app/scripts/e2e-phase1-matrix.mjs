@@ -1,7 +1,7 @@
 /**
  * Phase 1 API test matrix — masters, calculations, balances, stock.
  * Usage: npm run e2e:matrix
- * Requires: .env.local, .e2e-credentials.local, migrations 0001–0003 + 0005 + **0006** + **0007**
+ * Requires: .env.local, .e2e-credentials.local, migrations 0001–0003 + 0005 + **0006** + **0007** + **0008–0010** (UOM)
  */
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -430,6 +430,147 @@ try {
     } else r.pass("rls.customers scoped", `${scopedCust ?? "?"} / ${globalCust ?? "?"}`);
   } else {
     r.pass("rls.customers scoped", "skip (no SUPABASE_SERVICE_ROLE_KEY)");
+  }
+
+  // --- UOM: pack sale + sales_items.unit + v_stock (migrations 0008–0010) ---
+  const { error: uomSchemaErr } = await supabase
+    .from("products")
+    .select("uom_prices, uom_conversion")
+    .limit(1);
+  if (uomSchemaErr) {
+    r.fail(
+      "uom.schema.products",
+      `${uomSchemaErr.message} — apply 0008_product_uom_prices.sql and 0009_product_uom_conversion.sql`,
+    );
+  } else r.pass("uom.schema.products");
+
+  const { error: unitSchemaErr } = await supabase.from("sales_items").select("unit").limit(1);
+  if (unitSchemaErr) {
+    r.fail("uom.schema.sales_items.unit", `${unitSchemaErr.message} — apply 0010_sales_items_unit_stock.sql`);
+  } else r.pass("uom.schema.sales_items.unit");
+
+  let packProductId;
+  const packOpening = 100;
+  const packFactor = 10;
+  const packQty = 2;
+  const packRate = 550;
+  const { data: packProd, error: packPErr } = await supabase
+    .from("products")
+    .insert({
+      tenant_id: tenantId,
+      code: `MX-PACK-${stamp}`,
+      name: `Matrix Pack Product ${stamp}`,
+      category: "Ice Cream",
+      unit: "PCS",
+      purchase_price: 50,
+      sale_price: 55,
+      mrp: 60,
+      opening_stock: packOpening,
+      min_qty: 0,
+      is_active: true,
+      uom_prices: {
+        PCS: { mrp: 60, sale_price: 55 },
+        Box: { mrp: 600, sale_price: 550 },
+      },
+      uom_conversion: { pack_uom: "Box", factor: packFactor },
+    })
+    .select("id, uom_prices, uom_conversion")
+    .single();
+  if (packPErr) r.fail("uom.product.insert", packPErr.message);
+  else {
+    packProductId = packProd.id;
+    r.pass("uom.product.insert", packProductId.slice(0, 8));
+    const conv = packProd.uom_conversion;
+    if (conv?.pack_uom !== "Box" || Number(conv?.factor) !== packFactor) {
+      r.fail("uom.product.conversion round-trip", JSON.stringify(conv));
+    } else r.pass("uom.product.conversion round-trip");
+    const boxPrice = packProd.uom_prices?.Box;
+    if (!boxPrice || Number(boxPrice.sale_price) !== 550) {
+      r.fail("uom.product.uom_prices.Box", JSON.stringify(boxPrice));
+    } else r.pass("uom.product.uom_prices.Box");
+  }
+
+  if (packProductId) {
+    const { data: packSaleRows, error: packSaleErr } = await supabase.rpc("create_sales_bill", {
+      p_customer_id: customerId,
+      p_bill_date: T,
+      p_payment_mode: "Credit",
+      p_discount: 0,
+      p_items: [{ product_id: packProductId, qty: packQty, rate: packRate, unit: "Box" }],
+      p_paid: 0,
+      p_vat_amount: 0,
+      p_extra_charges: 0,
+    });
+    if (packSaleErr) r.fail("uom.sale.pack_create", packSaleErr.message);
+    else {
+      const packBillId = (Array.isArray(packSaleRows) ? packSaleRows[0] : packSaleRows)?.bill_id;
+      r.pass("uom.sale.pack_create", (Array.isArray(packSaleRows) ? packSaleRows[0] : packSaleRows)?.bill_no ?? "ok");
+
+      const { data: packLine, error: packLineErr } = await supabase
+        .from("sales_items")
+        .select("qty, rate, unit")
+        .eq("bill_id", packBillId)
+        .eq("product_id", packProductId)
+        .maybeSingle();
+      if (packLineErr) r.fail("uom.sale.line_read", packLineErr.message);
+      else {
+        r.assertClose(packLine?.qty, packQty, "uom.sale.line qty (Box)");
+        r.assertEq(packLine?.unit, "Box", "uom.sale.line unit stored");
+        r.assertClose(packLine?.rate, packRate, "uom.sale.line rate");
+      }
+
+      const { data: packStk } = await supabase
+        .from("v_stock")
+        .select("sold, closing_stock")
+        .eq("product_id", packProductId)
+        .maybeSingle();
+      const expectedPackSold = packQty * packFactor;
+      const expectedPackClosing = packOpening - expectedPackSold;
+      if (!packStk) r.fail("uom.v_stock.row", "missing");
+      else {
+        r.assertClose(packStk.sold, expectedPackSold, "uom.v_stock.sold (2 Box → 20 PCS)");
+        r.assertClose(packStk.closing_stock, expectedPackClosing, "uom.v_stock.closing_stock");
+      }
+
+      const packQtyAfterUpdate = 3;
+      const { error: packUpdErr } = await supabase.rpc("update_sales_bill", {
+        p_bill_id: packBillId,
+        p_customer_id: customerId,
+        p_bill_date: T,
+        p_payment_mode: "Credit",
+        p_discount: 0,
+        p_items: [{ product_id: packProductId, qty: packQtyAfterUpdate, rate: packRate, unit: "Box" }],
+        p_vat_amount: 0,
+        p_extra_charges: 0,
+      });
+      if (packUpdErr) r.fail("uom.sale.pack_update", packUpdErr.message);
+      else {
+        r.pass("uom.sale.pack_update");
+        const { data: packLineU } = await supabase
+          .from("sales_items")
+          .select("qty, unit")
+          .eq("bill_id", packBillId)
+          .eq("product_id", packProductId)
+          .maybeSingle();
+        r.assertEq(packLineU?.unit, "Box", "uom.sale.update unit stored");
+        r.assertClose(packLineU?.qty, packQtyAfterUpdate, "uom.sale.update qty");
+        const { data: packStkU } = await supabase
+          .from("v_stock")
+          .select("sold, closing_stock")
+          .eq("product_id", packProductId)
+          .maybeSingle();
+        r.assertClose(
+          packStkU?.sold,
+          packQtyAfterUpdate * packFactor,
+          "uom.v_stock.sold after update (3 Box → 30 PCS)",
+        );
+        r.assertClose(
+          packStkU?.closing_stock,
+          packOpening - packQtyAfterUpdate * packFactor,
+          "uom.v_stock.closing after update",
+        );
+      }
+    }
   }
 
   // --- G Stock ---

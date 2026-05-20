@@ -6,6 +6,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { EXPENSE_CATEGORIES } from "@/domain/catalogs";
@@ -47,7 +48,10 @@ export const ExpensePage = () => {
       <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
         <ArrowLeft size={16} /> Back
       </button>
-      <h1 className="mb-5 text-lg font-semibold">Expense entry</h1>
+      <h1 className="mb-1 text-lg font-semibold">Expense entry</h1>
+      <p className="mb-5 text-sm text-muted">
+        Day-to-day running costs (fuel, salary, rent, utilities). Not for buying assets or owner investment — use Capital for those.
+      </p>
       <div className="space-y-4">
         <FormField label="Category" required>
           <Select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
@@ -55,7 +59,7 @@ export const ExpensePage = () => {
           </Select>
         </FormField>
         <FormField label="Amount (NPR)" required>
-          <Input type="number" min={0} placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <NumericInput min={0} value={Number(amount) || 0} onChange={(v) => setAmount(v === 0 ? "" : String(v))} />
         </FormField>
         <FormField label="Date"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></FormField>
         <FormField label="Notes"><Textarea placeholder="Details" value={notes} onChange={(e) => setNotes(e.target.value)} /></FormField>

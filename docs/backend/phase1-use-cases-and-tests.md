@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](../README.md) · [Seed & reset](./seed-demo-and-reset.md) · [Project README](../../README.md) · [Manual E2E](./phase1-manual-e2e-checklist.md) · [Testing live](./testing-live-supabase.md) · [Data model](./data-model.md)
 
-Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **`0007`** (`update_sales_bill` for live bill edits + matrix) before live tests. Optional: **`0004`** (dev-only signup → active tenant, skips pending approval).
+Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **`0007`** → **`0008`** → **`0009`** → **`0010`** (UOM prices, pack conversion, `sales_items.unit` + stock) before live tests. Optional: **`0004`** (dev-only signup → active tenant, skips pending approval).
 
 **Manual E2E (everything scripts miss + step-by-step for all features):** [`phase1-manual-e2e-checklist.md`](./phase1-manual-e2e-checklist.md)
 
@@ -15,6 +15,7 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `tenants.status = 'active'` | `npm run e2e:live` marks a **failure** if the signed-in user’s tenant is still `pending`. Fix: SQL `update tenants set status = 'active' where id = '<tenant_id>';` or apply migration **0004**, or use `SUPABASE_SERVICE_ROLE_KEY` in `create-e2e-user-and-test.mjs`. |
 | `.env.local` + `.e2e-credentials.local` | URL, anon key, and test user email/password (see table below). |
 | `0007` applied | Matrix exercises **`update_sales_bill`**; UI **Edit bill** uses the same RPC. |
+| `0008`–`0010` applied | Matrix **`uom.*`** cases: pack sale (2 Box → 20 PCS stock), `sales_items.unit`, `update_sales_bill` with `unit`. |
 
 ---
 

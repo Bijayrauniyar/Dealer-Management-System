@@ -50,10 +50,26 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Open: app/supabase/migrations/0007_update_sales_bill.sql
    - Copy entire file → Paste → Run → Success.
 
+9. Migration 0008 (products.uom_prices — per-unit MRP/sell on product master)
+   - Open: app/supabase/migrations/0008_product_uom_prices.sql
+   - Copy entire file → Paste → Run → Success.
+
+10. Migration 0009 (products.uom_conversion — e.g. 1 Box = 10 PCS)
+   - Open: app/supabase/migrations/0009_product_uom_conversion.sql
+   - Copy entire file → Paste → Run → Success.
+
+11. Migration 0010 (sales_items.unit + v_stock pack→base qty + RPCs store unit)
+   - Open: app/supabase/migrations/0010_sales_items_unit_stock.sql
+   - Copy entire file → Paste → Run → Success.
+
+12. Migration 0011 (default_min_pack_qty + products.min_qty_pack for Box/PCS alerts)
+   - Open: app/supabase/migrations/0011_min_stock_pack_threshold.sql
+   - Copy entire file → Paste → Run → Success.
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 
-9. Verify (run this small query in SQL Editor):
+12. Verify (run this small query in SQL Editor):
 
    select table_name
    from information_schema.tables
@@ -71,7 +87,7 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
 
    Expect 1 row.
 
-10. Table Editor (left sidebar) → schema "public" → you should see many tables (including supplier_payments after 0006).
+13. Table Editor (left sidebar) → schema "public" → you should see many tables (including supplier_payments after 0006).
 
 --------------------------------------------------------------------------------
 METHOD B — Supabase CLI (optional; tracks migrations in Dashboard)
@@ -126,4 +142,4 @@ TROUBLESHOOTING
 - SQL error on Run → read line number; common: ran 0002 before 0001, or partial
   failed run; paste error when asking for help.
 
-Order: 0001 → 0002 → 0003 → 0005 → 0006 (0004 optional dev-only).
+Order: 0001 → 0002 → 0003 → 0005 → 0006 → 0007 → 0008 → 0009 → 0010 → 0011 (0004 optional dev-only).

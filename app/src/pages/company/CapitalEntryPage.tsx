@@ -7,6 +7,7 @@ import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
@@ -61,7 +62,7 @@ export const CapitalEntryPage = () => {
       </button>
       <h1 className="mb-1 text-lg font-semibold">Add capital entry</h1>
       <p className="mb-5 text-sm text-muted">
-        Record anything invested in the business from day 1 — assets, capital, loans, deposits.
+        Money or assets invested in the business (freezer, vehicle, owner cash, loans, deposits). For daily running costs use Expense; for stock from suppliers use Purchase.
       </p>
 
       <div className="space-y-4">
@@ -109,7 +110,7 @@ export const CapitalEntryPage = () => {
           required
           hint={isLoan ? "Full loan amount received" : "What you paid / invested"}
         >
-          <Input type="number" min={0} placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <NumericInput min={0} value={Number(amount) || 0} onChange={(v) => setAmount(v === 0 ? "" : String(v))} />
         </FormField>
 
         {/* ── Current value (for fixed assets) ── */}
@@ -118,11 +119,10 @@ export const CapitalEntryPage = () => {
             label="Current / book value (NPR)"
             hint="What it's worth today after use. Leave blank to use purchase price."
           >
-            <Input
-              type="number" min={0}
-              placeholder={amount || "Same as purchase price"}
-              value={currentValue}
-              onChange={(e) => setCurrentValue(e.target.value)}
+            <NumericInput
+              min={0}
+              value={Number(currentValue) || 0}
+              onChange={(v) => setCurrentValue(v === 0 ? "" : String(v))}
             />
           </FormField>
         )}

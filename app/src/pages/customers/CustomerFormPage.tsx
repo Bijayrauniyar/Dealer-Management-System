@@ -6,6 +6,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomers, commitCustomer } from "@/store/domain";
 
@@ -20,9 +21,7 @@ export const CustomerFormPage = () => {
   const [phone, setPhone] = useState(existing?.phone ?? "");
   const [area, setArea] = useState(existing?.area ?? "");
   const [address, setAddress] = useState(existing?.address ?? "");
-  const [creditLimit, setCreditLimit] = useState(
-    existing?.creditLimit != null ? String(existing.creditLimit) : "",
-  );
+  const [creditLimit, setCreditLimit] = useState(existing?.creditLimit ?? 0);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -38,7 +37,7 @@ export const CustomerFormPage = () => {
         phone: phone.trim(),
         area: area.trim(),
         address: address.trim(),
-        creditLimit: Number(creditLimit) || 0,
+        creditLimit,
       });
       toast.success(isEdit ? `${name} updated.` : `${name} added.`);
       navigate(isEdit ? `/app/customers/${id}` : "/app/customers");
@@ -91,13 +90,7 @@ export const CustomerFormPage = () => {
           />
         </FormField>
         <FormField label="Credit limit (NPR)" hint="Max outstanding allowed; 0 = no limit set">
-          <Input
-            type="number"
-            min={0}
-            placeholder="0"
-            value={creditLimit}
-            onChange={(e) => setCreditLimit(e.target.value)}
-          />
+          <NumericInput min={0} value={creditLimit} placeholder="0" onChange={setCreditLimit} />
         </FormField>
       </div>
 

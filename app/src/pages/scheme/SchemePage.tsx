@@ -7,6 +7,7 @@ import { FormField } from "@/components/app/FormField";
 import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useProducts } from "@/store/domain";
@@ -18,7 +19,7 @@ export const SchemePage = () => {
   const [name, setName]               = useState("");
   const [productId, setProductId]     = useState("");
   const [discountType, setType]       = useState("percent");
-  const [discountValue, setDValue]    = useState("");
+  const [discountValue, setDValue]    = useState(0);
   const [startDate, setStart]         = useState(toDateInput());
   const [endDate, setEnd]             = useState("");
   const [notes, setNotes]             = useState("");
@@ -56,7 +57,7 @@ export const SchemePage = () => {
             </Select>
           </FormField>
           <FormField label={discountType === "percent" ? "Discount %" : "Flat NPR"} required>
-            <Input type="number" min={0} placeholder="0" value={discountValue} onChange={(e) => setDValue(e.target.value)} />
+            <NumericInput min={0} value={discountValue} placeholder="0" onChange={setDValue} />
           </FormField>
         </div>
         <div className="grid grid-cols-2 gap-3">

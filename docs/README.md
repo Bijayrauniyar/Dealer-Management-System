@@ -12,7 +12,7 @@ Follow this path the first time you touch the repo:
 |------|----------|-----|
 | 1 | [Project README](../README.md) | What the app does, tech stack, `cd app` workflow, test scripts |
 | 2 | [Environment: MCP vs `.env`](backend/mcp-and-env.md) | Why `app/.env.local` exists vs Cursor MCP — avoids confusion |
-| 3 | [Migrations runbook](../app/supabase/README.txt) | Exact SQL file order: `0001` → `0002` → `0003` → **`0005`** (optional `0004`) |
+| 3 | [Migrations runbook](../app/supabase/README.txt) | Exact SQL file order: `0001` → `0002` → `0003` → `0005` → `0006` → `0007` (optional `0004` dev) |
 | 4 | [Testing against live Supabase](backend/testing-live-supabase.md) | Dashboard auth, first-run checklist, where to see data |
 | 5 | [Backend checklist](backend/BACKEND-TODO.md) | Done vs planned (Phase 0–2), what to build next |
 | 6 | [Data model](backend/data-model.md) | Tables, views, Phase 2 design (capital policy, bill amendments) |
@@ -58,7 +58,7 @@ flowchart LR
 | File | When to open it |
 |------|------------------|
 | [backend/phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md) | E2E commands, use-case IDs, what each script asserts |
-| [backend/seed-demo-and-reset.md](backend/seed-demo-and-reset.md) | Demo seed, tenant purge, credentials, npm scripts |
+| [backend/seed-demo-and-reset.md](backend/seed-demo-and-reset.md) | Supabase tenant seed (`seed:demo`), purge, credentials |
 | [backend/phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.md) | Manual-only coverage, print/UI edge cases, sign-off template |
 
 ### Deployment & CI

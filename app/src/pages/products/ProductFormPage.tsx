@@ -5,8 +5,8 @@
  *   MRP          = price on product label (shown on bill, reference only)
  *   Buy price    = cost from Havmor (private — never shown on bills)
  *   Markup %     = configurable % over buy price → auto-calculates sell price
- *   Sell price   = buy price × (1 + markup/100) — what we charge, excl. VAT
- *   Sell incl. VAT = sell price × 1.13 — shown as reference when VAT is on
+ *   Sell price   = buy price × (1 + markup/100) — what we charge on bills
+ *   VAT on bills = from tenant Settings (not per product)
  *
  *   Auto-link: changing buy price or markup % recalculates sell price.
  *              Manually typing sell price updates markup % to match.
@@ -17,21 +17,33 @@
  */
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Info, RefreshCw } from "lucide-react";
+import { ArrowLeft, Info, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { useBusinessSettings, useProducts, upsertProductLive } from "@/store/domain";
 import { supabase } from "@/lib/supabase";
 import { npr } from "@/lib/utils";
+import {
+  UOM_OPTIONS,
+  availableExtraUoms,
+  conversionLabel,
+  mergeUomPricesWithConversion,
+  packUomOptions,
+  toDbUomConversion,
+  toDbUomPrices,
+} from "@/lib/uom";
+import type { Product, ProductUomConversion, ProductUomPrice } from "@/domain/types";
+import { effectiveMinQtyPcs, isLowStock, minStockLabel } from "@/lib/stockAlert";
+import { Button } from "@/components/ui/button";
 
-const UOM_OPTIONS = ["PCS", "Box", "Ltr", "Kg", "Pkt", "Ctn", "Doz"];
+type ExtraUomRow = { id: number; uom: string; mrp: number; sellingPrice: number };
 const CAT_OPTIONS = ["Ice Cream", "Bar", "Party", "Candy", "Cone", "Other"];
-const VAT_RATE    = 13;
 
 const Section = ({ label }: { label: string }) => (
   <p className="mb-3 mt-6 text-xs font-bold uppercase tracking-wider text-teal-600 first:mt-0">{label}</p>
@@ -71,10 +83,35 @@ export const ProductFormPage = () => {
   );
 
   const [discountPct,   setDiscountPct]   = useState(existing?.discountPct   ?? 0);
-  const [vatApplicable, setVat]           = useState(existing?.vatApplicable ?? false);
 
   // ── Stock threshold (defaults from Settings) ──────────────────────────────
   const [minQty, setMinQty] = useState(existing?.minQty ?? business.defaultMinQty);
+  const [minQtyPack, setMinQtyPack] = useState(
+    existing?.minQtyPack ?? business.defaultMinPackQty,
+  );
+
+  const [packUom, setPackUom] = useState(existing?.uomConversion?.packUom ?? "");
+  const [piecesPerPack, setPiecesPerPack] = useState(
+    existing?.uomConversion?.piecesPerPack ?? 0,
+  );
+
+  const [extraUomRows, setExtraUomRows] = useState<ExtraUomRow[]>(() => {
+    if (!existing) return [];
+    const pack = existing.uomConversion?.packUom;
+    return Object.entries(existing.uomPrices)
+      .filter(([k]) => k !== existing.uom && k !== pack)
+      .map(([uom, p], i) => ({
+        id: i + 1,
+        uom,
+        mrp: p.mrp,
+        sellingPrice: p.sellingPrice,
+      }));
+  });
+
+  const uomConversion: ProductUomConversion | null =
+    packUom.trim() && piecesPerPack >= 2
+      ? { packUom: packUom.trim(), piecesPerPack: Math.round(piecesPerPack) }
+      : null;
 
   const [saving, setSaving] = useState(false);
 
@@ -108,16 +145,56 @@ export const ProductFormPage = () => {
 
   // ── Derived preview ───────────────────────────────────────────────────────
   const effectiveSell   = sellPrice * (1 - discountPct / 100);
-  const vatAmount       = vatApplicable ? Math.round(effectiveSell * VAT_RATE / 100) : 0;
-  const sellInclVat     = effectiveSell + vatAmount;
   const margin          = buyPrice > 0 ? Math.round(((effectiveSell - buyPrice) / buyPrice) * 100) : 0;
   const marginNpr       = effectiveSell - buyPrice;
 
   // ── Save ──────────────────────────────────────────────────────────────────
+  const buildUomPricesForSave = (): Record<string, { mrp: number; sale_price: number }> => {
+    const manual: Record<string, ProductUomPrice> = {};
+    for (const row of extraUomRows) {
+      const key = row.uom.trim();
+      if (!key) continue;
+      manual[key] = { mrp: row.mrp, sellingPrice: row.sellingPrice };
+    }
+    const merged = mergeUomPricesWithConversion(
+      uom,
+      { mrp, sellingPrice: sellPrice },
+      manual,
+      uomConversion,
+    );
+    return toDbUomPrices(merged);
+  };
+
+  const addExtraUomRow = () => {
+    const next = availableExtraUoms(uom, packUom, extraUomRows)[0];
+    if (!next) {
+      toast.error("All standard units are already added.");
+      return;
+    }
+    setExtraUomRows((rows) => [
+      ...rows,
+      { id: Date.now(), uom: next, mrp: 0, sellingPrice: 0 },
+    ]);
+  };
+
   const handleSave = async () => {
     if (!name.trim())   { toast.error("Product name is required."); return; }
     if (sellPrice <= 0) { toast.error("Sell price must be greater than 0."); return; }
     if (buyPrice <= 0)  { toast.error("Buy price must be greater than 0."); return; }
+    if (packUom.trim() && piecesPerPack < 2) {
+      toast.error("Enter how many base units are in one pack (e.g. 10).");
+      return;
+    }
+    for (const row of extraUomRows) {
+      if (!row.uom.trim()) {
+        toast.error("Choose a unit for each extra price row.");
+        return;
+      }
+      if (row.mrp <= 0 || row.sellingPrice <= 0) {
+        toast.error(`Enter MRP and sell price for ${row.uom}.`);
+        return;
+      }
+    }
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
@@ -135,9 +212,12 @@ export const ProductFormPage = () => {
         purchase_price: buyPrice,
         sale_price: sellPrice,
         mrp,
+        uom_prices: buildUomPricesForSave(),
+        uom_conversion: toDbUomConversion(uomConversion),
         discount_pct: discountPct,
-        vat_applicable: vatApplicable,
+        vat_applicable: false,
         min_qty: minQty,
+        min_qty_pack: uomConversion && minQtyPack > 0 ? minQtyPack : null,
       });
       toast.success(isEdit ? `${name} updated.` : `${name} added.`);
       navigate("/app/products");
@@ -173,12 +253,73 @@ export const ProductFormPage = () => {
                 {CAT_OPTIONS.map((c) => <option key={c}>{c}</option>)}
               </Select>
             </FormField>
-            <FormField label="Unit (UOM)">
-              <Select value={uom} onChange={(e) => setUom(e.target.value)}>
+            <FormField label="Base unit" hint="Stock counted in this unit (e.g. PCS, Pkt)">
+              <Select
+                value={uom}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setUom(next);
+                  if (packUom === next) setPackUom("");
+                  setExtraUomRows((rows) => rows.filter((r) => r.uom !== next));
+                }}
+              >
                 {UOM_OPTIONS.map((u) => <option key={u}>{u}</option>)}
               </Select>
             </FormField>
           </div>
+
+          <Section label="Pack / conversion" />
+          <p className="mb-3 text-xs text-muted">
+            If you sell in packs (e.g. Box), set how many base units are inside one pack.
+          </p>
+          <div className="space-y-4 rounded-xl border border-border-subtle bg-slate-50/80 p-4">
+            <FormField label="Pack unit (optional)" hint="Larger unit — e.g. Box, Ctn">
+              <Select
+                value={packUom}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setPackUom(next);
+                  setExtraUomRows((rows) => rows.filter((r) => r.uom !== next));
+                  if (!next) setPiecesPerPack(0);
+                  else if (piecesPerPack < 2) setPiecesPerPack(10);
+                }}
+              >
+                <option value="">— Not sold in packs —</option>
+                {packUomOptions(uom).map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            {packUom ? (
+              <>
+                <FormField
+                  label="Conversion rate"
+                  hint={`How many ${uom} in one ${packUom}`}
+                >
+                  <NumericInput
+                    min={0}
+                    value={piecesPerPack}
+                    placeholder="e.g. 10"
+                    onChange={(v) => setPiecesPerPack(Math.round(v))}
+                  />
+                </FormField>
+                {uomConversion ? (
+                  <div className="flex items-start gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-sm font-medium text-emerald-800">
+                    <Info size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+                    <span>{conversionLabel(uomConversion, uom)}</span>
+                  </div>
+                ) : null}
+                <p className="text-[11px] text-muted">
+                  Pack MRP/sell on bills can be filled automatically (base price ×{" "}
+                  {piecesPerPack >= 2 ? piecesPerPack : "…"}) or overridden under other units
+                  below.
+                </p>
+              </>
+            ) : null}
+          </div>
+
           <FormField label="Description (optional)">
             <Input placeholder="Flavour, size, pack details…" value={description}
               onChange={(e) => setDescription(e.target.value)} />
@@ -200,15 +341,18 @@ export const ProductFormPage = () => {
 
         <div className="space-y-4">
           <FormField label="MRP (NPR)" hint="Price on the product label — shown on bill for customer reference">
-            <Input type="number" min={0} value={mrp || ""} placeholder="0"
-              onChange={(e) => setMrp(Number(e.target.value))} />
+            <NumericInput min={0} value={mrp} placeholder="0" onChange={setMrp} />
           </FormField>
 
           {/* Buy price */}
           <FormField label="Buy price (NPR)" hint="Your cost from Havmor — private, for profit calc only">
-            <Input type="number" min={0} value={buyPrice || ""} placeholder="0"
-              onChange={(e) => handleBuyChange(Number(e.target.value))}
-              className="border-amber-300 focus:ring-amber-400" />
+            <NumericInput
+              min={0}
+              value={buyPrice}
+              placeholder="0"
+              onChange={handleBuyChange}
+              className="border-amber-300 focus:ring-amber-400"
+            />
           </FormField>
 
           {/* Markup + sell price — linked row */}
@@ -217,9 +361,13 @@ export const ProductFormPage = () => {
               label="Markup (%)"
               hint={`Default: ${defaultMarkup}% (from Settings)`}
             >
-              <Input type="number" min={0} max={500} value={markupPct || ""}
+              <NumericInput
+                min={0}
+                max={500}
+                value={markupPct}
                 placeholder={String(defaultMarkup)}
-                onChange={(e) => handleMarkupChange(Number(e.target.value))} />
+                onChange={handleMarkupChange}
+              />
             </FormField>
 
             <FormField
@@ -228,8 +376,7 @@ export const ProductFormPage = () => {
               required
             >
               <div className="relative">
-                <Input type="number" min={0} value={sellPrice || ""} placeholder="0"
-                  onChange={(e) => handleSellChange(Number(e.target.value))} />
+                <NumericInput min={0} value={sellPrice} placeholder="0" onChange={handleSellChange} />
                 {/* Reset button — recalculate from buy × markup */}
                 {buyPrice > 0 && (
                   <button
@@ -245,100 +392,175 @@ export const ProductFormPage = () => {
             </FormField>
           </div>
 
-          {/* Sell price incl. VAT — shown when VAT is on, read-only reference */}
-          {vatApplicable && sellPrice > 0 && (
-            <FormField
-              label="Sell price incl. VAT (NPR)"
-              hint={`Reference only: sell price + ${VAT_RATE}% VAT. This is NOT a separate field — VAT is added at bill footer.`}
-            >
-              <div className="flex h-11 items-center rounded-lg bg-teal-50 border border-teal-200 px-3 text-sm font-semibold text-teal-700">
-                {npr(Math.round(sellPrice * (1 + VAT_RATE / 100)))}
-                <span className="ml-2 text-xs font-normal text-teal-500">(excl. {npr(sellPrice)} + VAT {npr(Math.round(sellPrice * VAT_RATE / 100))})</span>
-              </div>
-            </FormField>
-          )}
-
           <FormField label="Standard discount (%)" hint="Auto-filled on new bills — 0 if none">
-            <Input type="number" min={0} max={100} value={discountPct || ""} placeholder="0"
-              onChange={(e) => setDiscountPct(Math.min(100, Number(e.target.value)))} />
+            <NumericInput
+              min={0}
+              max={100}
+              value={discountPct}
+              placeholder="0"
+              onChange={(v) => setDiscountPct(Math.min(100, v))}
+            />
           </FormField>
         </div>
 
-        {/* ── VAT ── */}
-        <Section label="VAT" />
-        <FormField
-          label="VAT applicable on this product?"
-          hint="When Yes, 13% VAT is added at bill total — sell price above is excl. VAT."
-        >
-          <div className="flex gap-3">
-            {[true, false].map((v) => (
-              <button key={String(v)} onClick={() => setVat(v)}
-                className={`flex-1 rounded-lg border py-2.5 text-sm font-semibold transition-colors ${vatApplicable === v ? "border-teal-600 bg-teal-600 text-white" : "border-border-subtle bg-surface-card text-muted"}`}>
-                {v ? "Yes — add VAT on bill" : "No — price inclusive"}
-              </button>
-            ))}
+        {/* ── Other units (Box, Ctn, …) ── */}
+        <Section label="Prices for other units" />
+        <p className="mb-3 text-xs text-muted">
+          Optional. Other sell units (not the pack above) with their own MRP and sell price. Base and
+          pack units use the prices above unless you add overrides here.
+        </p>
+        {extraUomRows.length > 0 && (
+          <div className="mb-3 space-y-3">
+            {extraUomRows.map((row) => {
+              const uomPick = availableExtraUoms(
+                uom,
+                packUom,
+                extraUomRows.filter((r) => r.id !== row.id),
+              );
+              const options = row.uom && !uomPick.includes(row.uom) ? [row.uom, ...uomPick] : uomPick;
+              return (
+                <div
+                  key={row.id}
+                  className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2 rounded-lg border border-border-subtle bg-slate-50/80 p-3"
+                >
+                  <FormField label="Unit">
+                    <Select
+                      value={row.uom}
+                      onChange={(e) =>
+                        setExtraUomRows((rows) =>
+                          rows.map((r) => (r.id === row.id ? { ...r, uom: e.target.value } : r)),
+                        )
+                      }
+                    >
+                      {options.map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField label="MRP (NPR)">
+                    <NumericInput
+                      min={0}
+                      value={row.mrp}
+                      onChange={(v) =>
+                        setExtraUomRows((rows) =>
+                          rows.map((r) => (r.id === row.id ? { ...r, mrp: v } : r)),
+                        )
+                      }
+                    />
+                  </FormField>
+                  <FormField label="Sell excl. VAT">
+                    <NumericInput
+                      min={0}
+                      value={row.sellingPrice}
+                      onChange={(v) =>
+                        setExtraUomRows((rows) =>
+                          rows.map((r) => (r.id === row.id ? { ...r, sellingPrice: v } : r)),
+                        )
+                      }
+                    />
+                  </FormField>
+                  <button
+                    type="button"
+                    onClick={() => setExtraUomRows((rows) => rows.filter((r) => r.id !== row.id))}
+                    className="mb-0.5 flex h-11 w-11 items-center justify-center rounded-lg text-danger hover:bg-red-50"
+                    aria-label="Remove unit"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        </FormField>
+        )}
+        {availableExtraUoms(uom, packUom, extraUomRows).length > 0 && (
+          <Button type="button" variant="ghost" size="sm" onClick={addExtraUomRow}>
+            <Plus size={14} /> Add unit price (e.g. Box)
+          </Button>
+        )}
 
-        {/* ── Pricing summary card ── */}
+        {/* ── Pricing summary (one line) ── */}
         {sellPrice > 0 && buyPrice > 0 && (
-          <Card className="mt-2">
-            <CardContent className="p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted">
-                Pricing summary (per {uom})
-              </p>
-              <div className="space-y-2">
-                <SummaryRow label="MRP (on product)"     value={npr(mrp)}          note="reference" dim />
-                <SummaryRow label="Buy price"            value={npr(buyPrice)}      note="private" dim />
-                <SummaryRow label="Markup"               value={`${markupPct}%`} />
-                <SummaryRow label="Sell price (excl. VAT)" value={npr(sellPrice)} />
-                {discountPct > 0 && (
-                  <SummaryRow label={`After ${discountPct}% discount`} value={npr(effectiveSell)} />
-                )}
-                {vatApplicable && (
-                  <SummaryRow label={`+ VAT ${VAT_RATE}%`}           value={`+ ${npr(vatAmount)}`} />
-                )}
-                <div className="border-t border-dashed border-gray-200 pt-2">
-                  <SummaryRow label="Customer pays"      value={npr(sellInclVat)}  bold />
-                </div>
-                <div className="border-t border-dashed border-gray-200 pt-2">
-                  <SummaryRow
-                    label="Your profit / unit"
-                    value={`${npr(marginNpr)} (${margin}%)`}
-                    bold
-                    colored={margin < 5 ? "text-danger" : margin < 15 ? "text-warning-foreground" : "text-success-foreground"}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="rounded-lg border border-border-subtle bg-slate-50 px-3 py-2 text-xs leading-relaxed text-foreground">
+            <span className="font-semibold text-muted">Per {uom}: </span>
+            <span>MRP {npr(mrp)}</span>
+            <span className="text-gray-300"> · </span>
+            <span className="text-muted">Buy {npr(buyPrice)}</span>
+            <span className="text-gray-300"> · </span>
+            <span>Markup {markupPct}%</span>
+            <span className="text-gray-300"> · </span>
+            <span className="font-semibold text-teal-800">Sell {npr(sellPrice)}</span>
+            {discountPct > 0 && (
+              <>
+                <span className="text-gray-300"> · </span>
+                <span>After disc. {npr(effectiveSell)}</span>
+              </>
+            )}
+            <span className="text-gray-300"> · </span>
+            <span
+              className={
+                margin < 5
+                  ? "font-semibold text-danger"
+                  : margin < 15
+                    ? "font-semibold text-warning-foreground"
+                    : "font-semibold text-success-foreground"
+              }
+            >
+              Profit {npr(marginNpr)} ({margin}%)
+            </span>
+          </div>
         )}
 
         {/* ── Stock alert threshold ── */}
         <Section label="Stock alert" />
-        <FormField
-          label="Low stock threshold (min qty)"
-          hint={`Default from Settings: ${business.defaultMinQty} ${uom}. Decrease here if this product needs a lower alert.`}
-        >
-          <Input type="number" min={0} value={minQty}
-            onChange={(e) => setMinQty(Number(e.target.value))} />
-        </FormField>
-        {existing && (
-          <p className="text-xs text-muted">
-            Currently on hand: <strong>{existing.onHand} {uom}</strong>.{" "}
-            {existing.onHand <= minQty
-              ? <span className="text-danger font-semibold">Below threshold — shows as Low.</span>
-              : <span className="text-success-foreground">{existing.onHand - minQty} {uom} above threshold.</span>}
-          </p>
-        )}
+        <p className="mb-2 text-[11px] text-muted leading-snug">
+          Stock is tracked in <strong>{uom}</strong>. Alerts use the higher of piece and pack minimums.
+        </p>
+        <div className={`grid gap-3 ${uomConversion ? "grid-cols-2" : "grid-cols-1"}`}>
+          <FormField
+            label={`Min (${uom})`}
+            hint={`Settings: ${business.defaultMinQty}`}
+          >
+            <NumericInput min={0} value={minQty} onChange={setMinQty} />
+          </FormField>
+          {uomConversion ? (
+            <FormField
+              label={`Min (${uomConversion.packUom})`}
+              hint={`Settings: ${business.defaultMinPackQty}`}
+            >
+              <NumericInput min={0} value={minQtyPack} onChange={setMinQtyPack} />
+            </FormField>
+          ) : null}
+        </div>
+        {existing && (() => {
+          const preview: Product = {
+            ...existing,
+            minQty,
+            minQtyPack: uomConversion && minQtyPack > 0 ? minQtyPack : undefined,
+            uomConversion,
+          };
+          const eff = effectiveMinQtyPcs(preview);
+          const low = isLowStock(preview);
+          return (
+            <p className="text-xs text-muted">
+              On hand: <strong>{existing.onHand} {uom}</strong> · alert below{" "}
+              <strong>{minStockLabel(preview)}</strong> ({eff} {uom} total).{" "}
+              {low ? (
+                <span className="font-semibold text-danger">Low stock now.</span>
+              ) : (
+                <span className="text-success-foreground">{existing.onHand - eff} {uom} above alert.</span>
+              )}
+            </p>
+          );
+        })()}
 
       </div>
 
       <StickyBar
         rows={sellPrice > 0 ? [
           ["Sell price", npr(sellPrice)],
-          ...(vatApplicable ? [["Incl. VAT", npr(sellInclVat)] as [string, string]] : []),
-          ...(buyPrice > 0  ? [["Margin", `${margin}%`]         as [string, string]] : []),
+          ...(buyPrice > 0 ? [["Margin", `${margin}%`] as [string, string]] : []),
         ] : undefined}
         action={isEdit ? "Update product" : "Add product"}
         onAction={handleSave}
@@ -348,18 +570,3 @@ export const ProductFormPage = () => {
     </PageShell>
   );
 };
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const SummaryRow = ({
-  label, value, note, bold, dim, colored,
-}: { label: string; value: string; note?: string; bold?: boolean; dim?: boolean; colored?: string }) => (
-  <div className={`flex items-center justify-between text-sm ${dim ? "opacity-55" : ""}`}>
-    <span className="text-muted">
-      {label}
-      {note && <span className="ml-1 text-[10px] opacity-70">({note})</span>}
-    </span>
-    <span className={colored ?? (bold ? "font-bold text-foreground" : "font-medium text-foreground")}>
-      {value}
-    </span>
-  </div>
-);

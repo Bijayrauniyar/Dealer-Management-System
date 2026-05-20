@@ -7,6 +7,7 @@ import { FormField } from "@/components/app/FormField";
 import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DAMAGE_REASONS } from "@/domain/catalogs";
@@ -17,7 +18,7 @@ export const DamagePage = () => {
   const navigate  = useNavigate();
   const PRODUCTS  = useProducts();
   const [productId, setProductId] = useState("");
-  const [qty, setQty]             = useState("1");
+  const [qty, setQty]             = useState(1);
   const [reason, setReason]       = useState(DAMAGE_REASONS[0]);
   const [notes, setNotes]         = useState("");
   const [date, setDate]           = useState(toDateInput());
@@ -30,7 +31,7 @@ export const DamagePage = () => {
       await new Promise((r) => setTimeout(r, 200));
       await commitDamageEntry({
         productId,
-        qty: Number(qty) || 0,
+        qty: qty || 1,
         reason,
         notes: notes || undefined,
       });
@@ -55,7 +56,7 @@ export const DamagePage = () => {
             value={productId} onChange={(id) => setProductId(id)} onClear={() => setProductId("")} entityLabel="product" />
         </FormField>
         <FormField label="Qty" required>
-          <Input type="number" min={1} value={qty} onChange={(e) => setQty(e.target.value)} />
+          <NumericInput min={1} value={qty} onChange={(v) => setQty(Math.max(1, v))} />
         </FormField>
         <FormField label="Reason" required>
           <Select value={reason} onChange={(e) => setReason(e.target.value)}>

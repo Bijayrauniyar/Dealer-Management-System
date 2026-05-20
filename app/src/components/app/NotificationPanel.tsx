@@ -17,6 +17,7 @@ import {
 import { Link } from "react-router-dom";
 import type { Product, Sale } from "@/domain/types";
 import { useBusinessSettings, useProducts, useSales } from "@/store/domain";
+import { isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { npr, fmtDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -84,12 +85,12 @@ export function buildNotifications(
 
   // 3. Low stock
   products
-    .filter((p) => p.onHand <= p.minQty)
+    .filter(isLowStock)
     .forEach((p) => {
       ns.push({
         id: `low-${p.id}`, type: "low_stock", tab: "stock",
         title: p.name,
-        body: `${p.onHand} ${p.uom} left · min threshold ${p.minQty} ${p.uom}`,
+        body: `${p.onHand} ${p.uom} left · min ${minStockLabel(p)}`,
         linkTo: "/app/stock", urgent: p.onHand === 0,
       });
     });

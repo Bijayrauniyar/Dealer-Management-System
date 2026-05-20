@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Phone, AlertTriangle, Clock, CheckCircle2, ChevronRight, FileText, FilePlus } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Clock, CheckCircle2, ChevronRight, FilePlus } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { KpiCard } from "@/components/app/KpiCard";
 import { SectionHeader } from "@/components/app/SectionHeader";
@@ -146,16 +146,17 @@ export const CustomerDetailPage = () => {
       </button>
 
       {/* ── Customer header ── */}
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-foreground leading-tight">{customer.name}</h1>
-          <p className="text-sm text-muted">{customer.area}</p>
-          {customer.address && (
-            <p className="text-xs text-muted/70">{customer.address}</p>
-          )}
+          <h1 className="text-lg font-bold text-foreground leading-tight">{customer.name}</h1>
+          <p className="text-xs text-muted leading-snug">
+            {[customer.area, customer.address, customer.phone ? `Ph ${customer.phone}` : null]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
           {customer.phone && (
-            <a href={`tel:${customer.phone}`} className="mt-1 inline-flex items-center gap-1 text-sm text-teal-600">
-              <Phone size={13} /> {customer.phone}
+            <a href={`tel:${customer.phone}`} className="sr-only">
+              {customer.phone}
             </a>
           )}
         </div>
@@ -168,24 +169,31 @@ export const CustomerDetailPage = () => {
         </button>
       </div>
 
-      {/* ── KPI row ── */}
-      <div className="mb-4 grid grid-cols-3 gap-2">
+      {/* ── KPI row — 3 equal columns, fits narrow screens ── */}
+      <div className="mb-3 grid grid-cols-3 gap-2">
         <KpiCard
+          size="compact"
           label="Outstanding"
           value={npr(customer.outstanding)}
           variant={customer.outstanding > 0 ? "warning" : "success"}
-          sub={`${openBills.length} open bill${openBills.length !== 1 ? "s" : ""}`}
+          sub={`${openBills.length} open`}
         />
         <KpiCard
+          size="compact"
           label="Overdue"
           value={npr(totalOverdue)}
           variant={totalOverdue > 0 ? "danger" : "success"}
-          sub={totalOverdue > 0 ? `${overdueBills.length} bill${overdueBills.length !== 1 ? "s" : ""}` : "None"}
+          sub={totalOverdue > 0 ? `${overdueBills.length} due` : "None"}
         />
         <KpiCard
+          size="compact"
           label="Credit limit"
           value={npr(customer.creditLimit)}
-          sub={`Used ${Math.round((customer.outstanding / customer.creditLimit) * 100)}%`}
+          sub={
+            customer.creditLimit > 0
+              ? `${Math.min(100, Math.round((customer.outstanding / customer.creditLimit) * 100))}% used`
+              : "Not set"
+          }
         />
       </div>
 
@@ -231,8 +239,8 @@ export const CustomerDetailPage = () => {
 
       {/* ── Collect payment CTA ── */}
       {customer.outstanding > 0 && (
-        <Button size="full" className="mb-5" onClick={goToPayment}>
-          Record payment · {npr(customer.outstanding)} pending
+        <Button size="full" className="mb-4" onClick={goToPayment}>
+          Collect · {npr(customer.outstanding)}
         </Button>
       )}
 

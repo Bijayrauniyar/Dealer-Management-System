@@ -52,6 +52,32 @@ for (const t of tables) {
   log("H5", "smoke", `table ${t}`, { ok: !error, error: error?.message ?? null, count });
 }
 
+const uomChecks = [
+  {
+    name: "products.uom_prices,uom_conversion",
+    run: () => supabase.from("products").select("uom_prices, uom_conversion").limit(1),
+    hint: "0008 + 0009",
+  },
+  {
+    name: "sales_items.unit",
+    run: () => supabase.from("sales_items").select("unit").limit(1),
+    hint: "0010",
+  },
+];
+for (const { name, run, hint } of uomChecks) {
+  const { error } = await run();
+  if (error) {
+    tableFails++;
+    log("H5", "smoke", `uom column ${name}`, {
+      ok: false,
+      error: error.message,
+      hint: `Apply migration ${hint}`,
+    });
+  } else {
+    log("H5", "smoke", `uom column ${name}`, { ok: true });
+  }
+}
+
 const { error: rpcProbe } = await supabase.rpc("signup_tenant", {
   p_business_name: "x",
   p_owner_name: "y",

@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import type { Sale, BillStatus } from "@/domain/types";
-import { ArrowLeft, Printer, Pencil, CreditCard, RotateCcw } from "lucide-react";
+import { ArrowLeft, Printer, Pencil, CreditCard, RotateCcw, Download, Share2 } from "lucide-react";
+import { downloadBillPdf, shareBillPdf } from "@/lib/billExport";
 import { PageShell } from "@/components/app/PageShell";
 import { BillPrintView } from "@/components/app/BillPrintView";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +58,36 @@ export const BillDetailPage = () => {
   const obEntry   = OUTSTANDING_BILLS.find((b) => b.billNo === billNo);
   const payments  = PAYMENTS.filter((p) => p.billNo === billNo);
   const customer  = sale ? CUSTOMERS.find((c) => c.id === sale.customerId) : undefined;
+  const [exporting, setExporting] = useState(false);
+
+  const handleDownload = async () => {
+    if (!sale) return;
+    setExporting(true);
+    try {
+      await downloadBillPdf(sale.billNo);
+      toast.success("Bill downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!sale) return;
+    setExporting(true);
+    try {
+      const result = await shareBillPdf(sale.billNo);
+      if (result === "shared") toast.success("Bill shared");
+      else toast.success("Bill downloaded (share not available on this device)");
+    } catch (e) {
+      if ((e as Error)?.name !== "AbortError") {
+        toast.error(e instanceof Error ? e.message : "Share failed");
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (searchParams.get("print") === "1" && sale) {
@@ -115,7 +147,7 @@ export const BillDetailPage = () => {
   const overDays = daysOverdue(sale.dueDate);
 
   return (
-    <PageShell>
+    <PageShell className="pb-56">
       {/* ── Top bar: back + status + actions ── */}
       <div data-no-print className="mb-4 flex items-center justify-between gap-2">
         <button
@@ -143,9 +175,9 @@ export const BillDetailPage = () => {
         </div>
       )}
 
-      {/* ── Bill (invoice print view) ── */}
-      <div className="mb-5 overflow-hidden rounded-2xl border border-border-subtle shadow-card">
-        <BillPrintView sale={sale} customer={customer} isPreview={Boolean(stateSale)} />
+      {/* ── Bill (scroll horizontally on small screens if table is wide) ── */}
+      <div className="-mx-1 mb-4 overflow-x-auto sm:mx-0">
+        <BillPrintView sale={sale} customer={customer} />
       </div>
 
       {/* ── Payment history (app-only, hidden on print) ── */}
@@ -171,37 +203,62 @@ export const BillDetailPage = () => {
         </div>
       )}
 
-      <div className="h-24" />
-
-      {/* ── Sticky bottom action bar ── */}
-      <div data-no-print className="fixed bottom-16 left-0 right-0 z-20 mx-auto max-w-xl px-4 pb-2">
-        <div className="flex gap-2 rounded-2xl border border-border-subtle bg-white/95 p-2 shadow-card-md backdrop-blur">
+      {/* ── Sticky bottom actions (two rows — no overlap with bill totals) ── */}
+      <div
+        data-no-print
+        className="fixed bottom-16 left-0 right-0 z-20 mx-auto max-w-xl border-t border-border-subtle bg-white/95 px-3 py-2 shadow-card-md backdrop-blur"
+      >
+        <div className="flex gap-2">
           <button
+            type="button"
+            disabled={exporting}
             onClick={() => window.print()}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-white px-3 py-3 text-sm font-medium text-muted hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-white py-2.5 text-xs font-semibold sm:text-sm"
           >
-            <Printer size={15} />
+            <Printer size={14} /> Print
+          </button>
+          <button
+            type="button"
+            disabled={exporting}
+            onClick={handleDownload}
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-white py-2.5 text-xs font-semibold sm:text-sm"
+          >
+            <Download size={14} /> PDF
+          </button>
+          <button
+            type="button"
+            disabled={exporting}
+            onClick={handleShare}
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-teal-200 bg-teal-50 py-2.5 text-xs font-semibold text-teal-800 sm:text-sm"
+          >
+            <Share2 size={14} /> Share
           </button>
           {status !== "paid" && (
             <button
+              type="button"
               onClick={() => navigate(`/app/sales/edit/${sale.billNo}`, { state: { sale } })}
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-white px-3 py-3 text-sm font-medium text-muted hover:bg-slate-50 active:bg-slate-100 transition-colors"
+              className="flex items-center justify-center rounded-lg border border-border-subtle bg-white px-3 py-2.5"
+              aria-label="Edit bill"
             >
-              <Pencil size={15} />
+              <Pencil size={14} />
             </button>
           )}
+        </div>
+        <div className="mt-2 flex gap-2">
           <button
+            type="button"
             onClick={() => navigate(`/app/returns/new?customerId=${sale.customerId}&billNo=${sale.billNo}`)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-white px-3 py-3 text-sm font-semibold text-foreground hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-white py-2.5 text-xs font-semibold sm:text-sm"
           >
-            <RotateCcw size={15} /> Return
+            <RotateCcw size={14} /> Return
           </button>
           {sale.balance > 0 && (
             <button
+              type="button"
               onClick={() => navigate(`/app/payments/new?customerId=${sale.customerId}`)}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-3 py-3 text-sm font-bold text-white shadow-sm hover:bg-teal-700 active:bg-teal-800 transition-colors"
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-teal-600 py-2.5 text-xs font-bold text-white sm:text-sm"
             >
-              <CreditCard size={15} /> Collect · {npr(sale.balance)}
+              <CreditCard size={14} /> Collect · {npr(sale.balance)}
             </button>
           )}
         </div>

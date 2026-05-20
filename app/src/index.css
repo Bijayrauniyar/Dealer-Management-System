@@ -2,32 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Print styles ────────────────────────────────────────────────────────── */
+/* ── Print styles (A4 invoice) ─────────────────────────────────────────── */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
 @media print {
-  /* Hide everything except the bill content */
   nav, header, footer,
   [data-no-print],
   .sticky-bar,
-  .bottom-tabs {
+  .bottom-tabs,
+  .bill-preview-chrome {
     display: none !important;
   }
 
   body {
     background: white;
     color: black;
-    font-size: 12px;
+    font-size: 11pt;
   }
 
-  /* Ensure bill content fills the page */
   .page-shell-content {
     padding: 0 !important;
     margin: 0 !important;
+    max-width: none !important;
   }
 
-  /* Remove shadows/cards for print */
   .shadow-card, .shadow-card-md {
     box-shadow: none !important;
   }
+
+  .bill-print-a4 {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    margin: 0 auto;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .bill-print-a4 .truncate {
+    overflow: visible !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+  }
+
+  .bill-print-a4 table,
+  .bill-print-a4 table thead tr {
+    break-inside: avoid;
+  }
+
+  .bill-print-a4 .bg-teal-600 {
+    background-color: #0d9488 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Off-screen clone for PDF export at full A4 width */
+.bill-pdf-capture {
+  width: 210mm !important;
+  max-width: 210mm !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.bill-pdf-capture .truncate {
+  overflow: visible !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
 }
 
 :root {

@@ -1,32 +1,25 @@
 # Backend data model
 
-> Last updated: 2026-05-14 — reflects UI v1 (React demo with dummy data).  
-> Stack target: **Supabase** (PostgreSQL + Row Level Security + Edge Functions).
+> Last updated: 2026-05-20 — live Supabase app (React + TanStack Query).  
+> Stack: **Supabase** (PostgreSQL + Row Level Security + RPCs; Edge Functions planned Phase 2).
 
 **Navigate:** [Docs hub](../README.md) · [Project README](../../README.md) · [Backend checklist](./BACKEND-TODO.md) · [Testing live](./testing-live-supabase.md) · [Migrations](../../app/supabase/README.txt)
 
 ---
 
-## Demo app (pre-backend) — client persistence
+## Live app — client persistence
 
-Until Supabase is live, the React app uses **`src/store/appStore.ts`**: an in-memory model mirrored to **`localStorage`** under key `havmor-demo-v1`.
+The React app is **Supabase-only**. Reads and writes go through [`app/src/lib/live/domainLive.ts`](../../app/src/lib/live/domainLive.ts); UI hooks in [`app/src/store/domainHooks.ts`](../../app/src/store/domainHooks.ts) (TanStack Query, key `["domain", "v1"]`).
 
 | Concern | Behaviour |
 |---|---|
-| **What is persisted** | Deep-cloned copies of seed `sales`, `products`, `customers`, `outstanding_bills`, `payments`, `suppliers`. `sales_by_bill` is rebuilt on load from `sales`. |
-| **Mutations** | `commitSale`, `commitPayment`, `commitReturn`, `commitPurchase`, `commitSupplierPayment` update the same shapes the backend will own later; each save writes JSON to `localStorage`. |
-| **Bill numbers** | `getNextBillNo()` scans `sales` for the highest numeric suffix after `tenant_settings.invoice_prefix`. |
-| **Reset** | Settings → **Reset demo data** clears the key and reloads seed JSON from `dummy.ts`. |
+| **Reads** | `fetchDomainBundle()` — parallel PostgREST queries + views (`v_stock`, `v_customer_balance`, `v_supplier_balance`). |
+| **Writes (money/stock)** | Postgres RPCs: `create_sales_bill`, `update_sales_bill`, `apply_customer_payment`, `apply_goods_return`, `record_purchase`, `apply_supplier_payment`, `record_expense`, `record_damage`. |
+| **Writes (masters)** | Direct upsert on `products`, `customers`; `tenant_settings` from Settings page. |
+| **Bill numbers** | Server assigns prefix + sequence via `create_sales_bill`; client can peek next via `peekNextBillNoLive`. |
+| **Test data** | `npm run seed:demo` seeds a **live tenant** via RPCs (not browser storage) — see [seed-demo-and-reset.md](./seed-demo-and-reset.md). |
 
-**Backend parity:** When wiring Supabase, replace store calls with RPC/mutations that:
-
-1. Insert/update `sales` + `sale_lines`, decrement `products.on_hand`, bump `customers.outstanding` by bill `balance`, upsert `outstanding_bills` / `customer_ledger` as designed below.  
-2. On payment: allocate to open bills (FIFO or user-selected), update `sales.balance` / `paid_now`, `outstanding_bills`, `customers.outstanding`, append `payments`.  
-3. On return: restore stock, reduce bill balance and customer outstanding by **min(credit, open balance on that bill)** (advance credit is a separate ledger in v2 if needed).  
-4. On purchase: increase `products.on_hand` by **received** qty, add to `suppliers.outstanding` by **received value** (invoice vs received shortfalls tracked per `data-model` short-receive section).  
-5. On supplier payment: decrease `suppliers.outstanding` by the amount paid (demo allocates against synthetic open balance).
-
-**Optional FE library:** The store uses React `useSyncExternalStore` today; **`zustand`** (with `persist` middleware) is listed in `package.json` as an optional migration path — same persistence key and shapes.
+Without `VITE_SUPABASE_*`, the app shows **`MissingSupabaseEnv`** (no offline demo).
 
 ---
 
@@ -67,8 +60,7 @@ One row per tenant — stores the full business profile that appears on invoices
 | default_min_qty | integer DEFAULT 20 | Default low-stock threshold applied when creating a new product. Overridable per product. |
 | updated_at | timestamptz | |
 
-> **FE note:** Load once at app boot and cache in React context / Zustand store.  
-> Invalidate cache on save from Settings page.
+> **FE note:** Loaded via `useBusinessSettings()` (React Query); invalidate `DOMAIN_QUERY_KEY` on save from Settings page.
 
 ---
 
@@ -100,14 +92,14 @@ One row per tenant — stores the full business profile that appears on invoices
 - `vat_applicable` — If true, 13% VAT is added at the bill total level (not per line). The `selling_price` is the VAT-exclusive base.
 - **Auto-calculation rule (FE only, no stored column):** `selling_price = cost_price × (1 + markup_pct / 100)`. `markup_pct` defaults to `tenant_settings.default_markup_pct` but is computed on the fly in the product form; only the final `selling_price` is persisted. Changing the sell price manually back-calculates the effective markup % for display only.
 
-**On a sales bill line:**
+**On a sales bill line (printed invoice):**
 ```
-S.N | Particulars | MRP | Qty | Unit | Rate | Disc% | Amount
+S.N | Particulars | MRP | Qty | Unit | Disc% | Amount
 ```
-- **MRP** — snapshot from `products.mrp` at time of billing. Reference only; never used in calculations.
-- **Rate** — snapshot of `products.selling_price` (excl. VAT) at time of billing.
-- **Disc%** — snapshot of `products.discount_pct` at time of billing. Column shown only when ≥ 1 line has a discount.
-- **Amount** — `qty × rate × (1 − discount_pct / 100)`. Rounded to nearest integer.
+- **MRP** — snapshot from `products.mrp` at billing (editable on sale screen).
+- **Disc%** — snapshot of `products.discount_pct`. Column shown only when ≥ 1 line has a discount.
+- **Amount** — `qty × mrp × (1 − discount_pct / 100)`. Rounded to nearest integer.
+- **Rate (DB only)** — `sales_items.rate` stores effective unit price `round(Amount / qty)` so server `subtotal = sum(qty×rate)` matches the UI. Dealer sell price is kept in the app for margin reference only, not printed.
 
 Then at bill footer:
 ```
@@ -789,7 +781,7 @@ Existing columns (from `0002`): `id`, `tenant_id`, `name`, `category`, `entry_da
 #### Goal
 Allow dealers to **correct an existing sales bill** in live mode (wrong qty, rate, discount, customer, due date) while keeping an **immutable amendment trail** for disputes and audits — **append-only audit** (`before_row` / `after_row`) like `capital_entry_audit`, but **not** the capital “include in totals / exclude with reason” model (see **Policy vs capital** below).
 
-> **Phase 1 status:** Create-only via `create_sales_bill`. The app route `/app/sales/edit/:billNo` exists and works in **demo** (`appStore.commitSale`). In **live** mode, `SaleEntryPage` blocks save with a toast (`"Editing an existing server bill is not supported yet"`). Bill detail still shows an Edit control; that is intentional until 2-D ships.
+> **Phase 1 status:** Create via `create_sales_bill` (`0003`); **edit** via `update_sales_bill` (`0007`) wired from `commitSaleLive` on `/app/sales/edit/:billNo`. **Still open for 2-D:** append-only `sales_bill_audit` + Amendment history UI on bill detail.
 
 **Policy vs capital:** Posted bills are **not** controlled by an “include in totals” tick like capital lines. Corrections use **amendment** (same `bill_no`, audited change) or future **void** (`voided_at` / reason), with stock and payment rules enforced in RPC — see **Cross-cutting policy**.
 
@@ -843,9 +835,6 @@ Optional: `change_reason text` (user-entered note on amend) if product wants it 
 - `SaleEntryPage`: remove live edit guard; load bill from server by `billNo` / id when editing.
 - `BillDetailPage`: **Amendment history** list/modal from `sales_bill_audit`; optionally hide **Edit** until RPC is deployed.
 - E2E: extend `e2e-phase1-matrix.mjs` with edit + audit assertions.
-
-#### Demo mode
-No change required: `appStore.commitSale` already overwrites the bill in `localStorage`. Phase 2-D is **live Supabase only** plus optional demo audit if you mirror audit into local state later.
 
 ---
 

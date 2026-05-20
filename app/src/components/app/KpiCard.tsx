@@ -47,12 +47,22 @@ type Props = {
   value: string | number;
   sub?: string | ReactNode;
   variant?: Variant;
+  size?: "default" | "compact";
   onClick?: () => void;
   className?: string;
 };
 
-export const KpiCard = ({ label, value, sub, variant = "default", onClick, className }: Props) => {
+export const KpiCard = ({
+  label,
+  value,
+  sub,
+  variant = "default",
+  size = "default",
+  onClick,
+  className,
+}: Props) => {
   const s = styles[variant];
+  const compact = size === "compact";
   return (
     <div
       role={onClick ? "button" : undefined}
@@ -60,18 +70,40 @@ export const KpiCard = ({ label, value, sub, variant = "default", onClick, class
       onClick={onClick}
       onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
       className={cn(
-        "rounded-xl p-4 shadow-card transition-transform",
+        "min-w-0 rounded-xl shadow-card transition-transform",
+        compact ? "p-2" : "p-3 sm:p-4",
         s.bg,
         onClick && "cursor-pointer hover:scale-[1.01] active:scale-100",
         className,
       )}
     >
-      <div className={cn("mb-1 text-xs font-medium", s.label)}>{label}</div>
-      <div className={cn("flex items-end justify-between gap-1")}>
-        <span className={cn("text-xl font-semibold leading-tight", s.value)}>{value}</span>
-        {onClick && <ChevronRight size={14} className={cn("mb-0.5 shrink-0", s.label)} />}
+      <div
+        className={cn(
+          "font-medium leading-none",
+          compact ? "text-[9px]" : "mb-0.5 text-[10px] sm:mb-1 sm:text-xs",
+          s.label,
+        )}
+      >
+        {label}
       </div>
-      {sub && <div className={cn("mt-1 text-xs", s.label)}>{sub}</div>}
+      <div className="flex items-end justify-between gap-0.5">
+        <span
+          className={cn(
+            "truncate font-semibold leading-tight tabular-nums",
+            compact ? "text-xs" : "text-base sm:text-xl",
+            s.value,
+          )}
+          title={typeof value === "string" ? value : String(value)}
+        >
+          {value}
+        </span>
+        {onClick && <ChevronRight size={compact ? 12 : 14} className={cn("mb-0.5 shrink-0", s.label)} />}
+      </div>
+      {sub && (
+        <div className={cn("mt-0.5 truncate leading-tight", compact ? "text-[9px]" : "mt-1 text-xs", s.label)}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 };

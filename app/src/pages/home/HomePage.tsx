@@ -5,6 +5,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useBusinessSettings, useCustomers, useProducts, useOutstandingBills } from "@/store/domain";
+import { isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { npr, fmtDate, toMiti, toDateInput } from "@/lib/utils";
 
 const TODAY = toDateInput();
@@ -27,7 +28,7 @@ export const HomePage = () => {
   const totalOutstanding  = CUSTOMERS.reduce((s, c) => s + c.outstanding, 0);
   const overdueCustomers  = CUSTOMERS.filter((c) => c.oldestBillDays > OVERDUE_DAYS && c.outstanding > 0);
   const openBillsCount    = OUTSTANDING_BILLS.filter((b) => b.balance > 0).length;
-  const lowStockProducts  = PRODUCTS.filter((p) => p.onHand <= p.minQty);
+  const lowStockProducts  = PRODUCTS.filter(isLowStock);
 
   const [tab,         setTab]         = useState<Tab>("customers");
   const [search,      setSearch]      = useState("");
@@ -49,7 +50,7 @@ export const HomePage = () => {
   // ── Stock list ─────────────────────────────────────────────────────────────
   const products = useMemo(() => {
     let list = [...PRODUCTS];
-    if (stockFilter === "low") list = list.filter((p) => p.onHand <= p.minQty);
+    if (stockFilter === "low") list = list.filter(isLowStock);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
@@ -257,7 +258,7 @@ export const HomePage = () => {
             <Card>
               <CardContent className="p-0 px-4">
                 {products.map((p) => {
-                  const isLow = p.onHand <= p.minQty;
+                  const isLow = isLowStock(p);
                   return (
                     <div key={p.id} className="flex items-center justify-between border-b border-border-subtle py-3.5 last:border-0">
                       <div className="min-w-0 flex-1">
@@ -268,7 +269,7 @@ export const HomePage = () => {
                           )}
                         </div>
                         <p className="text-xs text-muted">
-                          {p.category} · Min {p.minQty} {p.uom}
+                          {p.category} · Min {minStockLabel(p)}
                         </p>
                       </div>
                       <div className="ml-3 text-right shrink-0">

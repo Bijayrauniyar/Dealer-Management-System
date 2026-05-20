@@ -6,6 +6,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Textarea } from "@/components/ui/textarea";
 import { commitNewSupplier } from "@/store/domain";
 
@@ -14,7 +15,7 @@ export const SupplierFormPage = () => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [openingPayable, setOpeningPayable] = useState("");
+  const [openingPayable, setOpeningPayable] = useState(0);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -28,7 +29,7 @@ export const SupplierFormPage = () => {
         name: name.trim(),
         phone: phone.trim() || undefined,
         address: address.trim() || undefined,
-        payable_opening: Number(openingPayable) || 0,
+        payable_opening: openingPayable,
       });
       toast.success(`${name.trim()} added.`);
       navigate("/app/suppliers");
@@ -65,13 +66,7 @@ export const SupplierFormPage = () => {
           label="Opening payable (NPR)"
           hint="What you already owed this supplier before using the app, if any"
         >
-          <Input
-            type="number"
-            min={0}
-            placeholder="0"
-            value={openingPayable}
-            onChange={(e) => setOpeningPayable(e.target.value)}
-          />
+          <NumericInput min={0} value={openingPayable} placeholder="0" onChange={setOpeningPayable} />
         </FormField>
       </div>
 

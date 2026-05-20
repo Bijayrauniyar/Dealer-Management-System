@@ -14,7 +14,7 @@ Do these **once**, in this order:
 |---|--------|--------|
 | 1 | **Local** | `cd app && npm run deploy:check` (lint + production build) |
 | 2 | **GitHub** | Create repo, push `main` (see [§ GitHub](#1-github-repository)) |
-| 3 | **Supabase** | Run migrations `0001` → `0005`; copy API URL + anon key ([§ Supabase](#2-supabase-before-first-deploy)) |
+| 3 | **Supabase** | Run migrations `0001` → `0010`; copy API URL + anon key ([§ Supabase](#2-supabase-before-first-deploy)) |
 | 4 | **Netlify** | Import repo; set `VITE_SUPABASE_*` **before** first deploy ([§ Netlify](#3-netlify--exact-click-path)) |
 | 5 | **Supabase Auth** | Add Netlify URL to **Site URL** + **Redirect URLs** |
 | 6 | **Netlify** | Trigger **Deploy site** (rebuild after env vars) |
@@ -111,7 +111,7 @@ Confirm `.gitignore` excludes `app/.env.local`, `app/.e2e-credentials.local`, `a
 
 1. [supabase.com](https://supabase.com) → project (new or existing).
 2. **SQL Editor** — run migrations in order: [`app/supabase/README.txt`](../app/supabase/README.txt)  
-   `0001` → `0002` → `0003` → **`0005`** (optional `0004` dev-only).
+   `0001` → `0002` → `0003` → `0005` → `0006` (supplier_payments) → `0007` (`update_sales_bill`) → `0008` (`uom_prices`) → `0009` (`uom_conversion`) → `0010` (`sales_items.unit` + pack stock). Optional `0004` dev-only.
 3. **Project Settings → API** — copy:
    - **Project URL** → `VITE_SUPABASE_URL`
    - **anon public** key → `VITE_SUPABASE_ANON_KEY`
@@ -152,11 +152,11 @@ Scope: **Production** (and **Deploy previews** if previews should use Supabase).
 
 ### Verify production
 
-1. Open `https://YOUR-SITE.netlify.app` — you should get **login/register**, not demo-only home without auth.
+1. Open `https://YOUR-SITE.netlify.app` — you should get **login/register** (not `MissingSupabaseEnv`).
 2. Register or log in → **Settings** → save → row in `tenant_settings`.
 3. One sale → `sales_bills` in Supabase Table Editor.
 
-If the app behaves like **demo mode** (no `/register`, localStorage): env vars missing or deploy happened **before** vars were set → set vars and **redeploy**.
+If you see **MissingSupabaseEnv** or a blank setup screen: `VITE_*` env vars missing or deploy happened **before** vars were set → set vars and **redeploy**.
 
 ### Custom domain
 
@@ -190,7 +190,7 @@ Create a smoke test user: `cd app && node scripts/create-e2e-user-and-test.mjs`.
 ## 5. Pre-launch checklist
 
 - [ ] `npm run deploy:check` passes locally
-- [ ] Migrations `0001` → `0005` on production Supabase
+- [ ] Migrations `0001` → `0010` on production Supabase (UOM + stock need `0008`–`0010`)
 - [ ] Netlify `VITE_*` set; deploy succeeded
 - [ ] Supabase Auth URLs include Netlify + localhost
 - [ ] Register / login / Settings / one sale on production URL
@@ -216,7 +216,7 @@ Create a smoke test user: `cd app && node scripts/create-e2e-user-and-test.mjs`.
 
 | Symptom | Fix |
 |---------|-----|
-| Demo mode on Netlify | Set `VITE_*`; **redeploy** |
+| MissingSupabaseEnv on Netlify | Set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`; **redeploy** |
 | Auth redirect error | Exact Netlify URL in Supabase redirect list |
 | `signup_tenant` / empty tables | Run migrations ([`README.txt`](../app/supabase/README.txt)) |
 | CI build fails | Node 20; `cd app && npm ci && npm run build` locally |

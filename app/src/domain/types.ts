@@ -23,7 +23,10 @@ export type BusinessSettings = {
   overdueDays: number;
   dueSoonDays: number;
   defaultMarkupPct: number;
+  /** Low-stock default in base unit (PCS, etc.). */
   defaultMinQty: number;
+  /** Low-stock default in pack unit (Box, etc.) when product has conversion. */
+  defaultMinPackQty: number;
 };
 
 export type Customer = {
@@ -38,6 +41,18 @@ export type Customer = {
   oldestBillDays: number;
 };
 
+/** MRP and dealer sell price for one unit of measure. */
+export type ProductUomPrice = {
+  mrp: number;
+  sellingPrice: number;
+};
+
+/** e.g. 1 Box = 10 PCS (base unit is product.uom). */
+export type ProductUomConversion = {
+  packUom: string;
+  piecesPerPack: number;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -46,10 +61,16 @@ export type Product = {
   mrp: number;
   costPrice: number;
   sellingPrice: number;
+  /** Prices keyed by UOM (always includes primary `uom`). */
+  uomPrices: Record<string, ProductUomPrice>;
+  /** Optional pack size: 1 packUom = piecesPerPack × uom. */
+  uomConversion: ProductUomConversion | null;
   discountPct: number;
   vatApplicable: boolean;
   onHand: number;
   minQty: number;
+  /** Optional alert threshold in pack UOM (e.g. Box); 0 = use base minQty only. */
+  minQtyPack?: number;
   description?: string;
 };
 

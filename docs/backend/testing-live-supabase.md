@@ -10,10 +10,10 @@ Use this when `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in `app/.
 
 | Step | Action |
 |------|--------|
-| 1.1 | In Supabase **SQL Editor**, run migrations **in order**: `0001_init.sql` → `0002_tenant_settings_capital_audit.sql` → `0003_phase1_operations.sql` → **`0005_fix_phase1_rpc_jsonb.sql`** (see [`app/supabase/README.txt`](../../app/supabase/README.txt)). |
+| 1.1 | In Supabase **SQL Editor**, run migrations **in order**: `0001` → `0002` → `0003` → `0005` → `0006` → `0007` → `0008` → `0009` → `0010` (see [`app/supabase/README.txt`](../../app/supabase/README.txt)). |
 | 1.2 | **Authentication → URL configuration**: set **Site URL** to your app (e.g. `http://localhost:5173`). |
 | 1.3 | **Authentication → Providers → Email**: for local dev, turn **Confirm email** **off** until you add a confirmation flow. Otherwise `signUp` often returns **no session** and `/register` cannot call `signup_tenant` immediately. |
-| 1.4 | From `app/`, run `npm run dev` and open the printed local URL. Do **not** clear `VITE_*` in the shell unless you intentionally want **demo mode**. |
+| 1.4 | From `app/`, run `npm run dev` and open the printed local URL. Ensure `app/.env.local` has valid `VITE_SUPABASE_*` (otherwise the app shows **MissingSupabaseEnv**). |
 
 ---
 

@@ -6,11 +6,18 @@ import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { queryClient } from "@/lib/queryClient";
 import { DOMAIN_QUERY_KEY } from "@/lib/live/domainLive";
+import {
+  taxFieldsForSave,
+  taxKindFromSettings,
+  taxNumberFromSettings,
+  type TaxRegistrationKind,
+} from "@/lib/billDisplay";
 
 const SectionTitle = ({ icon: Icon, label }: { icon: React.ElementType; label: string }) => (
   <div className="mb-3 mt-6 flex items-center gap-2 first:mt-0">
@@ -41,6 +48,7 @@ type TenantSettingsRow = {
   due_soon_days: number;
   default_markup_pct: number;
   default_min_qty: number;
+  default_min_pack_qty: number;
 };
 
 export function SettingsPage() {
@@ -59,15 +67,15 @@ export function SettingsPage() {
   const [addr2, setAddr2] = useState("");
   const [district, setDistrict] = useState("");
   const [province, setProvince] = useState("");
-  const [pan, setPan] = useState("");
-  const [vatRegistered, setVatReg] = useState(false);
-  const [vatNumber, setVatNumber] = useState("");
+  const [taxKind, setTaxKind] = useState<TaxRegistrationKind>("pan");
+  const [taxNumber, setTaxNumber] = useState("");
   const [prefix, setPrefix] = useState("INV");
   const [billFooter, setBillFooter] = useState("");
   const [overdueDays, setOverdueDays] = useState(7);
   const [dueSoonDays, setDueSoonDays] = useState(3);
   const [defaultMarkupPct, setDefaultMarkupPct] = useState(15);
   const [defaultMinQty, setDefaultMinQty] = useState(20);
+  const [defaultMinPackQty, setDefaultMinPackQty] = useState(2);
   const [saving, setSaving] = useState(false);
 
   const applyRow = (data: TenantSettingsRow) => {
@@ -81,15 +89,21 @@ export function SettingsPage() {
     setAddr2(data.address_line2 ?? "");
     setDistrict(data.district ?? "");
     setProvince(data.province ?? "");
-    setPan(data.pan_number ?? "");
-    setVatReg(data.vat_registered);
-    setVatNumber(data.vat_number ?? data.pan_number ?? "");
+    const row = {
+      vatRegistered: data.vat_registered,
+      vatNumber: data.vat_number ?? "",
+      panNumber: data.pan_number ?? "",
+    };
+    const kind = taxKindFromSettings(row);
+    setTaxKind(kind);
+    setTaxNumber(taxNumberFromSettings(row, kind));
     setPrefix(data.invoice_prefix);
     setBillFooter(data.bill_footer ?? "");
     setOverdueDays(data.overdue_days);
     setDueSoonDays(data.due_soon_days);
     setDefaultMarkupPct(data.default_markup_pct);
     setDefaultMinQty(data.default_min_qty);
+    setDefaultMinPackQty(data.default_min_pack_qty ?? 2);
   };
 
   useEffect(() => {
@@ -118,15 +132,6 @@ export function SettingsPage() {
     };
   }, [tenantId]);
 
-  const handlePanChange = (v: string) => {
-    setPan(v);
-    if (!vatRegistered || vatNumber === pan) setVatNumber(v);
-  };
-  const handleVatRegToggle = (v: boolean) => {
-    setVatReg(v);
-    if (v && !vatNumber) setVatNumber(pan);
-  };
-
   const handleSave = async () => {
     if (!tenantId) return;
     setSaving(true);
@@ -142,15 +147,14 @@ export function SettingsPage() {
       district: district || null,
       province: province || null,
       country: "Nepal",
-      pan_number: pan || null,
-      vat_registered: vatRegistered,
-      vat_number: vatRegistered ? vatNumber || null : null,
+      ...taxFieldsForSave(taxKind, taxNumber),
       invoice_prefix: prefix || "INV",
       bill_footer: billFooter || null,
       overdue_days: overdueDays,
       due_soon_days: dueSoonDays,
       default_markup_pct: defaultMarkupPct,
       default_min_qty: defaultMinQty,
+      default_min_pack_qty: defaultMinPackQty,
     };
 
     const { error } = await supabase.from("tenant_settings").update(payload).eq("tenant_id", tenantId);
@@ -220,32 +224,35 @@ export function SettingsPage() {
 
           <SectionTitle icon={FileText} label="Tax &amp; registration" />
           <div className="space-y-4">
-            <FormField label="PAN number">
-              <Input value={pan} onChange={(e) => handlePanChange(e.target.value)} maxLength={9} />
-            </FormField>
-            <FormField label="VAT registered?">
+            <FormField
+              label="Registration type"
+              hint="Use PAN for non-VAT businesses. Use VAT if you are VAT registered. Only one number is saved and printed on bills."
+            >
               <div className="flex gap-3">
-                {[true, false].map((v) => (
+                {(["pan", "vat"] as const).map((k) => (
                   <button
-                    key={String(v)}
+                    key={k}
                     type="button"
-                    onClick={() => handleVatRegToggle(v)}
+                    onClick={() => setTaxKind(k)}
                     className={`flex-1 rounded-lg border py-2.5 text-sm font-semibold transition-colors ${
-                      vatRegistered === v
+                      taxKind === k
                         ? "border-teal-600 bg-teal-600 text-white"
                         : "border-border-subtle bg-surface-card text-muted"
                     }`}
                   >
-                    {v ? "Yes" : "No"}
+                    {k === "pan" ? "PAN" : "VAT"}
                   </button>
                 ))}
               </div>
             </FormField>
-            {vatRegistered && (
-              <FormField label="VAT number">
-                <Input value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} maxLength={9} />
-              </FormField>
-            )}
+            <FormField label={taxKind === "vat" ? "VAT number" : "PAN number"}>
+              <Input
+                value={taxNumber}
+                onChange={(e) => setTaxNumber(e.target.value)}
+                maxLength={9}
+                placeholder={taxKind === "vat" ? "VAT registration no." : "PAN no."}
+              />
+            </FormField>
           </div>
 
           <SectionTitle icon={Receipt} label="Invoice / bill settings" />
@@ -267,42 +274,38 @@ export function SettingsPage() {
           </div>
 
           <SectionTitle icon={SlidersHorizontal} label="Alerts & thresholds" />
-          <div className="space-y-4">
-            <FormField label="Overdue after (days)">
-              <Input type="number" min={0} max={90} value={overdueDays} onChange={(e) => setOverdueDays(Number(e.target.value))} />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Overdue (days)">
+                <NumericInput min={0} max={90} value={overdueDays} onChange={setOverdueDays} />
+              </FormField>
+              <FormField label="Due soon (days)">
+                <NumericInput min={0} max={30} value={dueSoonDays} onChange={setDueSoonDays} />
+              </FormField>
+            </div>
+            <FormField label="Default sell markup (%)">
+              <NumericInput min={0} max={500} value={defaultMarkupPct} onChange={setDefaultMarkupPct} />
             </FormField>
-            <FormField label="Due-soon reminder (days)">
-              <Input type="number" min={0} max={30} value={dueSoonDays} onChange={(e) => setDueSoonDays(Number(e.target.value))} />
-            </FormField>
-            <FormField label="Default sell price markup (%)">
-              <Input
-                type="number"
-                min={0}
-                max={500}
-                value={defaultMarkupPct}
-                onChange={(e) => setDefaultMarkupPct(Number(e.target.value))}
-              />
-            </FormField>
-            <FormField label="Default low stock threshold (qty)">
-              <Input type="number" min={0} value={defaultMinQty} onChange={(e) => setDefaultMinQty(Number(e.target.value))} />
-            </FormField>
+
+            <div className="rounded-lg border border-border-subtle bg-slate-50 p-3">
+              <p className="mb-2 text-xs font-semibold text-foreground">Default low stock alert</p>
+              <p className="mb-3 text-[11px] text-muted leading-snug">
+                Applied to new products. Stock is in pieces (PCS); Box applies when the product has pack
+                conversion.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Min (PCS / pieces)">
+                  <NumericInput min={0} value={defaultMinQty} onChange={setDefaultMinQty} />
+                </FormField>
+                <FormField label="Min (Box / pack)">
+                  <NumericInput min={0} value={defaultMinPackQty} onChange={setDefaultMinPackQty} />
+                </FormField>
+              </div>
+            </div>
           </div>
 
-          <div className="mb-6">
-            <Button
-              variant="secondary"
-              size="full"
-              onClick={() => {
-                void signOut().then(() => {
-                  toast.info("Signed out.");
-                  navigate("/login", { replace: true });
-                });
-              }}
-              className="text-danger border-danger/30 hover:bg-red-50"
-            >
-              Sign out
-            </Button>
-          </div>
+          {/* Spacer so content clears sticky Save + bottom tabs */}
+          <div className="h-4" />
         </>
       )}
 
@@ -312,6 +315,25 @@ export function SettingsPage() {
         loading={saving}
         disabled={!loaded || !tenantId || !!loadError}
       />
+
+      {loaded && (
+        <div className="mt-4 border-t border-border-subtle pt-4 pb-6">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Account</p>
+          <Button
+            variant="secondary"
+            size="full"
+            onClick={() => {
+              void signOut().then(() => {
+                toast.info("Signed out.");
+                navigate("/login", { replace: true });
+              });
+            }}
+            className="text-danger border-danger/30 hover:bg-red-50"
+          >
+            Sign out
+          </Button>
+        </div>
+      )}
     </PageShell>
   );
 }

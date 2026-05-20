@@ -12,7 +12,7 @@ If you are new to the codebase, read this file first, then follow the **numbered
 |------|-------------------|
 | **Auth & tenancy** | Email login, registration (`signup_tenant`), tenant pending approval, role-gated app shell (`owner` / `accountant`). |
 | **Home & cash** | Dashboard-style home, aging buckets, overdue list, period views. |
-| **Sales** | Create bills (lines, discount, VAT, extra charges, partial pay at billing, due date for credit). **Live:** `create_sales_bill`. **Edit existing bill:** demo only; live blocked until Phase 2-D. |
+| **Sales** | Create and edit bills (lines, discount, VAT, extra charges, partial pay at billing). RPCs: `create_sales_bill`, `update_sales_bill` (`0007`). |
 | **Bills** | Bill detail, navigation from home; print-oriented layout. |
 | **Payments** | Customer payments with FIFO-style bill allocation (`apply_customer_payment`). |
 | **Returns** | Goods return with stock and bill credit (`apply_goods_return`). |
@@ -27,9 +27,9 @@ If you are new to the codebase, read this file first, then follow the **numbered
 | **Company** | Overview KPIs, capital list/add (**live** reads/writes to `capital_entries`). |
 | **More / settings** | Navigation hub, app settings. |
 
-**Demo mode:** If `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are not set, the app runs entirely in the browser with **Zustand** + seeded **`dummy.ts`** data (no server).
+**Requires Supabase:** Without `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, the app shows a setup screen (`MissingSupabaseEnv`) — there is no offline demo mode.
 
-**Planned (Phase 2+):** Notifications, bill images, capital edit / inclusion-in-totals / audit UI, sales bill amendment RPC — see [`docs/backend/data-model.md`](docs/backend/data-model.md) and [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md).
+**Planned (Phase 2+):** Notifications, bill images, capital edit / inclusion-in-totals / audit UI, sales bill **amendment history** (`sales_bill_audit`) — see [`docs/backend/data-model.md`](docs/backend/data-model.md) and [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md).
 
 ---
 
@@ -40,9 +40,8 @@ If you are new to the codebase, read this file first, then follow the **numbered
 | **UI** | React 19, TypeScript, Vite 7 |
 | **Routing** | React Router 6 |
 | **Styling** | Tailwind CSS 3, `tailwind-merge`, `class-variance-authority`, `tailwindcss-animate` |
-| **Forms** | `react-hook-form` + Zod (`@hookform/resolvers`) |
-| **Client state (demo)** | Zustand |
-| **Server state (live)** | TanStack React Query |
+| **Forms** | Local `useState` on pages (`react-hook-form` + Zod are deps but unused) |
+| **Server state** | TanStack React Query |
 | **Backend** | Supabase: Postgres, Auth, RLS |
 | **Charts** | Recharts |
 | **CSV** | Papa Parse |
@@ -61,11 +60,11 @@ havmor/
 │   │   ├── components/     # Shared UI (layout, forms, primitives)
 │   │   ├── pages/          # Route-level screens
 │   │   ├── routes/         # AppRouter
-│   │   ├── store/          # appStore (demo), domainHooks (demo vs live)
-│   │   ├── lib/            # supabase, auth, live/domainLive, summarizers
-│   │   └── data/           # dummy.ts — demo seed + shared types
+│   │   ├── store/          # domainHooks → domainLive (React Query)
+│   │   ├── domain/         # types.ts, defaults.ts, catalogs.ts
+│   │   ├── lib/            # supabase, auth, live/domainLive
 │   ├── scripts/            # E2E and Supabase smoke scripts (.mjs)
-│   └── supabase/migrations # 0001… — ordered SQL
+│   └── supabase/migrations # 0001…0007 — ordered SQL
 ├── docs/                   # Project documentation (index: docs/README.md)
 └── netlify.toml            # SPA deploy: base app/, publish dist/
 ```
@@ -75,8 +74,8 @@ havmor/
 ## How we developed it (approach)
 
 1. **Product-first screens** — Flows match dealer workflows (sale → payment → return → purchase) before backend polish.
-2. **Demo parity, then live** — `domainHooks.ts` branches on `isSupabaseConfigured`: same components call either **Zustand mutations** or **`domainLive` RPCs/queries**. Keeps UI testable without a database.
-3. **Postgres as source of truth** — Non-trivial money/stock changes go through **RPCs** (`0003_phase1_operations.sql`, fixes in `0005_…`) so constraints stay server-side.
+2. **Supabase-only client** — `domainHooks.ts` + `domainLive.ts` call PostgREST and RPCs; app requires `VITE_*` env vars.
+3. **Postgres as source of truth** — Non-trivial money/stock changes go through **RPCs** (`0003` … `0007`) so constraints stay server-side.
 4. **RLS by tenant** — Data isolation via `tenant_id` and policies tied to `auth.uid()` / `tenant_users`.
 5. **Incremental migration** — Numbered SQL files; document order in `app/supabase/README.txt`.
 6. **Automated regression** — API matrix + UI E2E scripts (see Testing below).
@@ -85,11 +84,11 @@ havmor/
 
 ## Coding style & conventions
 
-- **TypeScript** throughout; strict typings for domain models re-exported from `dummy.ts` where practical.
+- **TypeScript** throughout; domain models in `src/domain/types.ts`.
 - **Path alias** `@/` → `src/` (see Vite/TS config).
 - **Naming** — React components `PascalCase`; hooks `use*`; live Supabase helpers often suffixed `Live` (`fetchXLive`, `commitSaleLive`).
 - **UI** — Prefer existing layout (`AppShell`), shared patterns for forms and lists; Tailwind utility classes; avoid one-off inline styles unless necessary.
-- **Mutations** — Live mode: invalidate or refetch via React Query keys (`DOMAIN_QUERY_KEY`, `CAPITAL_QUERY_KEY`, etc.); demo: Zustand actions in `appStore.ts`.
+- **Mutations** — Invalidate or refetch via React Query keys (`DOMAIN_QUERY_KEY`, `CAPITAL_QUERY_KEY`, etc.) after `domainLive` writes.
 - **Secrets** — Never commit `.env.local`, `.e2e-credentials.local`, or real keys. Use `.env.example` patterns described in docs if you add one locally.
 - **Git** — `.gitignore` excludes `app/node_modules`, `app/dist`, env files, E2E artifacts (e.g. `.e2e-ui-failure.png`), and `.cursor/*.log`.
 
@@ -107,8 +106,8 @@ npm run dev
 
 Open the URL Vite prints (typically `http://localhost:5173`).
 
-- **Demo:** Run without Supabase env vars; data lives in localStorage-backed store + seeds.
-- **Live:** Create `app/.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Apply migrations per [`app/supabase/README.txt`](app/supabase/README.txt). Auth setup Steps are in [`docs/backend/mcp-and-env.md`](docs/backend/mcp-and-env.md) and [`docs/backend/testing-live-supabase.md`](docs/backend/testing-live-supabase.md).
+- Copy `app/.env.example` → `app/.env.local` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (never commit `.env.local`).
+- Apply migrations per [`app/supabase/README.txt`](app/supabase/README.txt) (`0001` → `0007`). Auth setup: [`docs/backend/mcp-and-env.md`](docs/backend/mcp-and-env.md), [`docs/backend/testing-live-supabase.md`](docs/backend/testing-live-supabase.md).
 
 **Build:**
 
@@ -144,7 +143,7 @@ Start here for navigation: **[`docs/README.md`](docs/README.md)** (hub + **recom
 |----------|----------|
 | [`docs/README.md`](docs/README.md) | Hub, reading-order flow, full index |
 | [`docs/backend/mcp-and-env.md`](docs/backend/mcp-and-env.md) | `VITE_*` env, Cursor MCP vs app |
-| [`app/supabase/README.txt`](app/supabase/README.txt) | Migration order (`0001` … `0005`) |
+| [`app/supabase/README.txt`](app/supabase/README.txt) | Migration order (`0001` … `0007`) |
 | [`docs/backend/testing-live-supabase.md`](docs/backend/testing-live-supabase.md) | First live run, Dashboard checks |
 | [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md) | Phase 0–2 checklist, quality bar |
 | [`docs/backend/data-model.md`](docs/backend/data-model.md) | Schema, Phase 2 design, RPC notes |

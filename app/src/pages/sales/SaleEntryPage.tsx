@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Eye, X } from "lucide-react";
+import { ArrowLeft, Download, Plus, Trash2, Eye, X } from "lucide-react";
+import { downloadBillPdf } from "@/lib/billExport";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -9,11 +10,15 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { BillPrintView } from "@/components/app/BillPrintView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
+import { lineAmountFromMrp } from "@/lib/saleLineMath";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_MODES } from "@/domain/catalogs";
-import { useProducts, useCustomers, useSaleByBill, commitSale, useNextBillNo } from "@/store/domain";
+import { conversionLabel, linePricingForProduct, productUomChoices } from "@/lib/uom";
+import { useProducts, useCustomers, useSaleByBill, commitSale, useNextBillNo, useBusinessSettings } from "@/store/domain";
+import { BILL_VAT_RATE, tenantChargesVat } from "@/lib/billDisplay";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
 
 type Line = {
@@ -23,9 +28,8 @@ type Line = {
   uom: string;
   qty: number;
   mrp: number;
-  rate: number;          // sell price excl. VAT — editable
+  rate: number;          // sell price — editable (dealer)
   discountPct: number;   // product-level standard discount %
-  vatApplicable: boolean;// whether 13% VAT applies to this product
 };
 
 export const SaleEntryPage = () => {
@@ -36,6 +40,8 @@ export const SaleEntryPage = () => {
   // Reactive store data
   const CUSTOMERS = useCustomers();
   const PRODUCTS  = useProducts();
+  const business  = useBusinessSettings();
+  const tenantVat = tenantChargesVat(business);
   const existing  = useSaleByBill(editBillNo ?? "");
   const isEdit    = Boolean(existing);
 
@@ -60,9 +66,8 @@ export const SaleEntryPage = () => {
         mrp:           l.mrp ?? 0,
         rate:          l.rate,
         discountPct:   prod?.discountPct  ?? 0,
-        vatApplicable: prod?.vatApplicable ?? false,
       };
-    }) ?? [{ id: 1, productId: "", productName: "", uom: "PCS", qty: 1, mrp: 0, rate: 0, discountPct: 0, vatApplicable: false }],
+    }) ?? [{ id: 1, productId: "", productName: "", uom: "PCS", qty: 1, mrp: 0, rate: 0, discountPct: 0 }],
   );
 
   // Discount — pre-fill from existing
@@ -79,10 +84,6 @@ export const SaleEntryPage = () => {
     existing?.billTermsAmount ? String(existing.billTermsAmount) : "",
   );
 
-  // VAT
-  const [vatEnabled, setVatEnabled] = useState((existing?.vatRate ?? 0) > 0);
-  const VAT_RATE = 13;
-
   // Payment at time of billing
   const [paidNow, setPaidNow] = useState(
     existing?.paidNow ? String(existing.paidNow) : "",
@@ -94,6 +95,8 @@ export const SaleEntryPage = () => {
   const [notes, setNotes]     = useState(existing?.notes ?? "");
   const [saving, setSaving]   = useState(false);
   const [previewing, setPrev] = useState(false);
+  const [exportingPreview, setExportingPreview] = useState(false);
+  const [showDealerPricing, setShowDealerPricing] = useState(false);
 
   // Live edit: sales load after first paint — sync form when bill appears in bundle
   useEffect(() => {
@@ -112,7 +115,6 @@ export const SaleEntryPage = () => {
           mrp: l.mrp ?? 0,
           rate: l.rate,
           discountPct: prod?.discountPct ?? 0,
-          vatApplicable: prod?.vatApplicable ?? false,
         };
       }),
     );
@@ -120,14 +122,14 @@ export const SaleEntryPage = () => {
     setDiscountValue(existing.discountValue ? String(existing.discountValue) : "");
     setBillTerms(existing.billTerms ?? "");
     setBillTermsAmt(existing.billTermsAmount ? String(existing.billTermsAmount) : "");
-    setVatEnabled((existing.vatRate ?? 0) > 0);
     setPaidNow(existing.paidNow ? String(existing.paidNow) : "");
     setDueDate(existing.dueDate ?? "");
     setNotes(existing.notes ?? "");
   }, [existing, editBillNo, PRODUCTS]);
 
-  // ── Derived totals ──────────────────────────────────────────────────
-  const lineAmount = (l: Line) => Math.round(l.qty * l.rate * (1 - (l.discountPct ?? 0) / 100));
+  // ── Derived totals (MRP-based line amounts; bill discount unchanged below) ──
+  const lineAmount = (l: Line) =>
+    lineAmountFromMrp({ qty: l.qty, mrp: l.mrp, rate: l.rate, discountPct: l.discountPct });
   const subtotal   = lines.reduce((s, l) => s + lineAmount(l), 0);
 
   const discountAmt = (() => {
@@ -139,17 +141,52 @@ export const SaleEntryPage = () => {
   const afterDiscount  = subtotal - discountAmt;
   const termsAmt       = Number(billTermsAmt) || 0;
   const taxBase        = afterDiscount + termsAmt;
-  const vatAmt         = vatEnabled ? Math.round(taxBase * VAT_RATE / 100) : 0;
+  const vatAmt         = tenantVat ? Math.round(taxBase * BILL_VAT_RATE / 100) : 0;
   const grandTotal     = taxBase + vatAmt;
   const recordedPaid   = isEdit && existing ? Number(existing.paidNow) : 0;
   const paidAmt        = isEdit ? recordedPaid : Math.min(Number(paidNow) || 0, grandTotal);
   const balanceDue     = grandTotal - paidAmt;
 
   // ── Line helpers ────────────────────────────────────────────────────
-  const addLine    = () => setLines((ls) => [...ls, { id: Date.now(), productId: "", productName: "", uom: "PCS", qty: 1, mrp: 0, rate: 0, discountPct: 0, vatApplicable: false }]);
+  const addLine    = () => setLines((ls) => [...ls, { id: Date.now(), productId: "", productName: "", uom: "PCS", qty: 1, mrp: 0, rate: 0, discountPct: 0 }]);
   const removeLine = (id: number) => setLines((ls) => ls.filter((l) => l.id !== id));
   const updateLine = (id: number, patch: Partial<Line>) =>
     setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+
+  const applyProductToLine = (lineId: number, productId: string, productName: string) => {
+    const product = PRODUCTS.find((p) => p.id === productId);
+    if (!product) {
+      updateLine(lineId, {
+        productId,
+        productName,
+        uom: "PCS",
+        mrp: 0,
+        rate: 0,
+        discountPct: 0,
+      });
+      return;
+    }
+    const uom = product.uom || "PCS";
+    const { mrp, rate } = linePricingForProduct(product, uom);
+    updateLine(lineId, {
+      productId,
+      productName,
+      uom,
+      mrp,
+      rate,
+      discountPct: product.discountPct ?? 0,
+    });
+  };
+
+  const handleLineUomChange = (lineId: number, productId: string, newUom: string) => {
+    const product = PRODUCTS.find((p) => p.id === productId);
+    if (!product) {
+      updateLine(lineId, { uom: newUom });
+      return;
+    }
+    const { mrp, rate } = linePricingForProduct(product, newUom);
+    updateLine(lineId, { uom: newUom, mrp, rate });
+  };
 
   // ── Save ────────────────────────────────────────────────────────────
   const validate = () => {
@@ -196,7 +233,7 @@ export const SaleEntryPage = () => {
     afterDiscount,
     billTerms:       billTerms || "",
     billTermsAmount: termsAmt,
-    vatRate:         vatEnabled ? 13 : 0,
+    vatRate:         tenantVat ? BILL_VAT_RATE : 0,
     vatAmount:       vatAmt,
     grandTotal,
     paidNow:         paidAmt,
@@ -255,6 +292,18 @@ export const SaleEntryPage = () => {
     }
   };
 
+  const handlePreviewDownload = async () => {
+    setExportingPreview(true);
+    try {
+      await downloadBillPdf(buildSale().billNo);
+      toast.success("Bill downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setExportingPreview(false);
+    }
+  };
+
   const customerOptions = CUSTOMERS.map((c) => ({ id: c.id, label: c.name, sub: c.area }));
   const productOptions  = PRODUCTS.map((p)  => ({ id: p.id, label: p.name, sub: `NPR ${p.sellingPrice}` }));
 
@@ -262,17 +311,29 @@ export const SaleEntryPage = () => {
     <PageShell stickyBar>
       {/* ── Preview modal ── */}
       {previewing && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm">
-          <div className="flex items-center justify-between bg-white px-4 py-3 shadow-sm shrink-0">
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm print:relative print:inset-auto print:bg-white print:block">
+          <div className="bill-preview-chrome flex items-center justify-between bg-white px-4 py-3 shadow-sm shrink-0 print:hidden">
             <p className="text-sm font-semibold text-foreground">Bill preview</p>
             <div className="flex gap-2">
               <button
+                type="button"
+                disabled={exportingPreview}
                 onClick={() => window.print()}
-                className="flex items-center gap-1 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-muted"
+                className="flex items-center gap-1 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-muted hover:bg-slate-50 disabled:opacity-50"
               >
                 Print
               </button>
               <button
+                type="button"
+                disabled={exportingPreview}
+                onClick={() => void handlePreviewDownload()}
+                className="flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100 disabled:opacity-50"
+              >
+                <Download size={13} />
+                {exportingPreview ? "…" : "PDF"}
+              </button>
+              <button
+                type="button"
                 onClick={() => setPrev(false)}
                 className="flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white"
               >
@@ -280,7 +341,7 @@ export const SaleEntryPage = () => {
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4">
             <BillPrintView sale={buildSale()} customer={customer} isPreview />
           </div>
         </div>
@@ -320,7 +381,16 @@ export const SaleEntryPage = () => {
 
         {/* ── Line items ── */}
         <div>
-          <p className="mb-2 text-sm font-medium text-foreground">Items</p>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">Items</p>
+            <button
+              type="button"
+              onClick={() => setShowDealerPricing((v) => !v)}
+              className="text-xs font-medium text-teal-600 underline"
+            >
+              {showDealerPricing ? "Hide dealer pricing" : "Show dealer pricing"}
+            </button>
+          </div>
           <div className="space-y-3">
             {lines.map((line) => (
               <Card key={line.id}>
@@ -329,74 +399,80 @@ export const SaleEntryPage = () => {
                     placeholder="Search product"
                     options={productOptions}
                     value={line.productId}
-                    onChange={(id, opt) => {
-                      const product = PRODUCTS.find((p) => p.id === id);
-                      updateLine(line.id, {
-                        productId:     id,
-                        productName:   opt.label,
-                        uom:           product?.uom           ?? "PCS",
-                        mrp:           product?.mrp           ?? 0,
-                        rate:          product?.sellingPrice  ?? 0,
-                        discountPct:   product?.discountPct   ?? 0,
-                        vatApplicable: product?.vatApplicable ?? false,
-                      });
-                    }}
-                    onClear={() => updateLine(line.id, { productId: "", productName: "", uom: "PCS", mrp: 0, rate: 0, discountPct: 0, vatApplicable: false })}
+                    onChange={(id, opt) => applyProductToLine(line.id, id, opt.label)}
+                    onClear={() => updateLine(line.id, { productId: "", productName: "", uom: "PCS", mrp: 0, rate: 0, discountPct: 0 })}
                     entityLabel="product"
                   />
-                  {/* ── Pricing reference strip (shown once a product is selected) ── */}
-                  {line.productId && (
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg bg-teal-50 border border-teal-100 px-3 py-2 text-[11px]">
-                      {line.mrp > 0 && (
-                        <span className="text-gray-500">
-                          MRP <strong className="text-gray-700">{nprNum(line.mrp)}</strong>
-                        </span>
-                      )}
-                      <span className="text-gray-500">
-                        Sell excl. VAT <strong className="text-teal-700">{nprNum(line.rate)}</strong>
-                      </span>
-                      {line.vatApplicable && (
-                        <span className="text-gray-500">
-                          Sell incl. VAT <strong className="text-teal-700">
-                            {nprNum(Math.round(line.rate * 1.13))}
-                          </strong>
-                          <span className="ml-0.5 text-teal-500">(+13% VAT)</span>
-                        </span>
-                      )}
-                      {line.discountPct > 0 ? (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-700">
-                          {line.discountPct}% product discount
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">No product discount</span>
-                      )}
-                    </div>
+                  {line.productId && (line.discountPct ?? 0) > 0 && (
+                    <p className="text-[11px] text-amber-700">
+                      Line discount {line.discountPct}% applied on MRP
+                    </p>
                   )}
+                  {(() => {
+                    const product = PRODUCTS.find((p) => p.id === line.productId);
+                    if (!product?.uomConversion) return null;
+                    return (
+                      <p className="text-[11px] font-medium text-emerald-700">
+                        {conversionLabel(product.uomConversion, product.uom)}
+                      </p>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-4 gap-2">
-                    <FormField label="UOM">
-                      <Input value={line.uom} onChange={(e) => updateLine(line.id, { uom: e.target.value })}
-                        placeholder="PCS" />
+                    <FormField label="UOM" hint={line.productId ? "Only units set on product" : undefined}>
+                      <Select
+                        value={line.uom || "PCS"}
+                        disabled={!line.productId}
+                        onChange={(e) => handleLineUomChange(line.id, line.productId, e.target.value)}
+                      >
+                        {(() => {
+                          const product = PRODUCTS.find((p) => p.id === line.productId);
+                          const choices = product
+                            ? productUomChoices(product, line.uom)
+                            : [line.uom || "PCS"];
+                          return choices.map((u) => (
+                            <option key={u} value={u}>
+                              {u}
+                            </option>
+                          ));
+                        })()}
+                      </Select>
                     </FormField>
                     <FormField label="Qty">
-                      <Input type="number" min={1} value={line.qty}
-                        onChange={(e) => updateLine(line.id, { qty: Math.max(1, Number(e.target.value)) })} />
+                      <NumericInput min={1} value={line.qty}
+                        onChange={(v) => updateLine(line.id, { qty: Math.max(1, v) })} />
                     </FormField>
-                    <FormField label="Rate (NPR)">
-                      <Input type="number" min={0} value={line.rate}
-                        onChange={(e) => updateLine(line.id, { rate: Number(e.target.value) })} />
+                    <FormField
+                      label={`MRP (NPR)`}
+                      hint={line.productId ? `Per ${line.uom || "unit"} · on bill` : "On printed bill"}
+                    >
+                      <NumericInput min={0} value={line.mrp}
+                        onChange={(v) => updateLine(line.id, { mrp: v })} />
                     </FormField>
                     <FormField label="Amount">
                       <div className="flex h-11 flex-col justify-center rounded-lg bg-slate-50 px-3">
                         <span className="text-sm font-medium">{nprNum(lineAmount(line))}</span>
-                        {(line.discountPct ?? 0) > 0 && (
-                          <span className="text-[10px] text-amber-600 leading-tight">
-                            after {line.discountPct}% disc
-                          </span>
-                        )}
                       </div>
                     </FormField>
                   </div>
+
+                  {showDealerPricing && line.productId && (
+                    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-muted">
+                      <p className="font-medium text-slate-600">Dealer pricing (not on customer bill)</p>
+                      <p className="mt-1">
+                        Sell price: <strong className="text-teal-700">{nprNum(line.rate)}</strong>
+                        {tenantVat && (
+                          <> · Incl. {BILL_VAT_RATE}% VAT: {nprNum(Math.round(line.rate * (1 + BILL_VAT_RATE / 100)))}</>
+                        )}
+                      </p>
+                      <div className="mt-2">
+                        <FormField label="Dealer rate (NPR)">
+                          <NumericInput min={0} value={line.rate}
+                            onChange={(v) => updateLine(line.id, { rate: v })} />
+                        </FormField>
+                      </div>
+                    </div>
+                  )}
                   {lines.length > 1 && (
                     <button onClick={() => removeLine(line.id)} className="flex items-center gap-1 text-xs text-danger">
                       <Trash2 size={12} /> Remove
@@ -423,12 +499,11 @@ export const SaleEntryPage = () => {
                 </Select>
               </FormField>
               <FormField label={discountType === "percent" ? "Discount %" : "Discount (NPR)"}>
-                <Input
-                  type="number" min={0}
+                <NumericInput
+                  min={0}
                   max={discountType === "percent" ? 100 : subtotal}
-                  placeholder="0"
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(e.target.value)}
+                  value={Number(discountValue) || 0}
+                  onChange={(v) => setDiscountValue(v === 0 ? "" : String(v))}
                 />
               </FormField>
             </div>
@@ -453,34 +528,18 @@ export const SaleEntryPage = () => {
                   onChange={(e) => setBillTerms(e.target.value)} />
               </FormField>
               <FormField label="Amount (NPR)">
-                <Input type="number" min={0} placeholder="0" value={billTermsAmt}
-                  onChange={(e) => setBillTermsAmt(e.target.value)} />
+                <NumericInput min={0} value={Number(billTermsAmt) || 0}
+                  onChange={(v) => setBillTermsAmt(v === 0 ? "" : String(v))} />
               </FormField>
             </div>
           </CardContent>
         </Card>
 
-        {/* ── VAT ── */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-foreground">VAT (13%)</p>
-                <p className="text-xs text-muted">
-                  {vatEnabled
-                    ? `VAT amount: ${npr(vatAmt)} on taxable base ${npr(taxBase)}`
-                    : "Enable if customer requires a VAT bill"}
-                </p>
-              </div>
-              <button
-                onClick={() => setVatEnabled((v) => !v)}
-                className={`relative h-6 w-11 rounded-full transition-colors ${vatEnabled ? "bg-teal-600" : "bg-gray-200"}`}
-              >
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${vatEnabled ? "left-5.5 translate-x-0.5" : "left-0.5"}`} />
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+        {tenantVat && vatAmt > 0 && (
+          <p className="rounded-lg border border-teal-200/80 bg-teal-50/40 px-3 py-2 text-xs text-teal-900">
+            VAT {BILL_VAT_RATE}% ({npr(vatAmt)}) is added from <strong>Settings</strong> — your shop is VAT registered.
+          </p>
+        )}
 
         {/* ── Payment now (new bills only — use Payments screen to collect on issued bills) ── */}
         <Card>
@@ -492,14 +551,12 @@ export const SaleEntryPage = () => {
                 To add more, use <strong>Collect</strong> on the bill detail screen.
               </p>
             ) : (
-              <FormField label="Amount received (NPR)" hint={`Grand total: ${npr(grandTotal)}`}>
-                <Input
-                  type="number"
+              <FormField label="Amount received (NPR)" hint={`Grand total: ${npr(grandTotal)} · 0 = credit`}>
+                <NumericInput
                   min={0}
                   max={grandTotal}
-                  placeholder="0 = fully on credit"
-                  value={paidNow}
-                  onChange={(e) => setPaidNow(e.target.value)}
+                  value={Number(paidNow) || 0}
+                  onChange={(v) => setPaidNow(v === 0 ? "" : String(v))}
                 />
               </FormField>
             )}
@@ -547,26 +604,71 @@ export const SaleEntryPage = () => {
           </div>
         )}
 
+        {/* Totals in scroll area — keeps fixed footer short */}
+        {lines.some((l) => l.productId) && (
+          <Card className="border-dashed border-teal-200/80 bg-teal-50/30">
+            <CardContent className="space-y-1 p-3 text-sm">
+              <div className="flex justify-between gap-2">
+                <span className="text-muted">Subtotal</span>
+                <span className="font-medium tabular-nums">{npr(subtotal)}</span>
+              </div>
+              {discountAmt > 0 && (
+                <div className="flex justify-between gap-2 text-amber-800">
+                  <span>
+                    {discountType === "percent" ? `Discount (${discountValue}%)` : "Discount (flat)"}
+                  </span>
+                  <span className="font-medium tabular-nums">− {npr(discountAmt)}</span>
+                </div>
+              )}
+              {termsAmt > 0 && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted">Bill terms</span>
+                  <span className="font-medium tabular-nums">+ {npr(termsAmt)}</span>
+                </div>
+              )}
+              {vatAmt > 0 && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted">VAT (13%)</span>
+                  <span className="font-medium tabular-nums">{npr(vatAmt)}</span>
+                </div>
+              )}
+              <div className="flex justify-between gap-2 border-t border-teal-200/60 pt-1.5">
+                <span className="font-semibold text-foreground">Grand total</span>
+                <span className="font-bold tabular-nums text-teal-800">{npr(grandTotal)}</span>
+              </div>
+              {balanceDue > 0 && (
+                <div className="flex justify-between gap-2 text-warning-foreground">
+                  <span className="font-medium">Balance due</span>
+                  <span className="font-bold tabular-nums">{npr(balanceDue)}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <FormField label="Notes (optional)">
           <Input placeholder="Any note for this bill" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </FormField>
       </div>
 
       <StickyBar
+        compact
         previewLabel={customerId && lines.some((l) => l.productId) ? "Preview bill" : undefined}
         onPreview={
           customerId && lines.some((l) => l.productId) ? () => setPrev(true) : undefined
         }
         rows={[
           ["Subtotal", npr(subtotal)],
-          ...(discountAmt > 0 ? [[
-            discountType === "percent" ? `Discount (${discountValue}%)` : `Discount (flat)`,
-            `− ${npr(discountAmt)}`,
-          ] as [string, string]] : []),
-          ...(termsAmt > 0   ? [["Bill terms", `+ ${npr(termsAmt)}`]   as [string, string]] : []),
-          ...(vatAmt > 0     ? [["VAT (13%)", npr(vatAmt)]             as [string, string]] : []),
+          ...(discountAmt > 0
+            ? [[
+                discountType === "percent" ? `Discount (${discountValue}%)` : "Discount (flat)",
+                `− ${npr(discountAmt)}`,
+              ] as [string, string]]
+            : []),
+          ...(termsAmt > 0 ? [["Bill terms", `+ ${npr(termsAmt)}`] as [string, string]] : []),
+          ...(vatAmt > 0 ? [["VAT (13%)", npr(vatAmt)] as [string, string]] : []),
+          ...(balanceDue > 0 ? [["Balance due", npr(balanceDue)] as [string, string]] : []),
           ["Grand total", npr(grandTotal)],
-          ...(balanceDue > 0 ? [["Balance due", npr(balanceDue)]       as [string, string]] : []),
         ]}
         action={isEdit ? "Update bill" : "Save bill"}
         onAction={handleSave}

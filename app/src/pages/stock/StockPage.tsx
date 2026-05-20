@@ -5,6 +5,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useProducts } from "@/store/domain";
+import { isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { usePagination } from "@/lib/usePagination";
 
 export const StockPage = () => {
@@ -12,7 +13,7 @@ export const StockPage = () => {
   const PRODUCTS  = useProducts();
   const [query, setQuery] = useState("");
 
-  const lowStock = PRODUCTS.filter((p) => p.onHand <= p.minQty);
+  const lowStock = PRODUCTS.filter(isLowStock);
   const filtered = PRODUCTS.filter((p) =>
     !query || p.name.toLowerCase().includes(query.toLowerCase()),
   );
@@ -51,12 +52,12 @@ export const StockPage = () => {
             <span>Product</span><span className="text-right">On hand</span><span className="text-right">Min</span>
           </div>
           {visible.map((p) => (
-            <div key={p.id} className={`grid grid-cols-3 gap-2 border-b border-border-subtle px-4 py-2.5 text-sm last:border-0 ${p.onHand <= p.minQty ? "bg-danger-light/40" : ""}`}>
+            <div key={p.id} className={`grid grid-cols-3 gap-2 border-b border-border-subtle px-4 py-2.5 text-sm last:border-0 ${isLowStock(p) ? "bg-danger-light/40" : ""}`}>
               <span className="truncate font-medium text-foreground">{p.name}</span>
               <span className="text-right font-semibold text-foreground">{p.onHand}</span>
               <div className="flex justify-end gap-1 items-center">
-                <span className="text-muted">{p.minQty}</span>
-                {p.onHand <= p.minQty && <Badge variant="danger">Low</Badge>}
+                <span className="text-muted text-[11px]">{minStockLabel(p)}</span>
+                {isLowStock(p) && <Badge variant="danger">Low</Badge>}
               </div>
             </div>
           ))}

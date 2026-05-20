@@ -47,12 +47,12 @@ export const AppShell = () => {
             >
               {business.name}
             </p>
-            <h1
-              className="mt-0.5 truncate text-base font-semibold text-foreground group-hover:text-teal-600 transition-colors"
+            <p
+              className="mt-0.5 truncate text-sm font-semibold text-foreground group-hover:text-teal-600 transition-colors"
               title={business.region}
             >
               {business.region}
-            </h1>
+            </p>
           </Link>
           <div className="flex shrink-0 items-center gap-2 self-start pt-px">
             <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
@@ -113,7 +113,7 @@ export const AppShell = () => {
       {notifs && <NotificationPanel onClose={() => setNotifs(false)} />}
 
       {/* ── Bottom tab bar ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border-subtle bg-white">
+      <nav className="bottom-tabs fixed bottom-0 left-0 right-0 z-30 border-t border-border-subtle bg-white">
         <div className="mx-auto grid max-w-xl grid-cols-3">
           {/* Home tab */}
           {NAV_TABS.slice(0, 1).map((tab) => {

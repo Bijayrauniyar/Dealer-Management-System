@@ -48,8 +48,8 @@ Check each row after manual testing.
 | G15 | **Customer credit limit** | — | Sale pushing outstanding over limit (if UI enforces) |
 | G16 | **Customer PAN** | Not in schema | Field on form if present; DB column when added |
 | G17 | **Notifications panel** | — | Bell icon list; links open correct screens (static data today) |
-| G18 | **Daily cash → Supabase** | Demo toast only | Confirm **no** `daily_cash` row after save (expected until wired) |
-| G19 | **Scheme → Supabase** | Demo toast only | Confirm **no** `schemes` row (expected until wired) |
+| G18 | **Daily cash → Supabase** | Partial wiring | Confirm `daily_cash` row behaviour matches current implementation |
+| G19 | **Scheme → Supabase** | UI only | Confirm **no** `schemes` row (expected until wired) |
 | G20 | **Dashboard charts** | — | `/app/dashboard` loads; data matches your tenant (if wired) |
 | G21 | **Company overview maths** | Partial live capital | Net worth, assets, liabilities vs your entries + stock |
 | G22 | **Capital edit / history / soft-delete** | Insert + list | Edit entry, view history (Phase 2-C); delete behaviour |
@@ -59,7 +59,7 @@ Check each row after manual testing.
 | G26 | **Offline / PWA** | — | Refresh mid-form; install PWA if used |
 | G27 | **Mobile layout** | UI script uses mobile width | Real phone: sticky bar, pickers, bottom nav |
 | G28 | **Sign out + re-login** | Live script | Data still correct; no stale header name |
-| G29 | **Demo mode** (`VITE_*` unset) | — | localStorage persistence; Reset demo data in Settings |
+| G29 | **MissingSupabaseEnv** (`VITE_*` unset) | — | App shows setup screen; no data access |
 | G30 | **Performance** | — | Customer/product lists with 100+ rows; search |
 
 ---
@@ -75,7 +75,7 @@ Check each row after manual testing.
 | **Customers** | List, filter outstanding, add, edit, detail, new bill from customer | `/app/customers`, `.../new`, `.../edit/:id`, `.../:id` |
 | **Suppliers** | List, expandable cards (read-only add in UI) | `/app/suppliers` |
 | **Stock** | On-hand from `v_stock` | `/app/stock` |
-| **Sale** | New bill, edit (demo / blocked live), preview, print | `/app/sales/new`, `/app/sales/edit/:billNo` |
+| **Sale** | New bill, edit existing (`update_sales_bill`), preview, print | `/app/sales/new`, `/app/sales/edit/:billNo` |
 | **Bill detail** | View, print, return, pay, edit pencil | `/app/bills/:billNo` |
 | **Payment** | Customer payment, bill allocation | `/app/payments/new` |
 | **Return** | Return against bill, stock back, credit | `/app/returns/new` |
@@ -83,8 +83,8 @@ Check each row after manual testing.
 | **Supplier payment** | Pay down POs | `/app/supplier-payments/new` |
 | **Expense** | Record expense | `/app/expenses/new` |
 | **Damage** | Stock out | `/app/damages/new` |
-| **Daily cash** | Draft, lock day (demo persistence) | `/app/daily-cash` |
-| **Scheme** | Promo on product (demo persistence) | `/app/schemes/new` |
+| **Daily cash** | Draft, lock day (partial Supabase wiring) | `/app/daily-cash` |
+| **Scheme** | Promo on product (UI; DB TBD) | `/app/schemes/new` |
 | **Company** | Overview, capital KPIs | `/app/company` |
 | **Capital** | List, add entry | `/app/capital`, `/app/capital/new` |
 | **Dashboard** | Private reports | `/app/dashboard` |
@@ -190,8 +190,8 @@ open     = total − paid
 | SA12 | **Multi-line:** 2 different products | Subtotal = sum of lines; one bill_no |
 | SA13 | **Preview bill** button | Preview modal matches sticky totals |
 | SA14 | **Save & Print** | Print view opens; header/footer from settings |
-| SA15 | **Live edit (G1):** Bill detail → Edit → Save | Toast: not supported yet (Phase 1) |
-| SA16 | **Demo edit:** unset Supabase env, edit bill | Updates in demo storage |
+| SA15 | **Live edit:** Bill detail → Edit → change qty/rate → Save | `update_sales_bill` succeeds; totals/stock updated in DB |
+| SA16 | **Edit blocked:** reduce total below `paid` | RPC error or validation; bill unchanged |
 | SA17 | Sale without customer | Validation error |
 | SA18 | Sale without line items | Validation error |
 | SA19 | Credit sale without due date | Validation error |
@@ -286,13 +286,13 @@ open     = total − paid
 
 ---
 
-### 3.14 Daily cash & scheme — demo only (MAN-DEMO)
+### 3.14 Daily cash & scheme (MAN-DC-SC)
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| DC1 | Daily cash → change physical count → Save draft | Toast success; **no DB row** (Phase 1) |
+| DC1 | Daily cash → change physical count → Save draft | Toast success; verify `daily_cash` row if wired |
 | DC2 | Lock day with variance note | Toast; UI locked state |
-| SC1 | Scheme: name, product, dates, discount → Save | Toast; navigates home; **no DB row** (Phase 1) |
+| SC1 | Scheme: name, product, dates, discount → Save | Toast; navigates home; **no DB row** until scheme table ships |
 
 ---
 

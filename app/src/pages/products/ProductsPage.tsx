@@ -5,6 +5,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/store/domain";
+import { isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { npr } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { usePagination } from "@/lib/usePagination";
@@ -22,7 +23,7 @@ export const ProductsPage = () => {
 
   const chips: { id: Filter; label: string; count: number }[] = [
     { id: "all",       label: "All",       count: PRODUCTS.length },
-    { id: "low_stock", label: "Low stock", count: PRODUCTS.filter((p) => p.onHand <= p.minQty).length },
+    { id: "low_stock", label: "Low stock", count: PRODUCTS.filter(isLowStock).length },
     ...categories.map((c) => ({ id: c, label: c, count: PRODUCTS.filter((p) => p.category === c).length })),
   ];
 
@@ -32,7 +33,7 @@ export const ProductsPage = () => {
       p.category.toLowerCase().includes(query.toLowerCase());
     const matchFilter =
       filter === "all"       ? true :
-      filter === "low_stock" ? p.onHand <= p.minQty :
+      filter === "low_stock" ? isLowStock(p) :
       p.category === filter;
     return matchSearch && matchFilter;
   });
@@ -95,7 +96,7 @@ export const ProductsPage = () => {
       ) : (
         <div className="flex flex-col gap-2.5">
           {visible.map((p) => {
-            const isLow  = p.onHand <= p.minQty;
+            const isLow  = isLowStock(p);
             const margin = p.costPrice > 0
               ? Math.round(((p.sellingPrice - p.costPrice) / p.costPrice) * 100)
               : 0;
@@ -117,11 +118,10 @@ export const ProductsPage = () => {
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
                     {isLow    && <Badge variant="danger" className="text-[9px] px-1 py-0 shrink-0">Low</Badge>}
-                    {p.vatApplicable && <Badge variant="info" className="text-[9px] px-1 py-0 shrink-0">VAT</Badge>}
                   </div>
                   {/* Sub-line: category + stock */}
                   <p className="text-[11px] text-muted">
-                    {p.category} · {p.uom} · Stock <strong className={isLow ? "text-red-600" : ""}>{p.onHand}</strong> / min {p.minQty}
+                    {p.category} · Stock <strong className={isLow ? "text-red-600" : ""}>{p.onHand}</strong> {p.uom} · min {minStockLabel(p)}
                   </p>
                   {/* Pricing row */}
                   <div className="mt-1 flex items-center gap-2 text-[11px]">

@@ -8,6 +8,7 @@ import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { commitDailyCashClose, useDailyCashBreakdown } from "@/store/domain";
@@ -23,7 +24,7 @@ export const DailyCashPage = () => {
 
   const [physicalCount, setPhysicalCount] = useState("");
   const [varianceNote, setVarianceNote] = useState("");
-  const [ownerInject, setOwnerInject] = useState("0");
+  const [ownerInject, setOwnerInject] = useState(0);
   const [saving, setSaving] = useState(false);
   const [locked, setLocked] = useState(false);
 
@@ -39,7 +40,7 @@ export const DailyCashPage = () => {
     [live],
   );
 
-  const ownerInjectNum = Number(ownerInject) || 0;
+  const ownerInjectNum = ownerInject;
   const totalIn = openingBalance + cashSales + cashReceipts + ownerInjectNum;
   const totalOut = cashOut.expenses + cashOut.supplierPayments;
   const computed = totalIn - totalOut;
@@ -204,12 +205,11 @@ export const DailyCashPage = () => {
               Owner cash injection
               <span className="ml-1 text-xs text-muted-foreground">(personal → business)</span>
             </p>
-            <Input
-              type="number"
+            <NumericInput
               min={0}
               placeholder="0"
               value={ownerInject}
-              onChange={(e) => setOwnerInject(e.target.value)}
+              onChange={setOwnerInject}
               disabled={locked}
               className="h-9 text-sm"
             />
@@ -252,12 +252,11 @@ export const DailyCashPage = () => {
       <Card className="mb-4">
         <CardContent className="space-y-3 p-4">
           <FormField label="Cash in drawer / safe (NPR)" required>
-            <Input
-              type="number"
+            <NumericInput
               min={0}
               placeholder="Count and enter actual cash"
-              value={physicalCount}
-              onChange={(e) => setPhysicalCount(e.target.value)}
+              value={Number(physicalCount) || 0}
+              onChange={(v) => setPhysicalCount(v === 0 ? "" : String(v))}
               disabled={locked}
             />
           </FormField>

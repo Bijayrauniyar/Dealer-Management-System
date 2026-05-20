@@ -8,6 +8,7 @@ import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_MODES } from "@/domain/catalogs";
@@ -236,11 +237,12 @@ export const SupplierPaymentPage = () => {
 
         {/* ── Amount ── */}
         <FormField label="Amount (NPR)" required>
-          <Input
-            type="number" min={0}
+          <NumericInput
+            min={0}
+            max={selectedTotal > 0 ? selectedTotal : undefined}
             placeholder={selectedTotal > 0 ? `Max ${selectedTotal}` : "0"}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            value={Number(amount) || 0}
+            onChange={(v) => setAmount(v === 0 ? "" : String(v))}
           />
         </FormField>
 
