@@ -4,6 +4,8 @@ Web app for distributors / dealers: sales, stock, purchases, receivables, and co
 
 If you are new to the codebase, read this file first, then follow the **numbered reading order** in **[`docs/README.md` → Reading order](docs/README.md#reading-order)** (environment → migrations → live testing → checklist → data model → E2E docs).
 
+**Local AI (Gemma, Codex, etc.):** use **[`docs/LLM_CONTEXT.md`](docs/LLM_CONTEXT.md)** as the system prompt and update it after large features (see §10 in that file).
+
 ---
 
 ## Features (Phase 1 scope)

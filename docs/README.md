@@ -75,6 +75,12 @@ flowchart LR
 |------|------------------|
 | [app/supabase/README.txt](../app/supabase/README.txt) | Copy-paste migrations into Supabase SQL Editor |
 
+### AI / local LLM assistants
+
+| File | When to open it |
+|------|------------------|
+| [LLM_CONTEXT.md](LLM_CONTEXT.md) | **System prompt for Gemma / Codex / local Claude** — stack, rules, bill logic, how to update this file after big changes |
+
 ---
 
 ## Adding a new doc

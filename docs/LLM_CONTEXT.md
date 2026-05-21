@@ -1,0 +1,295 @@
+# Havmor DMS — context for local AI (Gemma, Codex, Claude, etc.)
+
+**Navigate:** [Docs hub](README.md) · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
+
+**Last updated:** 2026-05-21 (bill print/PDF release on `main`)
+
+Use this file as the **system prompt** or **first attachment** when working offline. It is a snapshot of the repo — not your chat history. Refresh it after big changes (see [§ Maintenance](#maintenance-update-this-file)).
+
+---
+
+## 1. What this project is
+
+**Havmor DMS** — dealer/distributor web app (Nepal): sales bills, stock, purchases, customer payments, returns, expenses, company reporting.
+
+| Layer | Stack |
+|-------|--------|
+| UI | React 19, TypeScript, Vite 7, Tailwind 3, React Router 6 |
+| State | TanStack React Query (`app/src/store/domainHooks.ts`) |
+| Backend | Supabase: Postgres, Auth, RLS, **RPCs** for money/stock |
+| Deploy | GitHub → **Netlify** (`netlify.toml`, build from `app/`) |
+| E2E | Node scripts + Playwright (`app/scripts/`) |
+
+**Requires env:** `app/.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. No offline demo without them.
+
+---
+
+## 2. Repository layout
+
+```
+havmor/
+├── app/                         # npm package: havmor-dms (all app code here)
+│   ├── src/
+│   │   ├── pages/               # Route screens (sales, bills, products, …)
+│   │   ├── components/          # Shared UI (layout, forms, BillPrintView)
+│   │   ├── routes/              # AppRouter
+│   │   ├── store/domainHooks.ts # React Query → domainLive
+│   │   ├── domain/types.ts      # Sale, Product, Customer, …
+│   │   └── lib/
+│   │       ├── live/domainLive.ts   # Supabase reads/writes (main data layer)
+│   │       ├── billDisplay.ts       # Bill labels, discount display rules
+│   │       ├── saleLineMath.ts      # Line amounts, effective rate for RPC
+│   │       ├── uom.ts               # Pack/PCS pricing, RPC line items
+│   │       ├── printBill.ts           # Print via hidden iframe
+│   │       ├── billExport.ts          # PDF download / share
+│   │       ├── billPdfCapture.ts      # html2canvas → PDF
+│   │       └── billPdfDocument.ts     # Vector PDF fallback
+│   ├── scripts/                 # e2e-*.mjs, check-tailwind-classes.mjs
+│   └── supabase/migrations/     # 0001 … 0011 (ordered SQL)
+├── docs/                        # Human + AI documentation
+└── netlify.toml
+```
+
+**Always run npm commands from `app/`:** `cd app && npm run …`
+
+---
+
+## 3. Architecture rules (do not break these)
+
+1. **Money and stock** → Supabase **RPCs** (`create_sales_bill`, `update_sales_bill`, `apply_customer_payment`, `record_purchase`, …). Never “fix” totals only in the UI without matching the RPC payload.
+2. **Data layer** → `domainLive.ts` for DB; pages use `domainHooks.ts`. Avoid new raw `supabase.from()` calls in pages unless following an existing pattern.
+3. **Forms** → mostly `useState` on pages (not react-hook-form in practice).
+4. **Styling** → Tailwind; run `npm run lint:tailwind` — invalid semantic classes fail CI.
+5. **Scope** → smallest correct diff; match naming and style of surrounding code.
+6. **Secrets** → never commit `.env.local`, service role keys, or `Havmor Management.xlsx`.
+7. **Git** → commit only when the user asks; focus commit message on **why**.
+
+---
+
+## 4. Migrations (apply in order)
+
+See `app/supabase/README.txt` for copy-paste steps.
+
+| File | Purpose |
+|------|---------|
+| 0001–0003 | Core schema, settings, Phase 1 RPCs |
+| 0005–0007 | Operations, `update_sales_bill` |
+| 0008 | `products.uom_prices` |
+| 0009 | `products.uom_conversion` |
+| 0010 | `sales_items.unit`, stock in PCS |
+| 0011 | `min_qty_pack` on products |
+
+---
+
+## 5. Commands (verification)
+
+| Command | When |
+|---------|------|
+| `npm run dev` | Local UI http://localhost:5173 |
+| `npm run deploy:check` | **Before push** — lint + tsc + build |
+| `npm run e2e:smoke` | Schema / RPC smoke |
+| `npm run e2e:live` | Login + reads (needs `.e2e-credentials.local`) |
+| `npm run e2e:matrix` | Full API math, stock, payments |
+| `npm run e2e:bill` | Bill math + source checks (no server) |
+| `npm run e2e:bill:visual` | Needs `dev` + Playwright; screenshots + PDF |
+| `npm run e2e:ui` | Full UI E2E (needs `dev`) |
+
+**Bill-only change:** `deploy:check` + `e2e:bill` (add `e2e:bill:visual` if layout/print/PDF changed).
+
+---
+
+## 6. Sales bill — business logic
+
+### Line amount (what customer sees on bill)
+
+- **`billLineAmount()`** / **`lineAmountFromMrp()`** in `app/src/lib/saleLineMath.ts`
+- MRP path: `round(qty × mrp × (1 − discountPct/100))`
+- DB stores **`rate`** so `qty × rate` = line amount → **`effectiveRateForRpc()`**
+- Pack/UOM: `app/src/lib/uom.ts` — `linePricingForProduct`, `saleLineToRpcItem`; product has `uom_prices`, `uom_conversion`; line has `unit` (e.g. Box)
+
+### Bill-level vs line-level discount (display)
+
+Logic in **`app/src/lib/billDisplay.ts`**:
+
+| Type | Where it shows |
+|------|----------------|
+| **Bill-level** (% or flat from sale form) | Totals only: Subtotal → Discount (n%) → VAT → Grand total |
+| **Line-level** (product `discount_pct`) | **DISC%** column on lines only |
+
+- **`billShowsFooterDiscount(sale)`** — footer discount row
+- **`billShowsLineDiscColumn(lines, sale)`** — hide DISC% column when bill-level discount is set
+- **`fetchSalesLive()`** infers percent vs flat from `subtotal` and `discount` when loading old bills
+
+### Totals (UI + server)
+
+```
+subtotal = Σ line amounts
+afterDiscount = subtotal − bill discount
+taxBase = afterDiscount + billTermsAmount
+vat = round(taxBase × 13%) if tenant VAT registered (see tenantChargesVat)
+grandTotal = taxBase + vat
+balance = grandTotal − paidNow
+```
+
+### Payment labels on bill
+
+- **`billPaymentModeDisplay`** — Credit / Partial (Cash) / Cash / Paid (not “Cash” on unpaid credit)
+- **`billPaymentStatusLabel`** — one “Due {date}”, no duplicate Due badge
+
+---
+
+## 7. Bill UI / print / PDF (important files)
+
+| File | Role |
+|------|------|
+| `app/src/components/app/BillPrintView.tsx` | Screen + print HTML; `#bill-print-root`, `.bill-print-a4` |
+| `app/src/index.css` | `@page`, print, `.bill-pdf-capture`, `.bill-lines-table`, `.bill-totals-rule` |
+| `app/src/lib/printBill.ts` | Print in **hidden iframe** (empty title → no bill no. in browser print header) |
+| `app/src/lib/billExport.ts` | Download / share PDF |
+| `app/src/lib/billPdfCapture.ts` | html2canvas capture (matches colored screen) |
+| `app/src/pages/bills/BillDetailPage.tsx` | Print / PDF / Share buttons |
+| `app/src/pages/sales/SaleEntryPage.tsx` | Sale form, MRP lines, bill discount |
+
+### Current bill table layout
+
+- Columns: **S.N. | Particulars (centered) | MRP | Unit | Qty | [Disc%] | Amt**
+- Line cell padding: `.bill-lines-table .bill-cell-inner` (extra space above bottom border)
+- Grand total separator: row **`.bill-totals-rule`** + **`.bill-totals-rule-line`** — rule cell must **not** use Tailwind `p-0` (it kills spacing)
+- Print dialog (user): turn **off** “Headers and footers”; turn **on** “Background graphics”
+- A4: content ~186mm wide; `@page` margin ~18mm top
+
+### CSS pitfalls (learned)
+
+- `p-0` on totals cells overrides custom padding → VAT line touches separator
+- `border: none !important` on all `.bill-totals-table td` hides borders — use dedicated classes for rule row
+- Prefer structural spacing (rule row padding) over only `border-top` on grand row
+
+---
+
+## 8. Key RPCs and domainLive entry points
+
+| Action | RPC / function |
+|--------|----------------|
+| Create bill | `commitSaleLive` → `create_sales_bill` |
+| Edit bill | `commitSaleLive` (edit) → `update_sales_bill` |
+| Customer payment | `commitPaymentLive` → `apply_customer_payment` |
+| Return | `commitReturnLive` → `apply_goods_return` |
+| Purchase | `commitPurchaseLive` → `record_purchase` |
+| Load sales | `fetchSalesLive` |
+
+Full schema: `docs/backend/data-model.md`
+
+---
+
+## 9. How to use this file with local models
+
+### Setup (once)
+
+1. Clone repo: `/path/to/havmor`
+2. Open **`docs/LLM_CONTEXT.md`** in your local chat app (Gemma 4 26B, Codex, Claude Code, etc.)
+3. Set **system prompt** to:  
+   `You are working on Havmor DMS. Follow docs/LLM_CONTEXT.md strictly. Ask before breaking RPC or RLS rules.`
+
+### Every new task (better context)
+
+Give the model **four layers** (small models need less noise):
+
+| Layer | What to paste / attach |
+|-------|-------------------------|
+| 1. Handbook | This file (`LLM_CONTEXT.md`) or §3–§7 only |
+| 2. Task | One clear sentence: “Fix X in bill totals spacing” |
+| 3. Scope | Exact files: max 3–5 paths |
+| 4. Proof | “Run `cd app && npm run deploy:check && npm run e2e:bill`” |
+
+**Example task prompt:**
+
+```text
+Task: Add 2px more space below VAT row before the grand-total line.
+Scope: only app/src/index.css and app/src/components/app/BillPrintView.tsx
+Rules: docs/LLM_CONTEXT.md §7; do not change discount logic or RPCs.
+Verify: npm run deploy:check && npm run e2e:bill
+```
+
+### Model-specific tips
+
+| Tool | Tip |
+|------|-----|
+| **Gemma 4 26B** | Shorter prompts; attach only changed files; use §7 for bill work |
+| **Codex / CLI** | Point cwd at `app/`; pass file paths explicitly |
+| **Claude (local)** | Paste `git diff` after your edits when updating this doc |
+
+### What NOT to attach
+
+- Whole `node_modules/`, `dist/`, `.env.local`
+- Entire `data-model.md` unless doing schema work (link instead)
+- Long chat logs — summarize in 3 bullets
+
+---
+
+## 10. Maintenance — update this file
+
+### When to update
+
+Update after **big** changes:
+
+- New migration
+- Bill/print/PDF behavior change
+- New npm script or deploy step
+- New rule (“always do X / never Y”)
+
+Skip updates for typos or one-line fixes.
+
+### Option A — Ask Gemma / local LLM to update
+
+Paste this **maintenance prompt** (fill in brackets):
+
+```text
+Maintain docs/LLM_CONTEXT.md for Havmor DMS.
+
+1. Read the current docs/LLM_CONTEXT.md.
+2. Read these changed files (or git diff):
+   [LIST PATHS, e.g. app/src/components/app/BillPrintView.tsx]
+3. Update ONLY outdated sections. Keep structure (§1–§11).
+4. Add one bullet under "## Changelog" with date YYYY-MM-DD and a short summary.
+5. Do NOT invent features. If unsure, write "verify in code".
+6. Output the full updated markdown file.
+
+Hard rules: RPCs for money/stock; billDisplay.ts for discount display;
+tests before release: deploy:check, e2e:bill for bill changes.
+```
+
+**You must review** the output before committing — local models can hallucinate.
+
+### Option B — Quick manual changelog
+
+Add one line under **Changelog** yourself:
+
+```markdown
+- 2026-05-21 — Bill print iframe, footer discount rules, totals spacing.
+```
+
+### Option C — Cursor / cloud agent
+
+> “Update docs/LLM_CONTEXT.md to match the last commit; add changelog entry.”
+
+---
+
+## 11. Deeper docs (read when needed)
+
+| Doc | Use for |
+|-----|---------|
+| [README.md](../README.md) | Onboarding, features |
+| [backend/data-model.md](backend/data-model.md) | Tables, RPC formulas |
+| [backend/phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md) | E2E matrix |
+| [deployment.md](deployment.md) | Netlify, env vars |
+| [backend/BACKEND-TODO.md](backend/BACKEND-TODO.md) | Planned work |
+
+---
+
+## Changelog (newest first)
+
+- **2026-05-21** — Bill print/PDF: Karobar-style layout, `billDisplay` discount rules (bill-level in totals; line DISC% only when no bill discount), iframe print (no browser title header), Unit before Qty, line cell padding, totals rule row spacing, `e2e:bill` + `e2e:bill:visual`, deployed to Netlify via `main` commit `580028a`.
+
+---
+
+*End of LLM_CONTEXT.md — keep this file under ~500 lines; link out for schema details.*
