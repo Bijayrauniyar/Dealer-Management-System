@@ -79,7 +79,8 @@ flowchart LR
 
 | File | When to open it |
 |------|------------------|
-| [LLM_CONTEXT.md](LLM_CONTEXT.md) | **System prompt for Gemma / Codex / local Claude** — stack, rules, bill logic, how to update this file after big changes |
+| [GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md) | **Copy-paste into Gemma 4 26B System field** — compact rules + routes + verify commands |
+| [LLM_CONTEXT.md](LLM_CONTEXT.md) | **Attach every session** — full handbook: files, bill logic, deploy, maintenance |
 
 ---
 

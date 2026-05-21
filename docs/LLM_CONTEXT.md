@@ -1,10 +1,12 @@
 # Havmor DMS — context for local AI (Gemma, Codex, Claude, etc.)
 
-**Navigate:** [Docs hub](README.md) · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
+**Navigate:** [Docs hub](README.md) · [Gemma 4 system prompt](GEMMA_SYSTEM_PROMPT.md) · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
 
-**Last updated:** 2026-05-21 (bill print/PDF release on `main`)
+**Last updated:** 2026-05-21
 
-Use this file as the **system prompt** or **first attachment** when working offline. It is a snapshot of the repo — not your chat history. Refresh it after big changes (see [§ Maintenance](#maintenance-update-this-file)).
+**Gemma 4 26B:** paste **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** into System instructions, then attach this file each session.
+
+Use this file as the **full handbook** when working offline. It is a snapshot of the repo — not your chat history. Refresh it after big changes (see [§ Maintenance](#maintenance-update-this-file)).
 
 ---
 
@@ -51,6 +53,83 @@ havmor/
 ```
 
 **Always run npm commands from `app/`:** `cd app && npm run …`
+
+### All app routes (`app/src/routes/AppRouter.tsx`)
+
+| Route | Page | Purpose |
+|-------|------|---------|
+| `/login`, `/register` | Login, Register | Auth; register calls `signup_tenant` |
+| `/pending-approval`, `/no-tenant` | Pending, NoTenant | Tenant gate |
+| `/app/home` | HomePage | Dashboard, KPIs, quick links |
+| `/app/home/aging/:bucket` | AgingDetailPage | Receivables aging |
+| `/app/home/overdue` | OverduePage | Overdue bills |
+| `/app/home/outstanding` | OutstandingBillsPage | Open bills list |
+| `/app/home/period/:type` | PeriodListPage | Period sales list |
+| `/app/sales/new` | SaleEntryPage | New bill |
+| `/app/sales/edit/:billNo` | SaleEntryPage | Edit bill (`update_sales_bill`) |
+| `/app/bills/:billNo` | BillDetailPage | View, print, PDF, share |
+| `/app/payments/new` | PaymentPage | Customer payment FIFO |
+| `/app/returns/new` | ReturnPage | Goods return |
+| `/app/purchases/new` | PurchasePage | Stock in |
+| `/app/supplier-payments/new` | SupplierPaymentPage | Pay supplier |
+| `/app/expenses/new` | ExpensePage | Expense |
+| `/app/damages/new` | DamagePage | Stock damage |
+| `/app/daily-cash` | DailyCashPage | Daily cash (partial wiring) |
+| `/app/schemes/new` | SchemePage | Promotional scheme UI |
+| `/app/products`, `…/new`, `…/edit/:id` | Products, ProductFormPage | Product CRUD |
+| `/app/customers`, `…/new`, `…/edit/:id`, `/:id` | Customers, forms, detail | Customer CRUD |
+| `/app/suppliers`, `…/new` | Suppliers, SupplierFormPage | Suppliers |
+| `/app/stock` | StockPage | Stock on hand (`v_stock`) |
+| `/app/dashboard` | DashboardPage | Charts |
+| `/app/company` | CompanyOverviewPage | Company KPIs |
+| `/app/capital`, `/app/capital/new` | Capital list / entry | Capital (live) |
+| `/app/more` | MorePage | Nav hub |
+| `/app/settings` | SettingsPage | `tenant_settings` |
+
+### Feature → primary files (where to edit)
+
+| Feature | UI | Data / logic |
+|---------|-----|----------------|
+| Sales bill | `pages/sales/SaleEntryPage.tsx` | `domainLive.commitSaleLive`, `saleLineMath`, `uom` |
+| Bill view/print/PDF | `pages/bills/BillDetailPage.tsx`, `BillPrintView.tsx` | `billDisplay`, `printBill`, `billExport`, `billPdfCapture` |
+| Payment | `pages/payments/PaymentPage.tsx` | `commitPaymentLive` |
+| Return | `pages/returns/ReturnPage.tsx` | `commitReturnLive` |
+| Purchase | `pages/purchases/PurchasePage.tsx` | `commitPurchaseLive` |
+| Supplier payment | `pages/supplier-payment/SupplierPaymentPage.tsx` | `commitSupplierPaymentLive` |
+| Product | `pages/products/ProductFormPage.tsx` | `upsertProductLive` |
+| Customer | `pages/customers/CustomerFormPage.tsx` | `upsertCustomerLive` |
+| Settings | `pages/settings/SettingsPage.tsx` | `fetchTenantSettingsLive`, settings save |
+| Home / outstanding | `pages/home/*` | `fetchSalesLive`, `deriveOutstandingBills` |
+| Auth | `pages/LoginPage.tsx`, `lib/auth.tsx` | Supabase Auth |
+| Shared hooks | — | `store/domainHooks.ts` |
+| Types | — | `domain/types.ts`, `domain/defaults.ts` |
+
+### `domainLive.ts` exports (main entry points)
+
+`fetchProductsLive`, `fetchCustomersLive`, `fetchSalesLive`, `fetchPaymentsLive`, `fetchDomainBundle`, `commitSaleLive`, `commitPaymentLive`, `commitReturnLive`, `commitPurchaseLive`, `commitSupplierPaymentLive`, `upsertProductLive`, `upsertCustomerLive`, `recordExpenseLive`, `recordDamageLive`, `fetchTenantSettingsLive`, `insertCapitalEntryLive`, `peekNextBillNoLive`, …
+
+### E2E scripts (`app/scripts/`)
+
+| Script | Role |
+|--------|------|
+| `e2e-supabase-smoke.mjs` | Schema smoke |
+| `e2e-supabase-live.mjs` | Login + reads |
+| `e2e-phase1-matrix.mjs` | Full API matrix |
+| `e2e-bill-print.mjs` | Bill math + source checks |
+| `e2e-bill-visual.mjs` | Screenshots + PDF (needs dev) |
+| `ui-e2e-phase1.mjs` | Playwright UI flows |
+| `tenant-seed.mjs` | Demo data |
+| `check-tailwind-classes.mjs` | CI lint guard |
+
+### End-to-end workflows (for AI tasks)
+
+| Goal | Steps |
+|------|--------|
+| **Bug fix** | Reproduce → grep related RPC/page → minimal fix in `domainLive` or page → `deploy:check` + targeted `e2e:*` |
+| **UI-only** | Page + components → `lint:tailwind` via `deploy:check` |
+| **New DB field** | Migration `00XX_*.sql` → apply on Supabase → `domainLive` + `types.ts` → form → matrix test |
+| **Bill change** | `billDisplay` / `BillPrintView` / `index.css` → `e2e:bill` (+ `e2e:bill:visual` if layout) |
+| **Deploy** | `deploy:check` → commit → `git push origin main` → Netlify; confirm `VITE_*` on Netlify |
 
 ---
 
@@ -186,9 +265,9 @@ Full schema: `docs/backend/data-model.md`
 ### Setup (once)
 
 1. Clone repo: `/path/to/havmor`
-2. Open **`docs/LLM_CONTEXT.md`** in your local chat app (Gemma 4 26B, Codex, Claude Code, etc.)
-3. Set **system prompt** to:  
-   `You are working on Havmor DMS. Follow docs/LLM_CONTEXT.md strictly. Ask before breaking RPC or RLS rules.`
+2. **Gemma 4 26B:** copy system text from **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** (the fenced block).
+3. Attach **`docs/LLM_CONTEXT.md`** every session (this handbook).
+4. Other models (Codex, Claude): use GEMMA prompt + this file, or GEMMA prompt alone for small tasks.
 
 ### Every new task (better context)
 
@@ -288,7 +367,9 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
-- **2026-05-21** — Bill print/PDF: Karobar-style layout, `billDisplay` discount rules (bill-level in totals; line DISC% only when no bill discount), iframe print (no browser title header), Unit before Qty, line cell padding, totals rule row spacing, `e2e:bill` + `e2e:bill:visual`, deployed to Netlify via `main` commit `580028a`.
+- **2026-05-21** — Added `GEMMA_SYSTEM_PROMPT.md`; expanded LLM_CONTEXT with routes, feature→file map, domainLive index, E2E scripts, end-to-end workflows.
+- **2026-05-21** — Bill print/PDF: Karobar-style layout, `billDisplay` discount rules, iframe print, Unit before Qty, line padding, totals rule spacing, `e2e:bill` + `e2e:bill:visual` (commit `580028a`).
+- **2026-05-21** — Initial `LLM_CONTEXT.md` + push `b0e6818`.
 
 ---
 
