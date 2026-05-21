@@ -5,9 +5,20 @@
 import React from "react";
 import type { Sale, Customer, BusinessSettings } from "@/domain/types";
 import { useBusinessSettings } from "@/store/domain";
-import { billDocumentTitle, sellerTaxId } from "@/lib/billDisplay";
+import {
+  billDocumentTitleDisplay,
+  billBalanceDueLabel,
+  billPaymentModeDisplay,
+  billPaymentStatusLabel,
+  billFooterDiscountLabel,
+  billShowsFooterDiscount,
+  billShowsLineDiscColumn,
+  billSubtotalForDisplay,
+  sellerContactLine,
+  sellerTaxId,
+} from "@/lib/billDisplay";
 import { nprNum, fmtDate, toMiti, amountInWords } from "@/lib/utils";
-import { lineAmountFromMrp } from "@/lib/saleLineMath";
+import { billLineAmount } from "@/lib/saleLineMath";
 
 type Props = {
   sale: Sale;
@@ -21,12 +32,6 @@ const joinParts = (...parts: (string | undefined | null)[]) =>
     .filter(Boolean)
     .join(", ");
 
-function sellerAddressLines(b: BusinessSettings): string[] {
-  const row1 = joinParts(b.addressLine1, b.addressLine2);
-  const row2 = joinParts(b.district, b.province, b.country);
-  return [row1, row2].filter(Boolean);
-}
-
 /** One name on bill: legal/registered if set, else trading name. */
 function sellerBillName(b: BusinessSettings): string {
   const legal = b.legalName.trim();
@@ -36,15 +41,17 @@ function sellerBillName(b: BusinessSettings): string {
 
 const rs = (n: number) => `Rs. ${nprNum(n)}`;
 
-const lineAmt = (l: { qty: number; mrp?: number; rate: number; discountPct?: number }) =>
-  lineAmountFromMrp({
-    qty: l.qty,
-    mrp: l.mrp ?? l.rate,
-    rate: l.rate,
-    discountPct: l.discountPct,
-  });
-
-const MIN_TABLE_ROWS = 2;
+/** Implied line discount when amount < qty × MRP (e.g. sell rate below MRP). */
+function lineDiscPct(line: { qty: number; mrp?: number; rate: number; discountPct?: number }): number {
+  if ((line.discountPct ?? 0) > 0) return line.discountPct ?? 0;
+  const mrp = Number(line.mrp) || 0;
+  const qty = Number(line.qty) || 0;
+  if (mrp <= 0 || qty <= 0) return 0;
+  const gross = Math.round(qty * mrp);
+  const amt = billLineAmount(line);
+  if (amt >= gross) return 0;
+  return Math.round((1 - amt / gross) * 100);
+}
 
 /** Standard Nepali bill phone label (same on screen, preview, print, PDF). */
 function PhLine({ number }: { number: string }) {
@@ -67,25 +74,42 @@ function TaxIdLine({ label, number }: { label: "PAN" | "VAT"; number: string }) 
   );
 }
 
+/** Flex wrapper — vertical center in table/totals (screen, print, PDF capture). */
+function BillCellInner({
+  children,
+  align = "left",
+}: {
+  children: React.ReactNode;
+  align?: "left" | "center" | "right";
+}) {
+  const justify =
+    align === "center" ? "justify-center" : align === "right" ? "justify-end" : "justify-start";
+  const text =
+    align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
+  return (
+    <div className={`bill-cell-inner flex min-h-[1.35rem] w-full items-center ${justify} ${text}`}>
+      {children}
+    </div>
+  );
+}
+
 export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
   const business = useBusinessSettings();
   const lines = Array.isArray(sale.lines) ? sale.lines : [];
   const hasTax = sale.vatRate > 0;
   const hasTerms = sale.billTermsAmount > 0;
-  const hasDisc = sale.discountAmount > 0;
-  const hasLineDisc = lines.some((l) => (l.discountPct ?? 0) > 0);
+  const hasFooterDisc = billShowsFooterDiscount(sale);
+  const hasLineDisc = billShowsLineDiscColumn(lines, sale);
+  const subtotalOnBill = billSubtotalForDisplay(sale);
 
   const customerName = sale.customerName || customer?.name || "—";
-  const payMode =
-    sale.paymentMode?.trim() ||
-    (sale.balance <= 0 && sale.paidNow >= sale.grandTotal ? "Cash" : sale.paidNow > 0 ? "Partial" : "Credit");
+  const payMode = billPaymentModeDisplay(sale);
+  const paymentStatus = billPaymentStatusLabel(sale);
 
   const sellerTax = sellerTaxId(business);
   const buyerPan = customer?.panNumber?.trim() ?? "";
 
-  const sellerAddress = sellerAddressLines(business).join(" · ");
-  const sellerPhone = (business.mobile || business.phone).trim();
-  const sellerContact = joinParts(sellerAddress || null, sellerPhone ? `Ph ${sellerPhone}` : null);
+  const sellerContact = sellerContactLine(business);
 
   const customerAddress = customer?.address?.trim() ?? "";
   const customerPhone = customer?.phone?.trim() ?? "";
@@ -99,46 +123,39 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
     buyerPan ? `PAN ${buyerPan}` : null,
   ].filter(Boolean);
 
-  const statusBadge =
-    !isPreview && (
-      <span
-        className={`ml-1 inline-block rounded px-1.5 py-px text-[8px] font-semibold uppercase ${
-          sale.balance === 0
-            ? "bg-emerald-50 text-emerald-800"
-            : "bg-amber-50 text-amber-900"
-        }`}
-      >
-        {sale.balance === 0 ? "Paid" : "Due"}
-      </span>
-    );
-
   return (
     <div
       id="bill-print-root"
-      className="bill-print-a4 mx-auto w-full max-w-full overflow-hidden rounded-lg border border-gray-200 bg-white text-[10px] leading-tight text-gray-900 shadow-sm print:max-w-none print:rounded-none print:border-0 print:shadow-none"
-      style={{ maxWidth: "210mm" }}
+      className="bill-print-a4 mx-auto w-full min-w-0 max-w-[210mm] overflow-x-hidden rounded-lg border border-gray-200 bg-white text-[10px] leading-tight text-gray-900 shadow-sm print:overflow-visible print:rounded-none print:border-0 print:shadow-none"
+      style={{ width: "100%", maxWidth: "min(100%, 210mm)" }}
     >
-      <div className="px-3 py-2 print:px-6 print:py-3">
+      <div className="px-3 py-2 print:px-6 print:pb-3 print:pt-5">
 
-        {/* ── Seller letterhead (compact) ── */}
-        <div className="border-b border-gray-200 pb-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="min-w-0 flex-1 text-xs font-bold leading-tight text-gray-900" title={sellerBillName(business)}>
-              {sellerBillName(business)}
-            </p>
-            {sellerTax ? <TaxIdLine label={sellerTax.label} number={sellerTax.number} /> : null}
+        {/* ── Letterhead: shop + address (left), VAT/PAN (right), title centered ── */}
+        <div className="border-b border-gray-200 pb-1.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold leading-tight text-gray-900" title={sellerBillName(business)}>
+                {sellerBillName(business)}
+              </p>
+              {sellerContact ? (
+                <p className="mt-0.5 text-[9px] leading-snug text-gray-600">{sellerContact}</p>
+              ) : null}
+            </div>
+            {sellerTax ? (
+              <div className="shrink-0 pt-0.5">
+                <TaxIdLine label={sellerTax.label} number={sellerTax.number} />
+              </div>
+            ) : null}
           </div>
-          {sellerContact ? (
-            <p className="mt-0.5 text-[9px] leading-snug text-gray-600">{sellerContact}</p>
-          ) : null}
-          <p className="mt-0.5 text-center text-[9px] font-bold uppercase tracking-wide text-gray-800">
-            {billDocumentTitle()}
+          <p className="mt-1.5 text-center text-[9px] font-bold uppercase tracking-wide text-gray-800">
+            {billDocumentTitleDisplay()}
           </p>
         </div>
 
         {/* ── Bill meta + customer (2 lines) ── */}
-        <div className="mt-1 border-b border-dashed border-gray-300 py-1 text-[9px] leading-snug text-gray-800">
-          <p className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+        <div className="mt-1 border-b border-dashed border-gray-300 py-1.5 text-[9px] leading-snug text-gray-800">
+          <p className="flex flex-wrap items-center gap-x-1 gap-y-0.5 pb-0.5">
             <span>
               <span className="text-gray-500">Bill</span>{" "}
               <span className="font-bold text-gray-900">{sale.billNo}</span>
@@ -148,81 +165,105 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
             <span className="text-gray-500">({toMiti(sale.date)})</span>
             <span className="text-gray-300">·</span>
             <span>{payMode}</span>
-            {statusBadge}
-            {sale.dueDate && sale.balance > 0 && !isPreview ? (
+            {paymentStatus ? (
               <>
                 <span className="text-gray-300">·</span>
-                <span className="text-amber-800">Due {fmtDate(sale.dueDate)}</span>
+                <span
+                  className={
+                    sale.balance <= 0
+                      ? "font-medium text-emerald-800"
+                      : sale.dueDate
+                        ? "font-medium text-amber-800"
+                        : "font-medium text-amber-900"
+                  }
+                >
+                  {paymentStatus}
+                </span>
               </>
             ) : null}
           </p>
-          <p className="mt-0.5">
-            <span className="font-bold uppercase text-gray-500">To</span>{" "}
+          <p className="mt-2 pt-0.5">
+            <span className="mr-1 font-bold uppercase text-gray-500">To:</span>
             <span className="font-semibold text-gray-900">{buyerParts.join(" · ")}</span>
           </p>
         </div>
 
-        {/* ── Line items ── */}
-        <div className="mt-1 overflow-x-auto">
-          <table className="w-full border-collapse text-[10px]">
+        {/* ── Line items (fits phone width — no horizontal scroll) ── */}
+        <div className="mt-1 w-full min-w-0">
+          <table className="bill-lines-table w-full table-fixed border-collapse text-[8px] leading-normal sm:text-[10px]">
+            <colgroup>
+              <col className="bill-col-sn" style={{ width: hasLineDisc ? "7%" : "8%" }} />
+              <col style={{ width: hasLineDisc ? "32%" : "36%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "11%" }} />
+              {hasLineDisc ? <col style={{ width: "9%" }} /> : null}
+              <col style={{ width: hasLineDisc ? "16%" : "20%" }} />
+            </colgroup>
             <thead>
-              <tr className="bg-teal-600 text-[9px] font-bold uppercase text-white">
-                <th className="w-6 border border-teal-700 px-0.5 py-0.5 text-center">S.N.</th>
-                <th className="border border-teal-700 px-1 py-0.5 text-left">Particulars</th>
-                <th className="w-11 border border-teal-700 px-0.5 py-0.5 text-right">MRP</th>
-                <th className="w-8 border border-teal-700 px-0.5 py-0.5 text-right">Qty</th>
-                <th className="w-8 border border-teal-700 px-0.5 py-0.5 text-center">Unit</th>
+              <tr className="bg-teal-600 font-bold uppercase text-white">
+                <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
+                  <BillCellInner align="center">S.N.</BillCellInner>
+                </th>
+                <th className="bill-cell border border-teal-700 p-0">
+                  <BillCellInner align="center">Particulars</BillCellInner>
+                </th>
+                <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
+                  <BillCellInner align="center">MRP</BillCellInner>
+                </th>
+                <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
+                  <BillCellInner align="center">Unit</BillCellInner>
+                </th>
+                <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
+                  <BillCellInner align="center">Qty</BillCellInner>
+                </th>
                 {hasLineDisc && (
-                  <th className="w-8 border border-teal-700 px-0.5 py-0.5 text-right">Disc%</th>
+                  <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
+                    <BillCellInner align="center">Disc%</BillCellInner>
+                  </th>
                 )}
-                <th className="w-12 border border-teal-700 px-0.5 py-0.5 text-right">Amount</th>
+                <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
+                  <BillCellInner align="center">Amt</BillCellInner>
+                </th>
               </tr>
             </thead>
             <tbody>
               {lines.map((line, i) => (
                 <tr key={i} className="even:bg-gray-50/60">
-                  <td className="border border-gray-200 px-0.5 py-0.5 text-center text-gray-500">
-                    {i + 1}
+                  <td className="bill-cell border border-gray-300 p-0 text-gray-500">
+                    <BillCellInner align="center">{i + 1}</BillCellInner>
                   </td>
-                  <td className="border border-gray-200 px-1 py-0.5 font-medium text-gray-900">
-                    {line.productName}
+                  <td className="bill-cell break-words border border-gray-300 p-0 font-medium text-gray-900">
+                    <BillCellInner align="center">{line.productName}</BillCellInner>
                   </td>
-                  <td className="whitespace-nowrap border border-gray-200 px-0.5 py-0.5 text-right tabular-nums text-gray-700">
-                    {line.mrp ? nprNum(line.mrp) : "—"}
+                  <td className="bill-cell border border-gray-300 p-0 tabular-nums text-gray-700">
+                    <BillCellInner align="center">{line.mrp ? nprNum(line.mrp) : "—"}</BillCellInner>
                   </td>
-                  <td className="whitespace-nowrap border border-gray-200 px-0.5 py-0.5 text-right tabular-nums">
-                    {nprNum(line.qty)}
+                  <td className="bill-cell border border-gray-300 p-0 text-[7px] text-gray-600 sm:text-[8px]">
+                    <BillCellInner align="center">{line.uom || "PCS"}</BillCellInner>
                   </td>
-                  <td className="border border-gray-200 px-0.5 py-0.5 text-center text-gray-600">
-                    {line.uom || "PCS"}
+                  <td className="bill-cell border border-gray-300 p-0 tabular-nums">
+                    <BillCellInner align="center">{nprNum(line.qty)}</BillCellInner>
                   </td>
                   {hasLineDisc && (
-                    <td className="whitespace-nowrap border border-gray-200 px-0.5 py-0.5 text-right text-amber-700">
-                      {(line.discountPct ?? 0) > 0 ? `${line.discountPct}%` : "—"}
+                    <td className="bill-cell border border-gray-300 p-0 text-amber-700">
+                      <BillCellInner align="center">
+                        {lineDiscPct(line) > 0 ? `${lineDiscPct(line)}%` : "—"}
+                      </BillCellInner>
                     </td>
                   )}
-                  <td className="whitespace-nowrap border border-gray-200 px-0.5 py-0.5 text-right font-semibold tabular-nums">
-                    {nprNum(lineAmt(line))}
+                  <td className="bill-cell border border-gray-300 p-0 font-semibold tabular-nums">
+                    <BillCellInner align="center">{nprNum(billLineAmount(line))}</BillCellInner>
                   </td>
                 </tr>
               ))}
-              {lines.length < MIN_TABLE_ROWS &&
-                Array.from({ length: MIN_TABLE_ROWS - lines.length }).map((_, i) => (
-                  <tr key={`empty-${i}`}>
-                    <td className="border border-gray-200 px-1 py-1 text-center text-gray-300">
-                      {lines.length + i + 1}
-                    </td>
-                    <td className="border border-gray-200 px-1 py-0.5" colSpan={hasLineDisc ? 6 : 5} />
-                  </tr>
-                ))}
             </tbody>
           </table>
-          <p className="mt-0.5 text-right text-[8px] text-gray-400">NPR</p>
         </div>
 
-        {/* ── Totals + amount in words ── */}
-        <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 md:items-start">
-          <div className="rounded border border-gray-200 bg-gray-50 px-2 py-1.5">
+        {/* ── Totals: stack on narrow screens so amounts are not clipped ── */}
+        <div className="bill-print-summary mt-1.5 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 min-[480px]:items-end">
+          <div className="min-w-0 rounded border border-gray-200 bg-gray-50 px-2 py-1.5">
             <p className="text-[8px] font-bold uppercase tracking-wider text-gray-400">Amount in words</p>
             <p className="mt-0.5 text-[10px] font-medium leading-snug text-gray-800">
               {amountInWords(sale.grandTotal)}
@@ -231,50 +272,99 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
               <p className="mt-2 text-[10px] italic text-gray-500">{business.billFooter}</p>
             ) : null}
           </div>
-          <div className="space-y-1 md:ml-auto md:w-full md:max-w-xs">
-            <TotalRow label="Subtotal" value={sale.subtotal} />
-            {hasDisc && (
-              <TotalRow
-                label={
-                  sale.discountType === "percent"
-                    ? `Discount (${sale.discountValue}%)`
-                    : "Discount"
+          <table className="bill-totals-table w-full min-w-0 table-fixed border-collapse text-[10px]">
+            <colgroup>
+              <col />
+              <col className="w-[6.75rem]" />
+            </colgroup>
+            <tbody>
+              <tr
+                className={
+                  !hasFooterDisc && !hasTerms && !hasTax ? "bill-totals-before-rule" : undefined
                 }
-                value={-sale.discountAmount}
-                negative
-              />
-            )}
-            {hasTerms && (
-              <TotalRow label={sale.billTerms || "Add. charges"} value={sale.billTermsAmount} />
-            )}
-            {hasTax && <TotalRow label={`VAT (${sale.vatRate}%)`} value={sale.vatAmount} />}
-            <div className="flex items-center justify-between border-t border-double border-gray-300 pt-2 font-bold text-gray-900">
-              <span>Grand total</span>
-              <span className="whitespace-nowrap tabular-nums">{rs(sale.grandTotal)}</span>
-            </div>
-            {sale.paidNow > 0 && (
-              <div className="flex items-center justify-between text-emerald-800">
-                <span className="font-medium">Paid at billing</span>
-                <span className="whitespace-nowrap tabular-nums font-semibold">{rs(sale.paidNow)}</span>
-              </div>
-            )}
-            {sale.balance > 0 && (
-              <div className="flex items-center justify-between font-semibold text-amber-900">
-                <span>Balance due</span>
-                <span className="whitespace-nowrap tabular-nums">{rs(sale.balance)}</span>
-              </div>
-            )}
-          </div>
+              >
+                <td className="bill-totals-cell p-0 pr-3 text-gray-700">
+                  <BillCellInner align="left">Subtotal</BillCellInner>
+                </td>
+                <td className="bill-totals-cell bill-totals-amount p-0 tabular-nums text-gray-900">
+                  <BillCellInner align="right">{rs(subtotalOnBill)}</BillCellInner>
+                </td>
+              </tr>
+              {hasFooterDisc && (
+                <tr className={!hasTerms && !hasTax ? "bill-totals-before-rule" : undefined}>
+                  <td className="bill-totals-cell p-0 pr-3 text-gray-700">
+                    <BillCellInner align="left">{billFooterDiscountLabel(sale)}</BillCellInner>
+                  </td>
+                  <td className="bill-totals-cell bill-totals-amount p-0 tabular-nums text-red-600">
+                    <BillCellInner align="right">- {rs(sale.discountAmount)}</BillCellInner>
+                  </td>
+                </tr>
+              )}
+              {hasTerms && (
+                <tr className={!hasTax ? "bill-totals-before-rule" : undefined}>
+                  <td className="bill-totals-cell p-0 pr-3 text-gray-700">
+                    <BillCellInner align="left">{sale.billTerms || "Add. charges"}</BillCellInner>
+                  </td>
+                  <td className="bill-totals-cell bill-totals-amount p-0 tabular-nums">
+                    <BillCellInner align="right">{rs(sale.billTermsAmount)}</BillCellInner>
+                  </td>
+                </tr>
+              )}
+              {hasTax && (
+                <tr className="bill-totals-before-rule">
+                  <td className="bill-totals-cell pr-3 text-gray-700">
+                    <BillCellInner align="left">VAT ({sale.vatRate}%)</BillCellInner>
+                  </td>
+                  <td className="bill-totals-cell bill-totals-amount tabular-nums">
+                    <BillCellInner align="right">{rs(sale.vatAmount)}</BillCellInner>
+                  </td>
+                </tr>
+              )}
+              <tr className="bill-totals-rule" aria-hidden="true">
+                <td colSpan={2} className="bill-totals-rule-cell">
+                  <div className="bill-totals-rule-line" />
+                </td>
+              </tr>
+              <tr className="bill-totals-grand">
+                <td className="bill-totals-cell pr-3 font-bold text-gray-900">
+                  <BillCellInner align="left">Grand total (NPR)</BillCellInner>
+                </td>
+                <td className="bill-totals-cell bill-totals-amount font-bold tabular-nums text-gray-900">
+                  <BillCellInner align="right">{rs(sale.grandTotal)}</BillCellInner>
+                </td>
+              </tr>
+              {sale.paidNow > 0 && (
+                <tr>
+                  <td className="bill-totals-cell p-0 pr-3 font-medium text-emerald-800">
+                    <BillCellInner align="left">Paid at billing</BillCellInner>
+                  </td>
+                  <td className="bill-totals-cell bill-totals-amount p-0 font-semibold tabular-nums text-emerald-800">
+                    <BillCellInner align="right">{rs(sale.paidNow)}</BillCellInner>
+                  </td>
+                </tr>
+              )}
+              {sale.balance > 0 && (
+                <tr>
+                  <td className="bill-totals-cell p-0 pr-3 font-semibold text-amber-900">
+                    <BillCellInner align="left">{billBalanceDueLabel()}</BillCellInner>
+                  </td>
+                  <td className="bill-totals-cell bill-totals-amount p-0 font-semibold tabular-nums text-amber-900">
+                    <BillCellInner align="right">{rs(sale.balance)}</BillCellInner>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* ── Signatures ── */}
-        <div className="mt-2 grid grid-cols-2 gap-3 border-t border-dashed border-gray-300 pt-2">
+        <div className="bill-signatures mt-2 grid grid-cols-2 gap-3 border-t border-dashed border-gray-300 pt-2 sm:mt-1.5 sm:pt-1.5">
           <div className="text-center">
-            <div className="mb-0.5 min-h-[1.25rem] border-b border-gray-400" />
+            <div className="mb-0.5 min-h-[1rem] border-b border-gray-400" />
             <p className="text-[9px] font-medium text-gray-600">Authorised signature</p>
           </div>
           <div className="text-center">
-            <div className="mb-0.5 min-h-[1.25rem] border-b border-gray-400" />
+            <div className="mb-0.5 min-h-[1rem] border-b border-gray-400" />
             <p className="text-[9px] font-medium text-gray-600">Received by</p>
           </div>
         </div>
@@ -282,22 +372,3 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
     </div>
   );
 };
-
-function TotalRow({
-  label,
-  value,
-  negative,
-}: {
-  label: React.ReactNode;
-  value: number;
-  negative?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 text-gray-700">
-      <span className="min-w-0">{label}</span>
-      <span className={`shrink-0 whitespace-nowrap tabular-nums ${negative ? "text-red-600" : ""}`}>
-        {negative ? `− ${rs(Math.abs(value))}` : rs(value)}
-      </span>
-    </div>
-  );
-}

@@ -5,6 +5,7 @@
 **/.env.local
 **/.e2e-credentials.local
 app/.e2e-ui-failure.png
+app/test-output/
 app/.e2e-smoke.log
 
 # Dependencies & build output

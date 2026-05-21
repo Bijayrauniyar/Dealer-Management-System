@@ -22,7 +22,8 @@ import type {
 } from "@/domain/types";
 import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
 import type { DashboardPeriodTotals } from "@/domain/defaults";
-import { lineAmountFromMrp } from "@/lib/saleLineMath";
+import { billLineAmount } from "@/lib/saleLineMath";
+import { linePricingForProduct, productFromSalesEmbed } from "@/lib/uom";
 import { saleLineToRpcItem } from "@/lib/uom";
 import { parseUomConversion, parseUomPrices, toDbUomConversion, toDbUomPrices } from "@/lib/uom";
 
@@ -252,8 +253,24 @@ type ItemRow = {
   rate: number;
   unit?: string | null;
   products?:
-    | { name: string; unit: string; mrp?: number; discount_pct?: number }
-    | { name: string; unit: string; mrp?: number; discount_pct?: number }[]
+    | {
+        name: string;
+        unit: string;
+        mrp?: number;
+        sale_price?: number;
+        discount_pct?: number;
+        uom_prices?: unknown;
+        uom_conversion?: unknown;
+      }
+    | {
+        name: string;
+        unit: string;
+        mrp?: number;
+        sale_price?: number;
+        discount_pct?: number;
+        uom_prices?: unknown;
+        uom_conversion?: unknown;
+      }[]
     | null;
 };
 
@@ -269,12 +286,22 @@ export async function fetchSalesLive(): Promise<Sale[]> {
   if (billIds.length) {
     let items: unknown[] | null = null;
     let ie: { message?: string } | null = null;
-    const withUnit = await supabase
+    const productEmbed =
+      "name, unit, mrp, sale_price, discount_pct, uom_prices, uom_conversion";
+    const withUom = await supabase
       .from("sales_items")
-      .select("bill_id, product_id, qty, rate, unit, products(name, unit, mrp, discount_pct)")
+      .select(`bill_id, product_id, qty, rate, unit, products(${productEmbed})`)
       .in("bill_id", billIds);
-    items = withUnit.data;
-    ie = withUnit.error;
+    items = withUom.data;
+    ie = withUom.error;
+    if (ie && (isMissingColumnError(ie, "unit") || isMissingColumnError(ie, "uom_prices"))) {
+      const withUnit = await supabase
+        .from("sales_items")
+        .select("bill_id, product_id, qty, rate, unit, products(name, unit, mrp, sale_price, discount_pct)")
+        .in("bill_id", billIds);
+      items = withUnit.data;
+      ie = withUnit.error;
+    }
     if (ie && isMissingColumnError(ie, "unit")) {
       const legacy = await supabase
         .from("sales_items")
@@ -302,23 +329,41 @@ export async function fetchSalesLive(): Promise<Sale[]> {
     const sub = Number(b.subtotal);
     const disc = Number(b.discount);
     const afterDisc = sub - disc;
+    let discountType: Sale["discountType"] = "none";
+    let discountValue = 0;
+    if (disc > 0 && sub > 0) {
+      const pct = Math.round((disc / sub) * 100);
+      if (pct >= 1 && pct <= 100 && Math.abs(Math.round((sub * pct) / 100) - disc) <= 1) {
+        discountType = "percent";
+        discountValue = pct;
+      } else {
+        discountType = "flat";
+        discountValue = disc;
+      }
+    } else if (disc > 0) {
+      discountType = "flat";
+      discountValue = disc;
+    }
     const vatRate = vatAmt > 0 ? 13 : 0;
     const lines: SaleLine[] = items.map((it) => {
       const prod = embedOne(it.products);
-      const mrp = Number(prod?.mrp ?? 0);
       const discountPct = Number(prod?.discount_pct ?? 0);
       const qty = Number(it.qty);
       const rate = Number(it.rate);
-      const pricing = { qty, mrp: mrp > 0 ? mrp : rate, rate, discountPct };
+      const uom = ((it.unit as string)?.trim() || prod?.unit) ?? "PCS";
+      const amount = billLineAmount({ qty, rate, discountPct });
+      const displayMrp = prod
+        ? linePricingForProduct(productFromSalesEmbed(prod), uom).mrp
+        : rate;
       return {
         productId: it.product_id,
         productName: prod?.name ?? "",
-        uom: ((it.unit as string)?.trim() || prod?.unit) ?? "PCS",
+        uom,
         qty,
-        mrp: mrp > 0 ? mrp : rate,
+        mrp: displayMrp > 0 ? displayMrp : rate,
         rate,
         discountPct,
-        amount: lineAmountFromMrp(pricing),
+        amount,
       };
     });
 
@@ -335,8 +380,8 @@ export async function fetchSalesLive(): Promise<Sale[]> {
       customerName: cust?.name ?? "",
       lines,
       subtotal: sub,
-      discountType: disc > 0 ? "flat" : "none",
-      discountValue: disc,
+      discountType,
+      discountValue,
       discountAmount: disc,
       afterDiscount: afterDisc,
       billTerms: extra > 0 ? "Charges" : "",

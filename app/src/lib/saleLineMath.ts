@@ -19,6 +19,27 @@ export function lineAmountFromMrp(l: LinePricing): number {
   return Math.round(qty * rate * (1 - disc / 100));
 }
 
+/** Line amount on printed/downloaded bill (matches DB subtotal). */
+export function billLineAmount(line: {
+  qty: number;
+  rate: number;
+  mrp?: number;
+  discountPct?: number;
+  amount?: number;
+}): number {
+  if (line.amount != null && Number.isFinite(line.amount)) {
+    return Math.round(line.amount);
+  }
+  const fromRate = Math.round(line.qty * line.rate);
+  if (line.rate > 0) return fromRate;
+  return lineAmountFromMrp({
+    qty: line.qty,
+    mrp: line.mrp ?? line.rate,
+    rate: line.rate,
+    discountPct: line.discountPct,
+  });
+}
+
 /** Unit price stored in DB so sum(qty×rate) matches subtotal. */
 export function effectiveRateForRpc(l: LinePricing): number {
   const qty = Number(l.qty) || 0;

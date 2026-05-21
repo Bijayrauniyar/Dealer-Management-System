@@ -4,11 +4,19 @@ import { toast } from "sonner";
 import type { Sale, BillStatus } from "@/domain/types";
 import { ArrowLeft, Printer, Pencil, CreditCard, RotateCcw, Download, Share2 } from "lucide-react";
 import { downloadBillPdf, shareBillPdf } from "@/lib/billExport";
+import { printBill, useBillDocumentTitle } from "@/lib/printBill";
 import { PageShell } from "@/components/app/PageShell";
 import { BillPrintView } from "@/components/app/BillPrintView";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { useSaleByBill, useOutstandingBills, usePayments, useCustomers, useDomainBundleLoadState } from "@/store/domain";
+import {
+  useSaleByBill,
+  useOutstandingBills,
+  usePayments,
+  useCustomers,
+  useDomainBundleLoadState,
+  useBusinessSettings,
+} from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
 
 function saleFromLocationState(raw: unknown, urlBillNo: string | undefined): Sale | undefined {
@@ -58,13 +66,14 @@ export const BillDetailPage = () => {
   const obEntry   = OUTSTANDING_BILLS.find((b) => b.billNo === billNo);
   const payments  = PAYMENTS.filter((p) => p.billNo === billNo);
   const customer  = sale ? CUSTOMERS.find((c) => c.id === sale.customerId) : undefined;
+  const business  = useBusinessSettings();
   const [exporting, setExporting] = useState(false);
 
   const handleDownload = async () => {
     if (!sale) return;
     setExporting(true);
     try {
-      await downloadBillPdf(sale.billNo);
+      await downloadBillPdf({ sale, customer, business });
       toast.success("Bill downloaded");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Download failed");
@@ -77,7 +86,7 @@ export const BillDetailPage = () => {
     if (!sale) return;
     setExporting(true);
     try {
-      const result = await shareBillPdf(sale.billNo);
+      const result = await shareBillPdf({ sale, customer, business });
       if (result === "shared") toast.success("Bill shared");
       else toast.success("Bill downloaded (share not available on this device)");
     } catch (e) {
@@ -89,12 +98,14 @@ export const BillDetailPage = () => {
     }
   };
 
+  useBillDocumentTitle(sale?.billNo);
+
   useEffect(() => {
-    if (searchParams.get("print") === "1" && sale) {
-      const t = setTimeout(() => window.print(), 600);
+    if (searchParams.get("print") === "1" && sale?.billNo) {
+      const t = setTimeout(() => printBill(sale.billNo), 600);
       return () => clearTimeout(t);
     }
-  }, [searchParams, sale]);
+  }, [searchParams, sale?.billNo]);
 
   if (loadState === "loading") {
     return (
@@ -175,8 +186,8 @@ export const BillDetailPage = () => {
         </div>
       )}
 
-      {/* ── Bill (scroll horizontally on small screens if table is wide) ── */}
-      <div className="-mx-1 mb-4 overflow-x-auto sm:mx-0">
+      {/* ── Bill: centered on screen and on A4 print ── */}
+      <div className="bill-print-zone mb-4 w-full min-w-0">
         <BillPrintView sale={sale} customer={customer} />
       </div>
 
@@ -212,8 +223,9 @@ export const BillDetailPage = () => {
           <button
             type="button"
             disabled={exporting}
-            onClick={() => window.print()}
+            onClick={() => sale && printBill(sale.billNo)}
             className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-white py-2.5 text-xs font-semibold sm:text-sm"
+            title="Print: disable Headers and footers in the dialog; enable Background graphics."
           >
             <Printer size={14} /> Print
           </button>

@@ -1,4 +1,5 @@
-import type { BusinessSettings } from "@/domain/types";
+import type { BusinessSettings, Sale, SaleLine } from "@/domain/types";
+import { fmtDate } from "@/lib/utils";
 
 export const BILL_VAT_RATE = 13;
 
@@ -12,6 +13,108 @@ export function tenantChargesVat(
 /** Center title on printed bill (same for PAN and VAT shops; tax id is shown top-right). */
 export function billDocumentTitle(): string {
   return "Sales details";
+}
+
+/** Uppercase title for bill header (screen + PDF). */
+export function billDocumentTitleDisplay(): string {
+  return billDocumentTitle().toUpperCase();
+}
+
+/**
+ * How payment was made at billing (not the same as “fully paid”).
+ * Credit bill with balance must not show “Cash”.
+ */
+export function billPaymentModeDisplay(
+  sale: Pick<Sale, "paymentMode" | "balance" | "paidNow">,
+): string {
+  const balance = Number(sale.balance) || 0;
+  const paid = Number(sale.paidNow) || 0;
+  const mode = sale.paymentMode?.trim();
+
+  if (balance <= 0) return paid > 0 ? mode || "Cash" : "Paid";
+  if (paid <= 0) return "Credit";
+  return mode ? `Partial (${mode})` : "Partial";
+}
+
+/** Balance / due date in bill meta — one “Due” only (not duplicated with a badge). */
+export function billPaymentStatusLabel(
+  sale: Pick<Sale, "balance" | "dueDate">,
+): string | null {
+  if (sale.balance <= 0) return "Paid";
+  if (sale.dueDate) return `Due ${fmtDate(sale.dueDate)}`;
+  return "Unpaid";
+}
+
+/** Label for remaining amount on bill totals (screen, print, PDF). */
+export function billBalanceDueLabel(): string {
+  return "Due";
+}
+
+/** Line has explicit or implied discount (DISC% column on bill). */
+export function billLineHasDiscount(line: SaleLine): boolean {
+  if ((line.discountPct ?? 0) > 0) return true;
+  const mrp = Number(line.mrp) || 0;
+  const qty = Number(line.qty) || 0;
+  if (mrp <= 0 || qty <= 0) return false;
+  const gross = Math.round(qty * mrp);
+  const amt = line.amount != null ? Math.round(line.amount) : Math.round(qty * line.rate);
+  return amt < gross;
+}
+
+/**
+ * Bill-level discount from sale form (% or flat on total items) — show in totals.
+ * Item-level discount uses DISC% column only, not this row.
+ */
+export function billShowsFooterDiscount(
+  sale: Pick<Sale, "discountType" | "discountAmount">,
+): boolean {
+  return (
+    sale.discountAmount > 0 &&
+    (sale.discountType === "percent" || sale.discountType === "flat")
+  );
+}
+
+export function billFooterDiscountLabel(
+  sale: Pick<Sale, "discountType" | "discountValue">,
+): string {
+  if (sale.discountType === "percent") return `Discount (${sale.discountValue}%)`;
+  return "Discount";
+}
+
+/** Subtotal before bill-level discount; when no bill discount, lines total is final subtotal. */
+export function billSubtotalForDisplay(
+  sale: Pick<Sale, "subtotal" | "afterDiscount" | "discountType" | "discountAmount">,
+): number {
+  return billShowsFooterDiscount(sale) ? sale.subtotal : sale.afterDiscount;
+}
+
+/**
+ * DISC% column — item-level discounts only.
+ * When bill-level discount is in totals, do not repeat discount on each line.
+ */
+export function billShowsLineDiscColumn(
+  lines: SaleLine[],
+  sale?: Pick<Sale, "discountType" | "discountAmount">,
+): boolean {
+  if (sale && billShowsFooterDiscount(sale)) return false;
+  return lines.some(billLineHasDiscount);
+}
+
+/** Address + phone under shop name (left column of letterhead). */
+export function sellerContactLine(
+  b: Pick<
+    BusinessSettings,
+    "addressLine1" | "addressLine2" | "district" | "province" | "country" | "mobile" | "phone"
+  >,
+): string {
+  const row1 = [b.addressLine1, b.addressLine2].map((s) => (s ?? "").trim()).filter(Boolean).join(", ");
+  const row2 = [b.district, b.province, b.country]
+    .map((s) => (s ?? "").trim())
+    .filter(Boolean)
+    .join(" · ");
+  const addr = [row1, row2].filter(Boolean).join(" · ");
+  const phone = (b.mobile || b.phone).trim();
+  return [addr, phone ? `Ph ${phone}` : ""].filter(Boolean).join(" · ");
 }
 
 /** Seller tax line on bill: VAT if registered + number set, else PAN if set — never both. */

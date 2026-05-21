@@ -26,6 +26,11 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `npm run e2e:smoke` | Schema + RPC exists (no login) |
 | `npm run e2e:live` | Login + basic reads (`E2E_EMAIL` / `E2E_PASSWORD`) |
 | `npm run e2e:matrix` | **Full API matrix** — masters, maths, balances, stock |
+| `npm run e2e:bill` | **Bill print/PDF** — line amounts, layout source checks (no login) |
+| `npm run e2e:bill:live` | Same + verify recent bills: Σ line amount = subtotal |
+| `npm run e2e:bill:ui` | Same + browser bill DOM + `app/test-output/bill-print-ui.png` (needs `npm run dev`) |
+| `npm run e2e:bill:full` | `e2e:bill` + `--live` + `--ui` |
+| `npm run e2e:bill:visual` | **Screenshots** (mobile + desktop) + **PDF download** text check (`test-output/`) |
 | `npm run e2e:ui` | **Browser UI** — forms + navigation (needs `npm run dev`) |
 | `npm run e2e:ui:setup` | Install Playwright Chromium (once) |
 | `npm run e2e:all` | API matrix then UI |
@@ -43,7 +48,9 @@ Credentials: `app/.e2e-credentials.local` (from `node scripts/create-e2e-user-an
 2. `npm run e2e:smoke` — Schema and anonymous RPC smoke (uses your `.env.local` session briefly).
 3. Ensure tenant is **active** (see Pre-flight), then `npm run e2e:live`.
 4. `npm run e2e:matrix` — Expect **49/49** when tenant is active (includes **sale.update** via `update_sales_bill`; one row is `tenant.active`; rest cover bill math, payments, returns, purchase, supplier pay, damage, expense, capital, views).
-5. In another terminal: `npm run dev`, then `npm run e2e:ui` — Playwright UI flow (login, settings, customer/product forms, sale grand total, payment, purchase, supplier payment, expense, damage, capital).
+5. `npm run e2e:bill:live` — Bill line amounts on saved sales match subtotal (catches pack-MRP vs amount mismatch).
+6. In another terminal: `npm run dev`, then `npm run e2e:bill:ui` — Bill table layout (`bill-lines-table`, alignment, no orphan NPR label) + screenshot.
+7. `npm run e2e:ui` — Full Playwright UI flow (login, settings, customer/product forms, sale grand total, payment, purchase, supplier payment, expense, damage, capital).
 
 ---
 

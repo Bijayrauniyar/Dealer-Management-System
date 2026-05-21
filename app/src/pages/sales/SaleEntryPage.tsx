@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Download, Plus, Trash2, Eye, X } from "lucide-react";
 import { downloadBillPdf } from "@/lib/billExport";
+import { printBill } from "@/lib/printBill";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -236,9 +237,9 @@ export const SaleEntryPage = () => {
     vatRate:         tenantVat ? BILL_VAT_RATE : 0,
     vatAmount:       vatAmt,
     grandTotal,
-    paidNow:         paidAmt,
-    paymentMode:     payMode,
-    balance:         balanceDue,
+    paidNow: paidAmt,
+    paymentMode: paidAmt > 0 ? payMode : balanceDue > 0 ? "Credit" : payMode,
+    balance: balanceDue,
     dueDate:         dueDate || "",
     notes:           notes || "",
     total:           grandTotal,
@@ -295,7 +296,7 @@ export const SaleEntryPage = () => {
   const handlePreviewDownload = async () => {
     setExportingPreview(true);
     try {
-      await downloadBillPdf(buildSale().billNo);
+      await downloadBillPdf({ sale: buildSale(), customer, business });
       toast.success("Bill downloaded");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Download failed");
@@ -318,7 +319,7 @@ export const SaleEntryPage = () => {
               <button
                 type="button"
                 disabled={exportingPreview}
-                onClick={() => window.print()}
+                onClick={() => printBill(buildSale().billNo || "Bill")}
                 className="flex items-center gap-1 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-muted hover:bg-slate-50 disabled:opacity-50"
               >
                 Print
@@ -341,7 +342,7 @@ export const SaleEntryPage = () => {
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4">
+          <div className="bill-print-zone flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4 print:flex print:justify-center print:overflow-visible print:p-0">
             <BillPrintView sale={buildSale()} customer={customer} isPreview />
           </div>
         </div>

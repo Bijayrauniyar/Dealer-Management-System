@@ -34,6 +34,36 @@ export function parseUomPrices(
   return out;
 }
 
+/** Minimal product from sales_items embed for UOM-aware bill MRP. */
+export function productFromSalesEmbed(row: {
+  name?: string;
+  unit?: string;
+  mrp?: number;
+  sale_price?: number;
+  discount_pct?: number;
+  uom_prices?: unknown;
+  uom_conversion?: unknown;
+}): Product {
+  const uom = (row.unit as string)?.trim() || "PCS";
+  const mrp = Number(row.mrp ?? 0);
+  const sellingPrice = Number(row.sale_price ?? 0);
+  return {
+    id: "",
+    name: (row.name as string) ?? "",
+    category: "",
+    uom,
+    mrp,
+    costPrice: 0,
+    sellingPrice,
+    uomPrices: parseUomPrices(row.uom_prices, uom, mrp, sellingPrice),
+    uomConversion: parseUomConversion(row.uom_conversion, uom),
+    discountPct: Number(row.discount_pct ?? 0),
+    vatApplicable: false,
+    onHand: 0,
+    minQty: 0,
+  };
+}
+
 export function parseUomConversion(
   raw: unknown,
   baseUom: string,
