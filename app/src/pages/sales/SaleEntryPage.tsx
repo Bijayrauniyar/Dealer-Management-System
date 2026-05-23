@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Download, Plus, Trash2, Eye, X } from "lucide-react";
 import { downloadBillPdf } from "@/lib/billExport";
@@ -18,21 +18,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_MODES } from "@/domain/catalogs";
 import { conversionLabel, linePricingForProduct, productUomChoices } from "@/lib/uom";
-import { useProducts, useCustomers, useSaleByBill, commitSale, useNextBillNo, useBusinessSettings } from "@/store/domain";
+import {
+  useProducts,
+  useCustomers,
+  useSaleByBill,
+  commitSale,
+  useNextBillNo,
+  useBusinessSettings,
+  useSchemes,
+} from "@/store/domain";
 import { BILL_VAT_RATE, tenantChargesVat } from "@/lib/billDisplay";
 import { buildSaleProductPickerOptions } from "@/lib/stockAlert";
+import { stripFocSuffixFromName } from "@/lib/billFoc";
+import { syncSchemeFreeLines, schemeHintForLine, type SaleDraftLine } from "@/lib/schemeApply";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
 
-type Line = {
-  id: number;
-  productId: string;
-  productName: string;
-  uom: string;
-  qty: number;
-  mrp: number;
-  rate: number;          // sell price — editable (dealer)
-  discountPct: number;   // product-level standard discount %
-};
+type Line = SaleDraftLine;
 
 export const SaleEntryPage = () => {
   const navigate        = useNavigate();
@@ -42,6 +43,7 @@ export const SaleEntryPage = () => {
   // Reactive store data
   const CUSTOMERS = useCustomers();
   const PRODUCTS  = useProducts();
+  const SCHEMES   = useSchemes();
   const business  = useBusinessSettings();
   const tenantVat = tenantChargesVat(business);
   const existing  = useSaleByBill(editBillNo ?? "");
@@ -100,6 +102,22 @@ export const SaleEntryPage = () => {
   const [exportingPreview, setExportingPreview] = useState(false);
   const [showDealerPricing, setShowDealerPricing] = useState(false);
 
+  const setLinesWithSchemes = useCallback(
+    (updater: (ls: Line[]) => Line[]) => {
+      setLines((ls) => {
+        const next = updater(ls);
+        if (!SCHEMES.length) return next;
+        return syncSchemeFreeLines(next, SCHEMES, billDate);
+      });
+    },
+    [SCHEMES, billDate],
+  );
+
+  useEffect(() => {
+    if (!SCHEMES.length) return;
+    setLines((ls) => syncSchemeFreeLines(ls, SCHEMES, billDate));
+  }, [SCHEMES, billDate]);
+
   // Live edit: sales load after first paint — sync form when bill appears in bundle
   useEffect(() => {
     if (!existing || !editBillNo) return;
@@ -131,7 +149,9 @@ export const SaleEntryPage = () => {
 
   // ── Derived totals (MRP-based line amounts; bill discount unchanged below) ──
   const lineAmount = (l: Line) =>
-    lineAmountFromMrp({ qty: l.qty, mrp: l.mrp, rate: l.rate, discountPct: l.discountPct });
+    l.isSchemeFree
+      ? 0
+      : lineAmountFromMrp({ qty: l.qty, mrp: l.mrp, rate: l.rate, discountPct: l.discountPct });
   const subtotal   = lines.reduce((s, l) => s + lineAmount(l), 0);
 
   const discountAmt = (() => {
@@ -150,10 +170,21 @@ export const SaleEntryPage = () => {
   const balanceDue     = grandTotal - paidAmt;
 
   // ── Line helpers ────────────────────────────────────────────────────
-  const addLine    = () => setLines((ls) => [...ls, { id: Date.now(), productId: "", productName: "", uom: "PCS", qty: 1, mrp: 0, rate: 0, discountPct: 0 }]);
-  const removeLine = (id: number) => setLines((ls) => ls.filter((l) => l.id !== id));
-  const updateLine = (id: number, patch: Partial<Line>) =>
-    setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  const addLine = () =>
+    setLinesWithSchemes((ls) => [
+      ...ls,
+      { id: Date.now(), productId: "", productName: "", uom: "PCS", qty: 1, mrp: 0, rate: 0, discountPct: 0 },
+    ]);
+  const removeLine = (id: number) => {
+    if (lines.find((l) => l.id === id)?.isSchemeFree) return;
+    setLinesWithSchemes((ls) =>
+      ls.filter((l) => l.id !== id && l.schemePaidLineId !== id),
+    );
+  };
+  const updateLine = (id: number, patch: Partial<Line>) => {
+    if (lines.find((l) => l.id === id)?.isSchemeFree) return;
+    setLinesWithSchemes((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  };
 
   const applyProductToLine = (lineId: number, productId: string, productName: string) => {
     const product = PRODUCTS.find((p) => p.id === productId);
@@ -218,16 +249,27 @@ export const SaleEntryPage = () => {
     date:            billDate,
     customerId,
     customerName:    customer?.name ?? "",
-    lines:           lines.filter((l) => l.productId).map((l) => ({
-      productId:   l.productId,
-      productName: l.productName,
-      uom:         l.uom,
-      qty:         l.qty,
-      mrp:         l.mrp,
-      rate:        l.rate,
-      discountPct: l.discountPct ?? 0,
-      amount:      lineAmount(l),
-    })),
+    lines:           lines.filter((l) => l.productId).map((l) => {
+      const prod = PRODUCTS.find((p) => p.id === l.productId);
+      const name = stripFocSuffixFromName(l.productName);
+      const isFoc = Boolean(l.isSchemeFree);
+      const displayMrp =
+        isFoc && prod
+          ? linePricingForProduct(prod, l.uom).mrp
+          : l.mrp;
+      return {
+        productId: l.productId,
+        productName: name,
+        uom: l.uom,
+        qty: l.qty,
+        mrp: displayMrp,
+        rate: isFoc ? 0 : l.rate,
+        discountPct: l.discountPct ?? 0,
+        amount: lineAmount(l),
+        isFoc,
+        focNote: isFoc ? (l.schemeName?.trim() || "FOC") : undefined,
+      };
+    }),
     subtotal,
     discountType:    discountValue ? discountType : "none" as const,
     discountValue:   Number(discountValue) || 0,
@@ -312,8 +354,9 @@ export const SaleEntryPage = () => {
       buildSaleProductPickerOptions(
         PRODUCTS,
         lines.map((l) => l.productId).filter(Boolean),
+        { schemes: SCHEMES, billDate },
       ),
-    [PRODUCTS, lines],
+    [PRODUCTS, lines, SCHEMES, billDate],
   );
 
   return (
@@ -401,7 +444,23 @@ export const SaleEntryPage = () => {
             </button>
           </div>
           <div className="space-y-3">
-            {lines.map((line) => (
+            {lines.map((line) =>
+              line.isSchemeFree ? (
+              <Card key={line.id} className="border-pink-200 bg-pink-50/40">
+                <CardContent className="space-y-2 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge className="bg-pink-100 text-pink-800 border-pink-200">
+                      Scheme free
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{line.schemeName}</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">{line.productName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {line.qty} {line.uom} · NPR 0 · linked to paid line above
+                  </p>
+                </CardContent>
+              </Card>
+              ) : (
               <Card key={line.id}>
                 <CardContent className="space-y-3 p-3">
                   <EntityPicker
@@ -417,6 +476,19 @@ export const SaleEntryPage = () => {
                       Line discount {line.discountPct}% applied on MRP
                     </p>
                   )}
+                  {line.productId && (() => {
+                    const hint = schemeHintForLine(
+                      SCHEMES,
+                      line.productId,
+                      line.qty,
+                      billDate,
+                      line.uom,
+                    );
+                    if (!hint) return null;
+                    return (
+                      <p className="text-[11px] font-medium text-pink-800">{hint}</p>
+                    );
+                  })()}
                   {(() => {
                     const product = PRODUCTS.find((p) => p.id === line.productId);
                     if (!product?.uomConversion) return null;
@@ -482,7 +554,7 @@ export const SaleEntryPage = () => {
                       </div>
                     </div>
                   )}
-                  {lines.length > 1 && (
+                  {lines.filter((l) => !l.isSchemeFree).length > 1 && (
                     <button onClick={() => removeLine(line.id)} className="flex items-center gap-1 text-xs text-danger">
                       <Trash2 size={12} /> Remove
                     </button>

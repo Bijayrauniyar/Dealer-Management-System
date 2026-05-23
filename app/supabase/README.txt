@@ -66,6 +66,11 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Open: app/supabase/migrations/0011_min_stock_pack_threshold.sql
    - Copy entire file → Paste → Run → Success.
 
+13. Migration 0012 (scheme_tracker buy_uom / free_uom — optional; “1 Box → 1 PCS free”)
+   - Open: app/supabase/migrations/0012_scheme_uom.sql
+   - Copy entire file → Paste → Run → Success.
+   - Same-UOM schemes (buy 10 get 1) work without this migration.
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 

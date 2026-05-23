@@ -4,15 +4,16 @@ import { Search, AlertTriangle, ChevronRight, Package, X, FilePlus } from "lucid
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useBusinessSettings, useCustomers, useProducts, useOutstandingBills } from "@/store/domain";
+import { useBusinessSettings, useCustomers, useProducts, useOutstandingBills, useSchemes } from "@/store/domain";
 import { isLowStock, minStockLabel } from "@/lib/stockAlert";
+import { pickBestScheme, productIdsWithActiveSchemes, schemeSummaryLabel } from "@/lib/schemeApply";
 import { npr, fmtDate, toMiti, toDateInput } from "@/lib/utils";
 
 const TODAY = toDateInput();
 
 type Tab = "customers" | "stock";
 type CustFilter = "all" | "overdue" | "dues";
-type StockFilter = "all" | "low";
+type StockFilter = "all" | "low" | "scheme";
 
 export const HomePage = () => {
   const navigate        = useNavigate();
@@ -22,6 +23,7 @@ export const HomePage = () => {
   // Reactive store data — re-renders when commitSale / commitPayment / commitReturn run
   const CUSTOMERS        = useCustomers();
   const PRODUCTS         = useProducts();
+  const SCHEMES          = useSchemes();
   const OUTSTANDING_BILLS = useOutstandingBills();
 
   // Derived totals (computed fresh on every render)
@@ -29,6 +31,14 @@ export const HomePage = () => {
   const overdueCustomers  = CUSTOMERS.filter((c) => c.oldestBillDays > OVERDUE_DAYS && c.outstanding > 0);
   const openBillsCount    = OUTSTANDING_BILLS.filter((b) => b.balance > 0).length;
   const lowStockProducts  = PRODUCTS.filter(isLowStock);
+  const schemeProductIds  = useMemo(
+    () => productIdsWithActiveSchemes(SCHEMES, TODAY),
+    [SCHEMES],
+  );
+  const schemeProducts    = useMemo(
+    () => PRODUCTS.filter((p) => schemeProductIds.has(p.id)),
+    [PRODUCTS, schemeProductIds],
+  );
 
   const [tab,         setTab]         = useState<Tab>("customers");
   const [search,      setSearch]      = useState("");
@@ -51,12 +61,13 @@ export const HomePage = () => {
   const products = useMemo(() => {
     let list = [...PRODUCTS];
     if (stockFilter === "low") list = list.filter(isLowStock);
+    if (stockFilter === "scheme") list = list.filter((p) => schemeProductIds.has(p.id));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
     }
     return list.sort((a, b) => a.onHand - b.onHand); // lowest stock first
-  }, [PRODUCTS, search, stockFilter]);
+  }, [PRODUCTS, search, stockFilter, schemeProductIds]);
 
   const handleTabChange = (t: Tab) => { setTab(t); setSearch(""); };
 
@@ -235,9 +246,25 @@ export const HomePage = () => {
             </div>
           )}
 
+          {schemeProducts.length > 0 && stockFilter === "all" && (
+            <div className="mb-3 flex items-center gap-2 rounded-xl bg-pink-50 border border-pink-200 px-3 py-2.5">
+              <Package size={15} className="shrink-0 text-pink-700" />
+              <p className="text-xs text-pink-900">
+                <span className="font-semibold">{schemeProducts.length} products</span> on active buy-get-free scheme today
+              </p>
+              <button
+                type="button"
+                onClick={() => setStockFilter("scheme")}
+                className="ml-auto shrink-0 text-xs font-semibold text-teal-600 underline"
+              >
+                Show
+              </button>
+            </div>
+          )}
+
           {/* Filter chips */}
-          <div className="mb-3 flex gap-2">
-            {(["all", "low"] as StockFilter[]).map((f) => (
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+            {(["all", "low", "scheme"] as StockFilter[]).map((f) => (
               <button
                 key={f}
                 onClick={() => setStockFilter(f)}
@@ -247,7 +274,11 @@ export const HomePage = () => {
                     : "border-border-subtle bg-white text-muted"
                 }`}
               >
-                {f === "all" ? `All SKUs (${PRODUCTS.length})` : `Low stock (${lowStockProducts.length})`}
+                {f === "all"
+                  ? `All SKUs (${PRODUCTS.length})`
+                  : f === "low"
+                    ? `Low stock (${lowStockProducts.length})`
+                    : `On scheme (${schemeProducts.length})`}
               </button>
             ))}
           </div>
@@ -259,17 +290,29 @@ export const HomePage = () => {
               <CardContent className="p-0 px-4">
                 {products.map((p) => {
                   const isLow = isLowStock(p);
+                  const scheme = pickBestScheme(SCHEMES, p.id, TODAY);
                   return (
-                    <div key={p.id} className="flex items-center justify-between border-b border-border-subtle py-3.5 last:border-0">
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => navigate(`/app/products/${p.id}`)}
+                      className="flex w-full items-center justify-between border-b border-border-subtle py-3.5 last:border-0 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                    >
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
                           {isLow && (
                             <Badge variant="danger" className="text-[10px] px-1.5 py-0 shrink-0">Low</Badge>
                           )}
+                          {scheme && (
+                            <Badge className="text-[10px] px-1.5 py-0 shrink-0 bg-pink-100 text-pink-800 border-pink-200">
+                              {schemeSummaryLabel(scheme)}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-xs text-muted">
                           {p.category} · Min {minStockLabel(p)}
+                          {scheme ? ` · ${scheme.schemeName}` : ""}
                         </p>
                       </div>
                       <div className="ml-3 text-right shrink-0">
@@ -278,7 +321,8 @@ export const HomePage = () => {
                         </p>
                         <p className="text-xs text-muted">{npr(p.sellingPrice)} / {p.uom}</p>
                       </div>
-                    </div>
+                      <ChevronRight size={14} className="ml-1 shrink-0 text-muted" />
+                    </button>
                   );
                 })}
               </CardContent>

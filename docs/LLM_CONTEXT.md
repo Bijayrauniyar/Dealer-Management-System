@@ -362,15 +362,17 @@ Add one line under **Changelog** yourself:
 | [backend/phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md) | E2E matrix |
 | [deployment.md](deployment.md) | Netlify, env vars |
 | [backend/BACKEND-TODO.md](backend/BACKEND-TODO.md) | Planned work |
+| [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md) | **Pain-first roadmap** — what to build for clients now (not feature count) |
 | [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) | Phase 2-E export design (**deferred** — reporting / migration / backup) |
 | [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | Product name & rebrand (**deferred** — ChatGPT brief) |
 
+### What to build next (read first)
+
+Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2 features. Priority: export for accountant, categories/rebrand for 2nd tenant, paginate sales load — not van stock / Tally / barcode until a client asks. Schemes: save + auto-apply on sales (`schemeApply.ts`); test with `npm run seed:schemes`.
+
 ### Deferred backlog (address later)
 
-**Inventory / backdating** — [backend/BACKEND-TODO.md § Deferred](backend/BACKEND-TODO.md):
-
-1. **Block oversell in database** — RPC check on `create_sales_bill` / `update_sales_bill` (UI blocks OOS today only).
-2. **Picker vs bill date** — TBD: stock-as-of `bill_date` vs keep today’s `onHand`; decide before building.
+**Deferred register** — [DEFERRED_WORK.md](DEFERRED_WORK.md): **INV-1** (DB oversell), **INV-2** (stock vs bill date), **SUP-1**, **EXP-1**, **BRAND-1**, optional **MIG-0012**. Effort estimates, touchpoints, acceptance criteria. Summaries also in [backend/BACKEND-TODO.md § Deferred](backend/BACKEND-TODO.md). **Not** scheme-deploy blockers.
 
 **Data export (Phase 2-E)** — spec only, not built: [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) · checklist [BACKEND-TODO § 2-E](backend/BACKEND-TODO.md). Reporting CSV, migration ZIP, backup; `papaparse` unused. Do not implement until prioritized.
 
@@ -380,6 +382,8 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
+- **2026-05-20** — `DEFERRED_WORK.md`: maintainable backlog register (INV-1/INV-2 effort, touchpoints, acceptance); docs hub + BACKEND-TODO link.
+- **2026-05-23** — `PRODUCT_EVOLUTION.md`: client pain-first roadmap; BACKEND-TODO § Now links pains to work.
 - **2026-05-23** — Product naming & branding added to deferred backlog (`PRODUCT_NAMING_BRIEF.md`, BACKEND-TODO).
 - **2026-05-23** — Phase 2-E data export documented as **deferred** (`DATA_EXPORT_SPEC.md`, BACKEND-TODO, README, data-model); implement later.
 - **2026-05-23** — Added `DATA_EXPORT_SPEC.md` + BACKEND-TODO Phase 2-E (reporting CSV, full-tenant ZIP backup, migration columns).

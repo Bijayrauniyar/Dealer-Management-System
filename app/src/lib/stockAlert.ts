@@ -1,5 +1,6 @@
-import type { Product } from "@/domain/types";
+import type { Product, ProductScheme } from "@/domain/types";
 import type { PickerOption, PickerOptionTone } from "@/components/app/EntityPicker";
+import { pickBestScheme, schemeSummaryLabel } from "@/lib/schemeApply";
 import { nprNum } from "@/lib/utils";
 
 export type ProductStockStatus = "in_stock" | "low" | "out";
@@ -69,16 +70,22 @@ export function productPickerOptionMeta(
 export function buildSaleProductPickerOptions(
   products: Product[],
   lineProductIds: Iterable<string>,
+  opts?: { schemes?: ProductScheme[]; billDate?: string },
 ): PickerOption[] {
   const allowIds = new Set(lineProductIds);
+  const schemes = opts?.schemes ?? [];
+  const billDate = opts?.billDate ?? "";
   const options = products.map((p) => {
     const meta = productPickerOptionMeta(p, {
       allowOutOfStockSelect: allowIds.has(p.id),
     });
+    const scheme =
+      schemes.length && billDate ? pickBestScheme(schemes, p.id, billDate) : null;
+    const sub = scheme ? `${meta.sub} · ${schemeSummaryLabel(scheme)}` : meta.sub;
     return {
       id: p.id,
       label: p.name,
-      sub: meta.sub,
+      sub,
       disabled: meta.disabled,
       tone: meta.tone,
     };

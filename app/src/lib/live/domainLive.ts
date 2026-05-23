@@ -14,6 +14,7 @@ import type {
   Payment,
   PnlTotals,
   Product,
+  ProductScheme,
   PurchaseListItem,
   Sale,
   SaleLine,
@@ -22,6 +23,7 @@ import type {
 } from "@/domain/types";
 import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
 import type { DashboardPeriodTotals } from "@/domain/defaults";
+import { isFocSaleLine } from "@/lib/billFoc";
 import { billLineAmount } from "@/lib/saleLineMath";
 import { linePricingForProduct, productFromSalesEmbed } from "@/lib/uom";
 import { saleLineToRpcItem } from "@/lib/uom";
@@ -36,6 +38,7 @@ export type DomainBundle = {
   suppliers: Supplier[];
   sales: Sale[];
   payments: Payment[];
+  schemes: ProductScheme[];
   business: BusinessSettings;
   pnl: PnlTotals;
   latestCashClosing: number;
@@ -355,6 +358,7 @@ export async function fetchSalesLive(): Promise<Sale[]> {
       const displayMrp = prod
         ? linePricingForProduct(productFromSalesEmbed(prod), uom).mrp
         : rate;
+      const foc = isFocSaleLine({ rate, qty, amount });
       return {
         productId: it.product_id,
         productName: prod?.name ?? "",
@@ -364,6 +368,8 @@ export async function fetchSalesLive(): Promise<Sale[]> {
         rate,
         discountPct,
         amount,
+        isFoc: foc,
+        focNote: foc ? "FOC" : undefined,
       };
     });
 
@@ -834,6 +840,83 @@ export async function recordDamageLive(input: {
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
 }
 
+const SCHEME_SELECT_FULL =
+  "id, scheme_name, product_id, buy_qty, free_qty, buy_uom, free_uom, start_date, end_date, is_active";
+const SCHEME_SELECT_LEGACY =
+  "id, scheme_name, product_id, buy_qty, free_qty, start_date, end_date, is_active";
+
+function mapSchemeRow(row: Record<string, unknown>): ProductScheme {
+  return {
+    id: row.id as string,
+    schemeName: row.scheme_name as string,
+    productId: (row.product_id as string) ?? "",
+    buyQty: Number(row.buy_qty),
+    freeQty: Number(row.free_qty),
+    buyUom: (row.buy_uom as string | null) ?? null,
+    freeUom: (row.free_uom as string | null) ?? null,
+    startDate: String(row.start_date).slice(0, 10),
+    endDate: String(row.end_date).slice(0, 10),
+    isActive: Boolean(row.is_active),
+  };
+}
+
+export async function fetchSchemesLive(): Promise<ProductScheme[]> {
+  let data: Record<string, unknown>[] | null = null;
+  let error: { message?: string } | null = null;
+  const full = await supabase
+    .from("scheme_tracker")
+    .select(SCHEME_SELECT_FULL)
+    .eq("is_active", true)
+    .order("end_date", { ascending: false });
+  data = full.data as Record<string, unknown>[] | null;
+  error = full.error;
+  if (error && isMissingColumnError(error, "buy_uom")) {
+    const legacy = await supabase
+      .from("scheme_tracker")
+      .select(SCHEME_SELECT_LEGACY)
+      .eq("is_active", true)
+      .order("end_date", { ascending: false });
+    data = legacy.data as Record<string, unknown>[] | null;
+    error = legacy.error;
+  }
+  if (error) throw error;
+  return (data ?? []).map(mapSchemeRow);
+}
+
+export async function insertSchemeLive(input: {
+  schemeName: string;
+  productId: string;
+  buyQty: number;
+  freeQty: number;
+  buyUom?: string | null;
+  freeUom?: string | null;
+  startDate: string;
+  endDate: string;
+}): Promise<string> {
+  const tenantId = await tenantIdForCurrentUser();
+  const payload: Record<string, unknown> = {
+    tenant_id: tenantId,
+    scheme_name: input.schemeName.trim(),
+    product_id: input.productId,
+    buy_qty: input.buyQty,
+    free_qty: input.freeQty,
+    start_date: input.startDate,
+    end_date: input.endDate,
+    is_active: true,
+  };
+  if (input.buyUom?.trim()) payload.buy_uom = input.buyUom.trim();
+  if (input.freeUom?.trim()) payload.free_uom = input.freeUom.trim();
+
+  const { data, error } = await supabase
+    .from("scheme_tracker")
+    .insert(payload)
+    .select("id")
+    .single();
+  if (error) throw error;
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  return data.id as string;
+}
+
 type TenantSettingsRow = {
   name: string;
   legal_name: string | null;
@@ -1078,6 +1161,7 @@ export async function fetchDomainBundle(): Promise<DomainBundle> {
     suppliers,
     sales,
     payments,
+    schemes,
     business,
     pnl,
     latestCashClosing,
@@ -1089,6 +1173,7 @@ export async function fetchDomainBundle(): Promise<DomainBundle> {
     fetchSuppliersLive(),
     fetchSalesLive(),
     fetchPaymentsLive(),
+    fetchSchemesLive(),
     fetchTenantSettingsLive(),
     fetchPnlTotalsLive(),
     fetchLatestDailyCashClosingLive(),
@@ -1101,6 +1186,7 @@ export async function fetchDomainBundle(): Promise<DomainBundle> {
     suppliers,
     sales,
     payments,
+    schemes,
     business,
     pnl,
     latestCashClosing,

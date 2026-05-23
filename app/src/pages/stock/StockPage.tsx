@@ -52,14 +52,19 @@ export const StockPage = () => {
             <span>Product</span><span className="text-right">On hand</span><span className="text-right">Min</span>
           </div>
           {visible.map((p) => (
-            <div key={p.id} className={`grid grid-cols-3 gap-2 border-b border-border-subtle px-4 py-2.5 text-sm last:border-0 ${isLowStock(p) ? "bg-danger-light/40" : ""}`}>
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => navigate(`/app/products/${p.id}`)}
+              className={`grid w-full grid-cols-3 gap-2 border-b border-border-subtle px-4 py-2.5 text-sm last:border-0 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors ${isLowStock(p) ? "bg-danger-light/40" : ""}`}
+            >
               <span className="truncate font-medium text-foreground">{p.name}</span>
               <span className="text-right font-semibold text-foreground">{p.onHand}</span>
-              <div className="flex justify-end gap-1 items-center">
+              <div className="flex items-center justify-end gap-1">
                 <span className="text-muted text-[11px]">{minStockLabel(p)}</span>
                 {isLowStock(p) && <Badge variant="danger">Low</Badge>}
               </div>
-            </div>
+            </button>
           ))}
         </CardContent>
       </Card>

@@ -104,7 +104,7 @@ export const ProductsPage = () => {
             return (
               <button
                 key={p.id}
-                onClick={() => navigate(`/app/products/edit/${p.id}`)}
+                onClick={() => navigate(`/app/products/${p.id}`)}
                 className="flex items-center gap-3 rounded-2xl border border-border-subtle bg-white p-3.5 text-left shadow-sm hover:shadow-md active:scale-[0.99] transition-all"
               >
                 {/* Stock indicator bar */}

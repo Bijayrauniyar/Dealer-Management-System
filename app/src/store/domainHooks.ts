@@ -15,6 +15,7 @@ import type {
   Payment,
   PnlTotals,
   Product,
+  ProductScheme,
   PurchaseListItem,
   Sale,
   Supplier,
@@ -33,6 +34,7 @@ import {
   fetchDomainBundle,
   peekNextBillNoLive,
   recordDamageLive,
+  insertSchemeLive,
   recordExpenseLive,
   upsertCustomerLive,
   fetchDashboardPeriodTotalsLive,
@@ -150,6 +152,11 @@ export function usePayments(): Payment[] {
   return q.data?.payments ?? [];
 }
 
+export function useSchemes(): ProductScheme[] {
+  const q = useDomainBundleQuery();
+  return q.data?.schemes ?? [];
+}
+
 export function useOutstandingBills(): OutstandingBill[] {
   const sales = useSales();
   return useMemo(() => deriveOutstandingBills(sales), [sales]);
@@ -240,6 +247,19 @@ export async function commitDamageEntry(input: {
     reason: input.reason,
     notes: input.notes,
   });
+}
+
+export async function commitSchemeEntry(input: {
+  schemeName: string;
+  productId: string;
+  buyQty: number;
+  freeQty: number;
+  buyUom?: string | null;
+  freeUom?: string | null;
+  startDate: string;
+  endDate: string;
+}): Promise<void> {
+  await insertSchemeLive(input);
 }
 
 export async function commitCustomer(input: {

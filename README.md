@@ -37,14 +37,16 @@ If you are new to the codebase, read this file first, then follow the **numbered
 | **Suppliers** | Listing; add via DB/API (full supplier form wiring is incremental). |
 | **Expenses & damages** | `record_expense`, `record_damage`. |
 | **Daily cash** | Page present; deeper wiring tracked in backlog. |
-| **Schemes** | Promotional scheme entry (UI). |
+| **Schemes** | Buy-X-get-Y-free in `scheme_tracker` (More → Scheme); **auto free line on sale** when product + bill date match; Home → Stock → **On scheme**. Test data: `npm run seed:schemes`. |
 | **Settings** | `tenant_settings` — branding, bill prefix, VAT defaults, etc. |
 | **Company** | Overview KPIs, capital list/add (**live** reads/writes to `capital_entries`). |
 | **More / settings** | Navigation hub, app settings. |
 
 **Requires Supabase:** Without `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, the app shows a setup screen (`MissingSupabaseEnv`) — there is no offline demo mode.
 
-**Planned (Phase 2+):** Notifications, bill images, capital edit / inclusion-in-totals / audit UI, sales bill **amendment history** (`sales_bill_audit`), **data export** (CSV registers + full-tenant backup ZIP), **product name & branding** (generic app brand vs Havmor tenant) — see [`docs/DATA_EXPORT_SPEC.md`](docs/DATA_EXPORT_SPEC.md), [`docs/PRODUCT_NAMING_BRIEF.md`](docs/PRODUCT_NAMING_BRIEF.md), [`docs/backend/data-model.md`](docs/backend/data-model.md), and [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md).
+**What to build next:** Client pain points first (export for accountant, performance, second-dealer onboarding) — see [`docs/PRODUCT_EVOLUTION.md`](docs/PRODUCT_EVOLUTION.md) and [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md) § Now.
+
+**Planned (Phase 2+):** Only after pains above — see [`docs/PRODUCT_EVOLUTION.md`](docs/PRODUCT_EVOLUTION.md). **Deferred detail (effort, files, acceptance):** [`docs/DEFERRED_WORK.md`](docs/DEFERRED_WORK.md). Export spec: [`docs/DATA_EXPORT_SPEC.md`](docs/DATA_EXPORT_SPEC.md). Checklist: [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md).
 
 ---
 
@@ -161,6 +163,7 @@ Start here for navigation: **[`docs/README.md`](docs/README.md)** (hub + **recom
 | [`app/supabase/README.txt`](app/supabase/README.txt) | Migration order (`0001` … `0007`) |
 | [`docs/backend/testing-live-supabase.md`](docs/backend/testing-live-supabase.md) | First live run, Dashboard checks |
 | [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md) | Phase 0–2 checklist, quality bar |
+| [`docs/DEFERRED_WORK.md`](docs/DEFERRED_WORK.md) | Deferred backlog: INV-1/INV-2, export, supplier scheme — plan when ready |
 | [`docs/backend/data-model.md`](docs/backend/data-model.md) | Schema, Phase 2 design, RPC notes |
 | [`docs/backend/phase1-use-cases-and-tests.md`](docs/backend/phase1-use-cases-and-tests.md) | Automated E2E / matrix reference |
 | [`docs/backend/phase1-manual-e2e-checklist.md`](docs/backend/phase1-manual-e2e-checklist.md) | Manual QA, gaps scripts do not cover |

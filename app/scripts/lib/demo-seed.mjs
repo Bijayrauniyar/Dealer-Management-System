@@ -1,7 +1,15 @@
 /**
  * Curated demo dataset for a single tenant (Phase 1 tables).
  * Uses the same RPCs as production (`create_sales_bill`, `record_purchase`, …).
- *
+ */
+
+function addDays(isoDate, days) {
+  const d = new Date(`${isoDate}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * @param {object} opts
  * @param {import("@supabase/supabase-js").SupabaseClient} opts.supabase - JWT session (tenant owner)
  * @param {string} opts.tenantId
@@ -70,7 +78,33 @@ export async function runDemoSeed({ supabase, tenantId, billDate, stamp }) {
     productRows.push({ ...p, id: data.id });
   }
 
-  const [vanId, choId] = [productRows[0].id, productRows[1].id];
+  const [vanId, choId, strId] = [productRows[0].id, productRows[1].id, productRows[2].id];
+
+  const schemeStart = addDays(billDate, -30);
+  const schemeEnd = addDays(billDate, 90);
+  const { error: schemeErr } = await supabase.from("scheme_tracker").insert([
+    {
+      tenant_id: tenantId,
+      scheme_name: `${prefix} Vanilla buy-10-get-1`,
+      product_id: vanId,
+      buy_qty: 10,
+      free_qty: 1,
+      start_date: schemeStart,
+      end_date: schemeEnd,
+      is_active: true,
+    },
+    {
+      tenant_id: tenantId,
+      scheme_name: `${prefix} Chocolate buy-20-get-2`,
+      product_id: choId,
+      buy_qty: 20,
+      free_qty: 2,
+      start_date: schemeStart,
+      end_date: schemeEnd,
+      is_active: true,
+    },
+  ]);
+  if (schemeErr) throw new Error(`demo schemes: ${schemeErr.message}`);
 
   const { data: c1, error: c1e } = await supabase
     .from("customers")

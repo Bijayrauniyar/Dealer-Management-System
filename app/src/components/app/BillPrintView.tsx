@@ -18,6 +18,12 @@ import {
   sellerTaxId,
 } from "@/lib/billDisplay";
 import { nprNum, fmtDate, toMiti, amountInWords } from "@/lib/utils";
+import {
+  billLineDiscDisplay,
+  billLineMrpDisplay,
+  billLineParticulars,
+  isFocSaleLine,
+} from "@/lib/billFoc";
 import { billLineAmount } from "@/lib/saleLineMath";
 
 type Props = {
@@ -228,16 +234,30 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
               </tr>
             </thead>
             <tbody>
-              {lines.map((line, i) => (
-                <tr key={i} className="even:bg-gray-50/60">
+              {lines.map((line, i) => {
+                const foc = isFocSaleLine(line);
+                const { title, subtitle } = billLineParticulars(line);
+                const mrpRaw = billLineMrpDisplay(line);
+                const mrpCell = mrpRaw === "FOC" || mrpRaw === "—" ? mrpRaw : nprNum(Number(mrpRaw));
+                return (
+                <tr key={i} className={foc ? "bg-pink-50/50 text-gray-700" : "even:bg-gray-50/60"}>
                   <td className="bill-cell border border-gray-300 p-0 text-gray-500">
                     <BillCellInner align="center">{i + 1}</BillCellInner>
                   </td>
                   <td className="bill-cell break-words border border-gray-300 p-0 font-medium text-gray-900">
-                    <BillCellInner align="center">{line.productName}</BillCellInner>
+                    <BillCellInner align="center">
+                      <span className="block leading-tight">
+                        <span className={foc ? "text-gray-800" : ""}>{title}</span>
+                        {subtitle ? (
+                          <span className="mt-0.5 block text-[7px] font-semibold uppercase tracking-wide text-pink-800 sm:text-[8px]">
+                            {subtitle}
+                          </span>
+                        ) : null}
+                      </span>
+                    </BillCellInner>
                   </td>
                   <td className="bill-cell border border-gray-300 p-0 tabular-nums text-gray-700">
-                    <BillCellInner align="center">{line.mrp ? nprNum(line.mrp) : "—"}</BillCellInner>
+                    <BillCellInner align="center">{mrpCell}</BillCellInner>
                   </td>
                   <td className="bill-cell border border-gray-300 p-0 text-[7px] text-gray-600 sm:text-[8px]">
                     <BillCellInner align="center">{line.uom || "PCS"}</BillCellInner>
@@ -248,7 +268,7 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
                   {hasLineDisc && (
                     <td className="bill-cell border border-gray-300 p-0 text-amber-700">
                       <BillCellInner align="center">
-                        {lineDiscPct(line) > 0 ? `${lineDiscPct(line)}%` : "—"}
+                        {billLineDiscDisplay(line, lineDiscPct)}
                       </BillCellInner>
                     </td>
                   )}
@@ -256,7 +276,8 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
                     <BillCellInner align="center">{nprNum(billLineAmount(line))}</BillCellInner>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

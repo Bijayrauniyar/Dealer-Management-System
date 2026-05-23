@@ -101,6 +101,26 @@ export type SaleLine = {
   rate: number;
   discountPct?: number;
   amount?: number;
+  /** Free under scheme (FOC row); also inferred when rate & amount are 0. */
+  isFoc?: boolean;
+  /** Shown under product name on bill, e.g. FOC or scheme name. */
+  focNote?: string;
+};
+
+/** Buy-X-get-Y offer from scheme_tracker. */
+export type ProductScheme = {
+  id: string;
+  schemeName: string;
+  productId: string;
+  buyQty: number;
+  freeQty: number;
+  /** Paid line must use this UOM when set (e.g. Box). */
+  buyUom?: string | null;
+  /** Free line uses this UOM when set (e.g. PCS); else same as paid line. */
+  freeUom?: string | null;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
 };
 
 export type Sale = {

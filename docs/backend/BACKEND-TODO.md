@@ -1,10 +1,28 @@
 # Backend implementation checklist (Supabase)
 
-**Navigate:** [Docs hub](../README.md) · [Project README](../../README.md) · [Data model](./data-model.md) · [Testing live](./testing-live-supabase.md) · [Migrations](../../app/supabase/README.txt)
+**Navigate:** [Docs hub](../README.md) · [Deferred work register](../DEFERRED_WORK.md) · [Project README](../../README.md) · [Data model](./data-model.md) · [Testing live](./testing-live-supabase.md) · [Migrations](../../app/supabase/README.txt)
 
 > Living list for **Supabase-backed** multi-tenant Postgres. The app is **live-only** (no browser demo / `localStorage` store).  
 > Schema entrypoint: `0001` … `0003` → `0005` → `0006` → `0007` (see [`app/supabase/README.txt`](../../app/supabase/README.txt)).  
 > **Why MCP vs `.env`?** See [`mcp-and-env.md`](./mcp-and-env.md).
+
+---
+
+## Now — client pain points (priority over new features)
+
+> **Order work from here first.** Full pain → action mapping: [`../PRODUCT_EVOLUTION.md`](../PRODUCT_EVOLUTION.md). Do not add features that do not fix a listed pain or a broken screen.
+
+- [x] **Scheme page** — persists buy-X-get-Y to `scheme_tracker` (`insertSchemeLive` / `commitSchemeEntry`).
+- [x] **Scheme on sales** — active scheme per product + bill date → auto free line (`schemeApply.ts`, `SaleEntryPage`); Home stock filter **On scheme**. Test: `npm run seed:schemes`.
+- [ ] **Supplier scheme + pass-through to customer** — supplier promo on purchase (stock in); link/copy to customer `scheme_tracker`; purchase FOC lines (mirror sales).
+- [ ] **Export P0** — accountant registers + owner backup ZIP ([`../DATA_EXPORT_SPEC.md`](../DATA_EXPORT_SPEC.md)).
+- [ ] **Product categories** — tenant-configurable; remove ice-cream-only defaults in product form.
+- [ ] **Performance** — paginate/filter sales; avoid loading full `fetchDomainBundle` history on every session.
+- [ ] **Credit limit** — enforce on bill save or hide field until enforced.
+- [ ] **Rebrand** — generic product name ([`../PRODUCT_NAMING_BRIEF.md`](../PRODUCT_NAMING_BRIEF.md)) before second dealer.
+- [x] **Purchase invoice date** — form date → `record_purchase` (shipped).
+- [x] **Sale stock picker** — OOS/low/in stock on new bill lines (shipped).
+- [x] **Bill print/PDF** — discount + layout fixes (shipped).
 
 ---
 
@@ -74,12 +92,12 @@ Wire the UI to Supabase **RPCs and/or constrained updates** via `domainLive.ts` 
 
 ---
 
-## Deferred — inventory, backdating, oversell (address later)
+## Deferred — inventory & backdating
 
-> **Context:** Sale picker uses **today’s** `v_stock` / `onHand` only (see `stockAlert.ts`). Bill and purchase **dates** save correctly; stock is one lifetime ledger, not “as of bill date.” Operational rule for now: enter older purchases before backdated sales when catching up.
+> **Details, effort, touchpoints, acceptance criteria:** [`../DEFERRED_WORK.md`](../DEFERRED_WORK.md) (**INV-1**, **INV-2**). Not scheme/deploy blockers.
 
-- [ ] **Block oversell in database** — Today out-of-stock is **UI-only** (`EntityPicker` disabled rows); `create_sales_bill` / `update_sales_bill` do not reject qty above on-hand. Add RPC validation (and decide: current stock vs stock-as-of `bill_date`).
-- [ ] **Picker respects stock on bill date** — **TBD / needs product decision.** Options: (a) compute `stock_as_of(bill_date)` for picker + labels, (b) relax picker when bill date is before today, or (c) keep today-only + user enters history in chronological order.
+- [ ] **INV-1** — Block oversell in `create_sales_bill` / `update_sales_bill`.
+- [ ] **INV-2** — Picker stock vs bill date (product decision TBD).
 
 ---
 
@@ -103,4 +121,4 @@ Wire the UI to Supabase **RPCs and/or constrained updates** via `domainLive.ts` 
 
 ---
 
-**See also:** [Docs hub](../README.md) · [Data model](./data-model.md) · [Data export spec](../DATA_EXPORT_SPEC.md) · [Product naming brief](../PRODUCT_NAMING_BRIEF.md) · [Env & MCP](./mcp-and-env.md) · [Testing live](./testing-live-supabase.md) · [Automated E2E](./phase1-use-cases-and-tests.md)
+**See also:** [Docs hub](../README.md) · [Product evolution (pain-first)](../PRODUCT_EVOLUTION.md) · [Data model](./data-model.md) · [Data export spec](../DATA_EXPORT_SPEC.md) · [Product naming brief](../PRODUCT_NAMING_BRIEF.md) · [Env & MCP](./mcp-and-env.md) · [Testing live](./testing-live-supabase.md) · [Automated E2E](./phase1-use-cases-and-tests.md)

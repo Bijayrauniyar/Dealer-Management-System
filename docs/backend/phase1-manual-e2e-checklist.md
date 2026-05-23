@@ -49,7 +49,7 @@ Check each row after manual testing.
 | G16 | **Customer PAN** | Not in schema | Field on form if present; DB column when added |
 | G17 | **Notifications panel** | — | Bell icon list; links open correct screens (static data today) |
 | G18 | **Daily cash → Supabase** | Partial wiring | Confirm `daily_cash` row behaviour matches current implementation |
-| G19 | **Scheme → Supabase** | UI only | Confirm **no** `schemes` row (expected until wired) |
+| G19 | **Scheme → Supabase** | More → Scheme save | Row in `scheme_tracker`; sale qty 10 → free line if buy-10-get-1 |
 | G20 | **Dashboard charts** | — | `/app/dashboard` loads; data matches your tenant (if wired) |
 | G21 | **Company overview maths** | Partial live capital | Net worth, assets, liabilities vs your entries + stock |
 | G22 | **Capital edit / history / soft-delete** | Insert + list | Edit entry, view history (Phase 2-C); delete behaviour |
@@ -292,7 +292,7 @@ open     = total − paid
 |----|-------|----------|
 | DC1 | Daily cash → change physical count → Save draft | Toast success; verify `daily_cash` row if wired |
 | DC2 | Lock day with variance note | Toast; UI locked state |
-| SC1 | Scheme: name, product, dates, discount → Save | Toast; navigates home; **no DB row** until scheme table ships |
+| SC1 | Scheme: name, product, buy/free qty, dates → Save | `scheme_tracker` row; Home → **On scheme**; new sale qty qualifies → free line |
 
 ---
 

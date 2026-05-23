@@ -41,6 +41,7 @@ havmor/
   app/supabase/migrations/0001…0011 → SQL (ordered)
   docs/LLM_CONTEXT.md     → full handbook (read when unsure)
   docs/DATA_EXPORT_SPEC.md → Phase 2-E export (deferred backlog)
+  docs/PRODUCT_EVOLUTION.md → pain-first roadmap (what to build now)
   docs/PRODUCT_NAMING_BRIEF.md → name & branding (deferred)
   docs/deployment.md      → Netlify + Supabase Auth URLs
 ```
@@ -108,6 +109,7 @@ Details: `docs/deployment.md`
 - **New feature:** read BACKEND-TODO.md + data-model.md; migration if needed; wire domainLive; hook; page; e2e
 - **Data export:** deferred (Phase 2-E) — do not implement unless user explicitly asks; read docs/DATA_EXPORT_SPEC.md first
 - **Product rebrand:** deferred — UI may still say DealerOS / Havmor Distributor Panel; read docs/PRODUCT_NAMING_BRIEF.md; do not rename unless user picks a name and asks for rebrand
+- **Prioritization:** read docs/PRODUCT_EVOLUTION.md — client pains first (export, pagination, 2nd tenant); schemes wired (save + sale free lines); no feature for feature count
 
 ## Docs to request from user when deep work needed
 - `docs/LLM_CONTEXT.md` — always

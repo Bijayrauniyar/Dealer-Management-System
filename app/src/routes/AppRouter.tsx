@@ -33,6 +33,7 @@ import { CapitalEntryPage } from "@/pages/company/CapitalEntryPage";
 import { BillDetailPage } from "@/pages/bills/BillDetailPage";
 import { DashboardPage } from "@/pages/dashboard/DashboardPage";
 import { ProductFormPage } from "@/pages/products/ProductFormPage";
+import { ProductDetailPage } from "@/pages/products/ProductDetailPage";
 import { ProtectedRoute } from "@/lib/auth";
 
 const AppRoutesInner = () => (
@@ -71,6 +72,7 @@ const AppRoutesInner = () => (
       <Route path="products" element={<ProductsPage />} />
       <Route path="products/new" element={<ProductFormPage />} />
       <Route path="products/edit/:productId" element={<ProductFormPage />} />
+      <Route path="products/:productId" element={<ProductDetailPage />} />
       <Route path="customers" element={<CustomersPage />} />
       <Route path="customers/new" element={<CustomerFormPage />} />
       <Route path="customers/edit/:customerId" element={<CustomerFormPage />} />
