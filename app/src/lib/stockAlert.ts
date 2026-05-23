@@ -1,4 +1,8 @@
 import type { Product } from "@/domain/types";
+import type { PickerOption, PickerOptionTone } from "@/components/app/EntityPicker";
+import { nprNum } from "@/lib/utils";
+
+export type ProductStockStatus = "in_stock" | "low" | "out";
 
 /** Lowest on-hand (base PCS) before low-stock alert — uses max of PCS and pack thresholds. */
 export function effectiveMinQtyPcs(product: Product): number {
@@ -24,4 +28,64 @@ export function minStockLabel(product: Product): string {
     parts.push(`${packMin} ${conv.packUom}`);
   }
   return parts.join(" · ");
+}
+
+export function productStockStatus(product: Product): ProductStockStatus {
+  if (product.onHand <= 0) return "out";
+  if (isLowStock(product)) return "low";
+  return "in_stock";
+}
+
+function pickerTone(status: ProductStockStatus): PickerOptionTone {
+  if (status === "out") return "out";
+  if (status === "low") return "low";
+  return "default";
+}
+
+/** Subtitle + disabled state for sale line product search. */
+export function productPickerOptionMeta(
+  product: Product,
+  opts?: { allowOutOfStockSelect?: boolean },
+): { disabled: boolean; sub: string; tone: PickerOptionTone } {
+  const status = productStockStatus(product);
+  const uom = product.uom || "PCS";
+  const qtyLabel = `${nprNum(product.onHand)} ${uom}`;
+  const priceLabel = `NPR ${nprNum(product.sellingPrice)}`;
+  const disabled = status === "out" && !opts?.allowOutOfStockSelect;
+
+  let sub: string;
+  if (status === "out") {
+    sub = `Out of stock · ${qtyLabel} · ${priceLabel}`;
+  } else if (status === "low") {
+    sub = `Low stock · ${qtyLabel} · ${priceLabel}`;
+  } else {
+    sub = `${qtyLabel} in stock · ${priceLabel}`;
+  }
+
+  return { disabled, sub, tone: pickerTone(status) };
+}
+
+/** Sale entry: all products, selectable stock first; out-of-stock visible but disabled. */
+export function buildSaleProductPickerOptions(
+  products: Product[],
+  lineProductIds: Iterable<string>,
+): PickerOption[] {
+  const allowIds = new Set(lineProductIds);
+  const options = products.map((p) => {
+    const meta = productPickerOptionMeta(p, {
+      allowOutOfStockSelect: allowIds.has(p.id),
+    });
+    return {
+      id: p.id,
+      label: p.name,
+      sub: meta.sub,
+      disabled: meta.disabled,
+      tone: meta.tone,
+    };
+  });
+
+  const rank = (tone: PickerOptionTone | undefined) =>
+    tone === "out" ? 2 : tone === "low" ? 1 : 0;
+
+  return options.sort((a, b) => rank(a.tone) - rank(b.tone) || a.label.localeCompare(b.label));
 }

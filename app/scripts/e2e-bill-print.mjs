@@ -19,6 +19,11 @@ import {
   hydrateBillLineFromDbItem,
   sumBillLineAmounts,
 } from "./lib/bill-print-math.mjs";
+import {
+  productStockStatus,
+  productPickerOptionMeta,
+  buildSaleProductPickerOptions,
+} from "./lib/stock-picker.mjs";
 import { createE2eReporter, createAuthedClient, parseNpr } from "./lib/e2e-helpers.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -32,6 +37,8 @@ const r = createE2eReporter("Bill print / PDF");
 
 // ── 1. Unit: line amounts must match DB rate (not wrong PCS MRP) ─────────────
 function runUnitTests() {
+  r.assertEq(parseNpr("Rs. 576"), 576, "parseNpr Rs. prefix");
+  r.assertEq(parseNpr("NPR 1,093"), 1093, "parseNpr NPR comma");
   r.assertClose(
     billLineAmount({ qty: 1, rate: 105, mrp: 1300 }),
     105,
@@ -78,11 +85,28 @@ function runUnitTests() {
     205,
     "sumBillLineAmounts",
   );
+
+  const pOut = { id: "a", name: "A", onHand: 0, minQty: 5, uom: "PCS", sellingPrice: 100 };
+  const pLow = { id: "b", name: "B", onHand: 3, minQty: 10, uom: "PCS", sellingPrice: 200 };
+  const pOk = { id: "c", name: "C", onHand: 50, minQty: 5, uom: "PCS", sellingPrice: 300 };
+  r.assertEq(productStockStatus(pOut), "out", "stock.out");
+  r.assertEq(productStockStatus(pLow), "low", "stock.low");
+  r.assertEq(productStockStatus(pOk), "in_stock", "stock.ok");
+  r.assertEq(productPickerOptionMeta(pOut).disabled, true, "picker.out disabled");
+  r.assertEq(productPickerOptionMeta(pOut, { allowOutOfStockSelect: true }).disabled, false, "picker.out allow");
+  const opts = buildSaleProductPickerOptions([pOut, pLow, pOk], ["a"]);
+  r.assertEq(opts.find((o) => o.id === "a")?.disabled, false, "picker.line exception");
+  r.assertEq(opts.find((o) => o.id === "b")?.tone, "low", "picker.low tone");
 }
 
 // ── 2. Source: layout contracts for print + PDF capture ─────────────────────
 function runSourceTests() {
   const billView = readFileSync(resolve(SRC, "components/app/BillPrintView.tsx"), "utf8");
+  const saleEntry = readFileSync(resolve(SRC, "pages/sales/SaleEntryPage.tsx"), "utf8");
+  const entityPicker = readFileSync(resolve(SRC, "components/app/EntityPicker.tsx"), "utf8");
+  const stockAlert = readFileSync(resolve(SRC, "lib/stockAlert.ts"), "utf8");
+  const domainLive = readFileSync(resolve(SRC, "lib/live/domainLive.ts"), "utf8");
+  const purchasePage = readFileSync(resolve(SRC, "pages/purchases/PurchasePage.tsx"), "utf8");
   const billExport = readFileSync(resolve(SRC, "lib/billExport.ts"), "utf8");
   const billPdf = readFileSync(resolve(SRC, "lib/billPdfDocument.ts"), "utf8");
   const indexCss = readFileSync(resolve(SRC, "index.css"), "utf8");
@@ -103,6 +127,12 @@ function runSourceTests() {
     ["index.css", "vertical-align: middle", indexCss],
     ["index.css", ".bill-totals-table", indexCss],
     ["index.css", "bill-totals-grand", indexCss],
+    ["SaleEntryPage", "buildSaleProductPickerOptions", saleEntry],
+    ["stockAlert", "productStockStatus", stockAlert],
+    ["EntityPicker", "opt.disabled", entityPicker],
+    ["EntityPicker", "cursor-not-allowed", entityPicker],
+    ["domainLive", "purchaseDate", domainLive],
+    ["PurchasePage", "purchaseDate: date", purchasePage],
   ];
   for (const [file, needle, text] of mustHave) {
     if (!text.includes(needle)) r.fail(`${file} contains ${needle}`, "missing");
@@ -295,11 +325,7 @@ async function runUiTests(billNoHint) {
     r.assertClose(uiSum, bill?.subtotal, `ui.${billNo} table amounts sum = subtotal`);
 
     const grandText = await root
-      .locator("div")
-      .filter({ hasText: "Grand total (NPR)" })
-      .first()
-      .locator("span.tabular-nums")
-      .last()
+      .locator("tr.bill-totals-grand td.bill-totals-amount .bill-cell-inner")
       .innerText()
       .catch(() => "");
     const uiGrand = parseNpr(grandText);

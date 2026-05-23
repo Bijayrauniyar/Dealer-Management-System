@@ -19,10 +19,15 @@ import { useState, useRef } from "react";
 import { Search, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export type PickerOptionTone = "default" | "low" | "out";
+
 export type PickerOption = {
   id: string;
   label: string;
   sub?: string;
+  /** When true, row is shown but cannot be selected (e.g. out of stock). */
+  disabled?: boolean;
+  tone?: PickerOptionTone;
 };
 
 type Props = {
@@ -63,10 +68,31 @@ export const EntityPicker = ({
     : options.slice(0, 20); // show first 20 when no query
 
   const handleSelect = (opt: PickerOption) => {
+    if (opt.disabled) return;
     onChange(opt.id, opt);
     setQuery("");
     setOpen(false);
   };
+
+  const rowClass = (opt: PickerOption) =>
+    cn(
+      "flex w-full flex-col px-4 py-2.5 text-left",
+      opt.disabled
+        ? "cursor-not-allowed bg-slate-50/90 opacity-70"
+        : "hover:bg-slate-50 active:bg-slate-100",
+    );
+
+  const labelClass = (opt: PickerOption) =>
+    cn(
+      "text-sm font-medium",
+      opt.disabled ? "text-slate-400" : opt.tone === "low" ? "text-foreground" : "text-foreground",
+    );
+
+  const subClass = (opt: PickerOption) =>
+    cn(
+      "text-xs",
+      opt.disabled ? "text-slate-400" : opt.tone === "low" ? "text-amber-700" : "text-muted",
+    );
 
   const handleClear = () => {
     setQuery("");
@@ -120,15 +146,22 @@ export const EntityPicker = ({
           <ul className="max-h-52 overflow-y-auto py-1">
             {filtered.map((opt) => (
               <li key={opt.id}>
-                <button
-                  type="button"
-                  className="flex w-full flex-col px-4 py-2.5 text-left hover:bg-slate-50 active:bg-slate-100"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleSelect(opt)}
-                >
-                  <span className="text-sm font-medium text-foreground">{opt.label}</span>
-                  {opt.sub && <span className="text-xs text-muted">{opt.sub}</span>}
-                </button>
+                {opt.disabled ? (
+                  <div className={rowClass(opt)} role="presentation">
+                    <span className={labelClass(opt)}>{opt.label}</span>
+                    {opt.sub && <span className={subClass(opt)}>{opt.sub}</span>}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={rowClass(opt)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleSelect(opt)}
+                  >
+                    <span className={labelClass(opt)}>{opt.label}</span>
+                    {opt.sub && <span className={subClass(opt)}>{opt.sub}</span>}
+                  </button>
+                )}
               </li>
             ))}
             {filtered.length === 0 && (

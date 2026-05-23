@@ -616,6 +616,20 @@ AS retained_earnings;
 1. **Pilot: capital** (Phase 2-C) — schema in `0002` already has `capital_entries` + `capital_entry_audit`; add inclusion columns + RPCs + UI.
 2. **Sales bills** (Phase 2-D) — **not** the same as “untick from totals”: use **amendment** (`update_sales_bill`) + `sales_bill_audit`, or future **void** with reason; posted bills stay traceable.
 3. **Later waves** (optional, same pattern where it fits): `expenses`, `damages`, purchases (heavier / stock), masters already use `is_active`.
+4. **Data export** (Phase 2-E) — reporting CSV, full-tenant backup ZIP, migration columns — **deferred**; see [`../DATA_EXPORT_SPEC.md`](../DATA_EXPORT_SPEC.md) and [BACKEND-TODO § 2-E](./BACKEND-TODO.md). Today: single-bill PDF only; `papaparse` not wired.
+
+---
+
+### Phase 2-E — Data export (deferred)
+
+> **Status:** Design + backlog only — not in app. Full spec: [`../DATA_EXPORT_SPEC.md`](../DATA_EXPORT_SPEC.md).
+
+| Mode | Purpose |
+|------|---------|
+| **Reporting** | Date-range sales/purchase/payment registers, stock snapshot, customer outstanding — Excel-friendly CSV |
+| **Migration / backup** | ZIP of relational CSVs + `README` + `manifest.json`; server-generated for large tenants |
+
+**v1 scope when built:** Settings → Export hub; paginated reads (not full `fetchDomainBundle`); owner-only full ZIP. **Defer:** Tally sync, historical stock-as-of-date, bulk PDF ZIP.
 
 ---
 
@@ -838,4 +852,4 @@ Optional: `change_reason text` (user-entered note on amend) if product wants it 
 
 ---
 
-**See also:** [Docs hub](../README.md) · [Backend checklist](./BACKEND-TODO.md) · [Automated E2E](./phase1-use-cases-and-tests.md) · [Manual E2E](./phase1-manual-e2e-checklist.md)
+**See also:** [Docs hub](../README.md) · [Backend checklist](./BACKEND-TODO.md) · [Data export spec](../DATA_EXPORT_SPEC.md) · [Automated E2E](./phase1-use-cases-and-tests.md) · [Manual E2E](./phase1-manual-e2e-checklist.md)

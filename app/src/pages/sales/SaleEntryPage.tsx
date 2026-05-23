@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Download, Plus, Trash2, Eye, X } from "lucide-react";
 import { downloadBillPdf } from "@/lib/billExport";
@@ -20,6 +20,7 @@ import { PAYMENT_MODES } from "@/domain/catalogs";
 import { conversionLabel, linePricingForProduct, productUomChoices } from "@/lib/uom";
 import { useProducts, useCustomers, useSaleByBill, commitSale, useNextBillNo, useBusinessSettings } from "@/store/domain";
 import { BILL_VAT_RATE, tenantChargesVat } from "@/lib/billDisplay";
+import { buildSaleProductPickerOptions } from "@/lib/stockAlert";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
 
 type Line = {
@@ -306,7 +307,14 @@ export const SaleEntryPage = () => {
   };
 
   const customerOptions = CUSTOMERS.map((c) => ({ id: c.id, label: c.name, sub: c.area }));
-  const productOptions  = PRODUCTS.map((p)  => ({ id: p.id, label: p.name, sub: `NPR ${p.sellingPrice}` }));
+  const productOptions = useMemo(
+    () =>
+      buildSaleProductPickerOptions(
+        PRODUCTS,
+        lines.map((l) => l.productId).filter(Boolean),
+      ),
+    [PRODUCTS, lines],
+  );
 
   return (
     <PageShell stickyBar>

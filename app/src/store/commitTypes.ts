@@ -18,6 +18,7 @@ export interface CommitReturnOpts {
 
 export interface CommitPurchaseOpts {
   supplierId: string;
+  purchaseDate: string;
   lines: { productId: string; receivedQty: number; cost: number }[];
   totalReceived: number;
 }

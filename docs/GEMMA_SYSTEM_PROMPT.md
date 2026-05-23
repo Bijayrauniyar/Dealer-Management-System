@@ -40,6 +40,8 @@ havmor/
   app/src/lib/billDisplay.ts, saleLineMath.ts, uom.ts → bill math
   app/supabase/migrations/0001…0011 → SQL (ordered)
   docs/LLM_CONTEXT.md     → full handbook (read when unsure)
+  docs/DATA_EXPORT_SPEC.md → Phase 2-E export (deferred backlog)
+  docs/PRODUCT_NAMING_BRIEF.md → name & branding (deferred)
   docs/deployment.md      → Netlify + Supabase Auth URLs
 ```
 
@@ -104,6 +106,8 @@ Details: `docs/deployment.md`
 - **New UI field:** types.ts → domainLive → page form → RPC/migration if persisted
 - **Bill/display:** billDisplay + BillPrintView + CSS; never duplicate discount logic in JSX
 - **New feature:** read BACKEND-TODO.md + data-model.md; migration if needed; wire domainLive; hook; page; e2e
+- **Data export:** deferred (Phase 2-E) — do not implement unless user explicitly asks; read docs/DATA_EXPORT_SPEC.md first
+- **Product rebrand:** deferred — UI may still say DealerOS / Havmor Distributor Panel; read docs/PRODUCT_NAMING_BRIEF.md; do not rename unless user picks a name and asks for rebrand
 
 ## Docs to request from user when deep work needed
 - `docs/LLM_CONTEXT.md` — always

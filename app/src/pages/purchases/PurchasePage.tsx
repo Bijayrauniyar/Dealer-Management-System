@@ -147,6 +147,7 @@ export const PurchasePage = () => {
       await new Promise((r) => setTimeout(r, 200));
       await commitPurchase({
         supplierId,
+        purchaseDate: date,
         totalReceived,
         lines: lines
           .filter((l) => l.productId && l.receivedQty > 0)

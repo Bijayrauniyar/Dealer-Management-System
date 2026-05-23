@@ -1,6 +1,19 @@
 # Havmor — Dealer Management System (DMS)
 
-Web app for distributors / dealers: sales, stock, purchases, receivables, and company reporting. The UI is a **Progressive Web App** built with React; persistence is **Supabase** (Postgres + Auth + Row Level Security) with **security-definer RPCs** for transactions.
+Multi-tenant dealer & distribution management platform built for Nepal FMCG workflows.
+
+The UI is a **Progressive Web App** built with React; persistence is **Supabase** (Postgres + Auth + Row Level Security) with **security-definer RPCs** for transactions.
+
+### At a glance
+
+- Sales billing (create/edit, print & PDF)
+- Stock tracking
+- Customer payments & outstanding
+- Purchases & supplier payments
+- Damage & returns
+- Multi-tenant isolation (RLS)
+- PWA (installable web app)
+- Data export — *planned* ([spec](docs/DATA_EXPORT_SPEC.md))
 
 If you are new to the codebase, read this file first, then follow the **numbered reading order** in **[`docs/README.md` → Reading order](docs/README.md#reading-order)** (environment → migrations → live testing → checklist → data model → E2E docs).
 
@@ -31,7 +44,7 @@ If you are new to the codebase, read this file first, then follow the **numbered
 
 **Requires Supabase:** Without `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, the app shows a setup screen (`MissingSupabaseEnv`) — there is no offline demo mode.
 
-**Planned (Phase 2+):** Notifications, bill images, capital edit / inclusion-in-totals / audit UI, sales bill **amendment history** (`sales_bill_audit`) — see [`docs/backend/data-model.md`](docs/backend/data-model.md) and [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md).
+**Planned (Phase 2+):** Notifications, bill images, capital edit / inclusion-in-totals / audit UI, sales bill **amendment history** (`sales_bill_audit`), **data export** (CSV registers + full-tenant backup ZIP), **product name & branding** (generic app brand vs Havmor tenant) — see [`docs/DATA_EXPORT_SPEC.md`](docs/DATA_EXPORT_SPEC.md), [`docs/PRODUCT_NAMING_BRIEF.md`](docs/PRODUCT_NAMING_BRIEF.md), [`docs/backend/data-model.md`](docs/backend/data-model.md), and [`docs/backend/BACKEND-TODO.md`](docs/backend/BACKEND-TODO.md).
 
 ---
 

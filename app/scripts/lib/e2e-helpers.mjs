@@ -143,9 +143,13 @@ export async function createAuthedClient(appDir) {
 
 export const today = () => new Date().toISOString().slice(0, 10);
 
-/** Parse "NPR 1,093" / "NPR 500" → number */
+/** Parse bill/UI amounts: "Rs. 576", "NPR 1,093", "576" → number */
 export function parseNpr(text) {
   if (!text) return NaN;
-  const m = String(text).replace(/[^\d.-]/g, "");
-  return Number(m);
+  const cleaned = String(text)
+    .trim()
+    .replace(/^(?:NPR|Rs\.?)\s*/i, "")
+    .replace(/,/g, "");
+  const m = cleaned.match(/-?\d+(?:\.\d+)?/);
+  return m ? Number(m[0]) : NaN;
 }

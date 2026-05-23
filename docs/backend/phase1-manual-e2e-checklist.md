@@ -405,6 +405,8 @@ After manual flows, spot-check in **Table Editor**:
 
 ## 7. When Phase 2 lands — retest
 
+Include **data export** (Phase 2-E, when built): Settings → Export hub, date-range CSV, full ZIP backup — see [DATA_EXPORT_SPEC.md](../DATA_EXPORT_SPEC.md).
+
 - [ ] Bill edit + `sales_bill_audit` history  
 - [ ] Supplier New UI  
 - [ ] Live daily cash + schemes tables  

@@ -65,6 +65,33 @@ Wire the UI to Supabase **RPCs and/or constrained updates** via `domainLive.ts` 
   - [x] FE: `SaleEntryPage` edit path → `commitSaleLive` → `update_sales_bill`.
   - [ ] FE: optional **“Amendment history”** on `BillDetailPage` from `sales_bill_audit`.
   - [ ] Tests: matrix cases for edit maths, stock delta, audit row count.
+- [ ] **2-E — Data export (reporting + migration + backup)** — **deferred; address later.** Full spec: [`../DATA_EXPORT_SPEC.md`](../DATA_EXPORT_SPEC.md)
+  - [ ] **P0 — Reporting:** Settings → Export hub; CSV for products, customers, `v_stock` snapshot; date-range sales (headers + lines), purchases, payments, customer outstanding (`v_customer_balance`); paginated Supabase reads (not full `fetchDomainBundle`); UTF-8 BOM; plain numeric cells (no `Rs.` in CSV).
+  - [ ] **P0 — Backup:** Server-side full-tenant ZIP (multi-CSV + `README.txt` + `manifest.json`); owner role; rate limit.
+  - [ ] **P1:** XLSX accountant pack; expenses/damages/returns registers; `export_runs` audit; `returns.bill_id` for migration; VAT period summary.
+  - [ ] **P2:** Import templates; async large exports; incremental backup.
+  - [ ] **Deferred:** Tally sync, historical stock-as-of-date, bulk bill PDF ZIP.
+
+---
+
+## Deferred — inventory, backdating, oversell (address later)
+
+> **Context:** Sale picker uses **today’s** `v_stock` / `onHand` only (see `stockAlert.ts`). Bill and purchase **dates** save correctly; stock is one lifetime ledger, not “as of bill date.” Operational rule for now: enter older purchases before backdated sales when catching up.
+
+- [ ] **Block oversell in database** — Today out-of-stock is **UI-only** (`EntityPicker` disabled rows); `create_sales_bill` / `update_sales_bill` do not reject qty above on-hand. Add RPC validation (and decide: current stock vs stock-as-of `bill_date`).
+- [ ] **Picker respects stock on bill date** — **TBD / needs product decision.** Options: (a) compute `stock_as_of(bill_date)` for picker + labels, (b) relax picker when bill date is before today, or (c) keep today-only + user enters history in chronological order.
+
+---
+
+## Deferred — product name & branding (address later)
+
+> **Context:** UI still shows **DealerOS** / **Havmor Distributor Panel** on login; npm package `havmor-dms`; repo folder `havmor`. Pilot tenant is Havmor — that stays in **tenant_settings**, not product brand. Brief for ChatGPT: [`../PRODUCT_NAMING_BRIEF.md`](../PRODUCT_NAMING_BRIEF.md).
+
+- [ ] **Decide product name** — English + optional Nepali subtitle; runner-up documented.
+- [ ] **Rebrand app shell** — `LoginPage.tsx`, `RegisterPage.tsx`, `index.html`, PWA manifest in `vite.config.ts`, document title.
+- [ ] **Rebrand docs & package** — root `README.md`, `docs/LLM_CONTEXT.md`, `package.json` name (if renaming); Netlify site title.
+- [ ] **Do not rename** — Supabase project, tenant business names in settings, historical bill prefixes unless product decision says otherwise.
+- [ ] **Optional:** repo rename / `feature/product-rebrand` branch; update `GEMMA_SYSTEM_PROMPT.md` product name line.
 
 ---
 
@@ -76,4 +103,4 @@ Wire the UI to Supabase **RPCs and/or constrained updates** via `domainLive.ts` 
 
 ---
 
-**See also:** [Docs hub](../README.md) · [Data model](./data-model.md) · [Env & MCP](./mcp-and-env.md) · [Testing live](./testing-live-supabase.md) · [Automated E2E](./phase1-use-cases-and-tests.md)
+**See also:** [Docs hub](../README.md) · [Data model](./data-model.md) · [Data export spec](../DATA_EXPORT_SPEC.md) · [Product naming brief](../PRODUCT_NAMING_BRIEF.md) · [Env & MCP](./mcp-and-env.md) · [Testing live](./testing-live-supabase.md) · [Automated E2E](./phase1-use-cases-and-tests.md)

@@ -362,11 +362,30 @@ Add one line under **Changelog** yourself:
 | [backend/phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md) | E2E matrix |
 | [deployment.md](deployment.md) | Netlify, env vars |
 | [backend/BACKEND-TODO.md](backend/BACKEND-TODO.md) | Planned work |
+| [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) | Phase 2-E export design (**deferred** — reporting / migration / backup) |
+| [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | Product name & rebrand (**deferred** — ChatGPT brief) |
+
+### Deferred backlog (address later)
+
+**Inventory / backdating** — [backend/BACKEND-TODO.md § Deferred](backend/BACKEND-TODO.md):
+
+1. **Block oversell in database** — RPC check on `create_sales_bill` / `update_sales_bill` (UI blocks OOS today only).
+2. **Picker vs bill date** — TBD: stock-as-of `bill_date` vs keep today’s `onHand`; decide before building.
+
+**Data export (Phase 2-E)** — spec only, not built: [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) · checklist [BACKEND-TODO § 2-E](backend/BACKEND-TODO.md). Reporting CSV, migration ZIP, backup; `papaparse` unused. Do not implement until prioritized.
+
+**Product name & branding** — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) · [BACKEND-TODO § Deferred — branding](backend/BACKEND-TODO.md). Replace DealerOS / Havmor panel subtitle with generic Nepal distributor brand; Havmor remains pilot **tenant** name in settings only.
 
 ---
 
 ## Changelog (newest first)
 
+- **2026-05-23** — Product naming & branding added to deferred backlog (`PRODUCT_NAMING_BRIEF.md`, BACKEND-TODO).
+- **2026-05-23** — Phase 2-E data export documented as **deferred** (`DATA_EXPORT_SPEC.md`, BACKEND-TODO, README, data-model); implement later.
+- **2026-05-23** — Added `DATA_EXPORT_SPEC.md` + BACKEND-TODO Phase 2-E (reporting CSV, full-tenant ZIP backup, migration columns).
+- **2026-05-23** — `e2e:stock` / `e2e:stock:live` / `e2e:stock-bill`: purchase & sale past/today dates, `v_stock`, picker unit + live tests.
+- **2026-05-21** — Deferred backlog: DB oversell block + bill-date stock picker (see BACKEND-TODO § Deferred).
+- **2026-05-21** — Sale product picker: in-stock / low-stock / out-of-stock rows (`stockAlert.ts`, `EntityPicker`); out-of-stock not selectable; purchase saves chosen invoice date.
 - **2026-05-21** — Added `GEMMA_SYSTEM_PROMPT.md`; expanded LLM_CONTEXT with routes, feature→file map, domainLive index, E2E scripts, end-to-end workflows.
 - **2026-05-21** — Bill print/PDF: Karobar-style layout, `billDisplay` discount rules, iframe print, Unit before Qty, line padding, totals rule spacing, `e2e:bill` + `e2e:bill:visual` (commit `580028a`).
 - **2026-05-21** — Initial `LLM_CONTEXT.md` + push `b0e6818`.

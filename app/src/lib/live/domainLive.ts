@@ -610,6 +610,7 @@ export async function commitReturnLive(opts: {
 
 export async function commitPurchaseLive(opts: {
   supplierId: string;
+  purchaseDate: string;
   lines: { productId: string; receivedQty: number; cost: number }[];
   totalReceived: number;
 }): Promise<void> {
@@ -622,7 +623,7 @@ export async function commitPurchaseLive(opts: {
     }));
 
   const { error } = await supabase.rpc("record_purchase", {
-    p_purchase_date: new Date().toISOString().slice(0, 10),
+    p_purchase_date: opts.purchaseDate,
     p_supplier_id: opts.supplierId,
     p_lines: lines,
     p_notes: null,
