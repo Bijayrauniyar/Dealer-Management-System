@@ -27,7 +27,7 @@ import {
   useBusinessSettings,
   useSchemes,
 } from "@/store/domain";
-import { BILL_VAT_RATE, tenantChargesVat } from "@/lib/billDisplay";
+import { getVatPct, tenantChargesVat } from "@/lib/billDisplay";
 import { buildSaleProductPickerOptions } from "@/lib/stockAlert";
 import { stripFocSuffixFromName } from "@/lib/billFoc";
 import { syncSchemeFreeLines, schemeHintForLine, type SaleDraftLine } from "@/lib/schemeApply";
@@ -46,6 +46,7 @@ export const SaleEntryPage = () => {
   const SCHEMES   = useSchemes();
   const business  = useBusinessSettings();
   const tenantVat = tenantChargesVat(business);
+  const vatPct    = getVatPct(business);
   const existing  = useSaleByBill(editBillNo ?? "");
   const isEdit    = Boolean(existing);
 
@@ -163,7 +164,7 @@ export const SaleEntryPage = () => {
   const afterDiscount  = subtotal - discountAmt;
   const termsAmt       = Number(billTermsAmt) || 0;
   const taxBase        = afterDiscount + termsAmt;
-  const vatAmt         = tenantVat ? Math.round(taxBase * BILL_VAT_RATE / 100) : 0;
+  const vatAmt         = tenantVat ? Math.round(taxBase * vatPct / 100) : 0;
   const grandTotal     = taxBase + vatAmt;
   const recordedPaid   = isEdit && existing ? Number(existing.paidNow) : 0;
   const paidAmt        = isEdit ? recordedPaid : Math.min(Number(paidNow) || 0, grandTotal);
@@ -277,7 +278,7 @@ export const SaleEntryPage = () => {
     afterDiscount,
     billTerms:       billTerms || "",
     billTermsAmount: termsAmt,
-    vatRate:         tenantVat ? BILL_VAT_RATE : 0,
+    vatRate:         tenantVat ? vatPct : 0,
     vatAmount:       vatAmt,
     grandTotal,
     paidNow: paidAmt,
@@ -543,7 +544,7 @@ export const SaleEntryPage = () => {
                       <p className="mt-1">
                         Sell price: <strong className="text-teal-700">{nprNum(line.rate)}</strong>
                         {tenantVat && (
-                          <> · Incl. {BILL_VAT_RATE}% VAT: {nprNum(Math.round(line.rate * (1 + BILL_VAT_RATE / 100)))}</>
+                          <> · Incl. {vatPct}% VAT: {nprNum(Math.round(line.rate * (1 + vatPct / 100)))}</>
                         )}
                       </p>
                       <div className="mt-2">
@@ -618,7 +619,7 @@ export const SaleEntryPage = () => {
 
         {tenantVat && vatAmt > 0 && (
           <p className="rounded-lg border border-teal-200/80 bg-teal-50/40 px-3 py-2 text-xs text-teal-900">
-            VAT {BILL_VAT_RATE}% ({npr(vatAmt)}) is added from <strong>Settings</strong> — your shop is VAT registered.
+            VAT {vatPct}% ({npr(vatAmt)}) is added from <strong>Settings</strong> — your shop is VAT registered.
           </p>
         )}
 
@@ -709,7 +710,7 @@ export const SaleEntryPage = () => {
               )}
               {vatAmt > 0 && (
                 <div className="flex justify-between gap-2">
-                  <span className="text-muted">VAT (13%)</span>
+                  <span className="text-muted">VAT ({vatPct}%)</span>
                   <span className="font-medium tabular-nums">{npr(vatAmt)}</span>
                 </div>
               )}
@@ -747,7 +748,7 @@ export const SaleEntryPage = () => {
               ] as [string, string]]
             : []),
           ...(termsAmt > 0 ? [["Bill terms", `+ ${npr(termsAmt)}`] as [string, string]] : []),
-          ...(vatAmt > 0 ? [["VAT (13%)", npr(vatAmt)] as [string, string]] : []),
+          ...(vatAmt > 0 ? [[`VAT (${vatPct}%)`, npr(vatAmt)] as [string, string]] : []),
           ...(balanceDue > 0 ? [["Balance due", npr(balanceDue)] as [string, string]] : []),
           ["Grand total", npr(grandTotal)],
         ]}

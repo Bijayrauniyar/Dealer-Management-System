@@ -8,7 +8,6 @@ import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { InvoiceNoField } from "@/components/app/InvoiceNoField";
 import { normalizeInvoiceNoSpoken } from "@/lib/voiceInvoiceNo";
 import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
@@ -17,9 +16,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   useSuppliers,
   useProducts,
+  useBusinessSettings,
   commitPurchase,
   commitPurchaseUpdate,
 } from "@/store/domain";
+import { getVatPct, addVatToExcl, vatAmountFromExcl, purchasePriceExclFromProduct } from "@/lib/tax";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
 import type { Product } from "@/domain/types";
 import {
@@ -52,14 +53,16 @@ const mkLine = (): Line => ({
 
 const inputCompact = "h-9 text-sm";
 
-function costForProductUom(product: Product, uom: string): number {
+/** Buy price excl. VAT for line UOM (product.costPrice is stored VAT-inclusive). */
+function costExclForProductUom(product: Product, uom: string, vatPct: number): number {
   const unit = uom.trim() || product.uom || "PCS";
-  const base = product.costPrice;
+  const baseIncl = product.costPrice;
   const conv = product.uomConversion;
-  if (conv && unit === conv.packUom && base > 0) {
-    return priceForPackFromBase({ mrp: base, sellingPrice: base }, conv.piecesPerPack).sellingPrice;
+  let incl = baseIncl;
+  if (conv && unit === conv.packUom && baseIncl > 0) {
+    incl = priceForPackFromBase({ mrp: baseIncl, sellingPrice: baseIncl }, conv.piecesPerPack).sellingPrice;
   }
-  return base;
+  return purchasePriceExclFromProduct(incl, vatPct);
 }
 
 /** Compact label + control (less vertical space than FormField). */
@@ -85,6 +88,8 @@ export const PurchasePage = () => {
   const isEdit = Boolean(editPurchaseId);
   const SUPPLIERS = useSuppliers();
   const PRODUCTS = useProducts();
+  const business = useBusinessSettings();
+  const vatPct = getVatPct(business);
 
   const presetSupplierId =
     (location.state as { supplierId?: string } | null)?.supplierId ?? "";
@@ -133,7 +138,7 @@ export const PurchasePage = () => {
                 uom: "PCS",
                 invoiceQty: l.qty,
                 receivedQty: l.qty,
-                cost: l.rate,
+                cost: l.rateExcl,
               }))
             : [mkLine()],
         );
@@ -151,10 +156,15 @@ export const PurchasePage = () => {
     };
   }, [isEdit, editPurchaseId]);
 
-  const lineInvoiced = (l: Line) => l.invoiceQty * l.cost;
-  const lineReceived = (l: Line) => l.receivedQty * l.cost;
-  const totalInvoiced = lines.reduce((s, l) => s + lineInvoiced(l), 0);
-  const totalReceived = lines.reduce((s, l) => s + lineReceived(l), 0);
+  const lineExcl = (l: Line, qty: number) => qty * l.cost;
+  const lineVat = (l: Line, qty: number) => vatAmountFromExcl(lineExcl(l, qty), vatPct);
+  const lineIncl = (l: Line, qty: number) => lineExcl(l, qty) + lineVat(l, qty);
+  const totalInvoicedExcl = lines.reduce((s, l) => s + lineExcl(l, l.invoiceQty), 0);
+  const totalReceivedExcl = lines.reduce((s, l) => s + lineExcl(l, l.receivedQty), 0);
+  const totalReceivedVat = lines.reduce((s, l) => s + lineVat(l, l.receivedQty), 0);
+  const totalReceivedIncl = totalReceivedExcl + totalReceivedVat;
+  const totalInvoicedIncl =
+    totalInvoicedExcl + lines.reduce((s, l) => s + lineVat(l, l.invoiceQty), 0);
   const shortLines = lines.filter((l) => l.receivedQty < l.invoiceQty && l.productId);
   const hasShort = shortLines.length > 0;
 
@@ -174,7 +184,7 @@ export const PurchasePage = () => {
       productId,
       productName,
       uom,
-      cost: costForProductUom(product, uom),
+      cost: costExclForProductUom(product, uom, vatPct),
     });
   };
 
@@ -184,13 +194,13 @@ export const PurchasePage = () => {
       updateLine(lineId, { uom: newUom });
       return;
     }
-    updateLine(lineId, { uom: newUom, cost: costForProductUom(product, newUom) });
+    updateLine(lineId, { uom: newUom, cost: costExclForProductUom(product, newUom, vatPct) });
   };
 
   const lineForStockRpc = (line: Line) => {
     const product = PRODUCTS.find((p) => p.id === line.productId);
     if (!product) {
-      return { receivedQty: line.receivedQty, cost: line.cost };
+      return { receivedQty: line.receivedQty, rateExcl: line.cost };
     }
     const baseQty = billQtyToBaseUnits(
       line.receivedQty,
@@ -198,9 +208,9 @@ export const PurchasePage = () => {
       product.uom,
       product.uomConversion ?? null,
     );
-    const lineTotal = line.receivedQty * line.cost;
-    const costPerBase = baseQty > 0 ? Math.round(lineTotal / baseQty) : line.cost;
-    return { receivedQty: baseQty, cost: costPerBase };
+    const lineTotalExcl = line.receivedQty * line.cost;
+    const rateExclPerBase = baseQty > 0 ? Math.round(lineTotalExcl / baseQty) : line.cost;
+    return { receivedQty: baseQty, rateExcl: rateExclPerBase };
   };
 
   const handleSave = async () => {
@@ -220,13 +230,13 @@ export const PurchasePage = () => {
     const rpcLines = lines
       .filter((l) => l.productId && l.receivedQty > 0)
       .map((l) => {
-        const { receivedQty, cost } = lineForStockRpc(l);
-        return { productId: l.productId, receivedQty, cost };
+        const { receivedQty, rateExcl } = lineForStockRpc(l);
+        return { productId: l.productId, receivedQty, rateExcl };
       });
 
-    if (isEdit && totalReceived < paidOnPurchase) {
+    if (isEdit && totalReceivedIncl < paidOnPurchase) {
       toast.error(
-        `Received total (${npr(totalReceived)}) cannot be less than already paid (${npr(paidOnPurchase)}).`,
+        `Received total (${npr(totalReceivedIncl)}) cannot be less than already paid (${npr(paidOnPurchase)}).`,
       );
       return;
     }
@@ -252,7 +262,7 @@ export const PurchasePage = () => {
           supplierId,
           purchaseDate: date,
           supplierInvoiceNo: normalizedInvoice,
-          totalReceived,
+          totalReceived: totalReceivedIncl,
           lines: rpcLines,
         });
         const label = normalizedInvoice;
@@ -331,17 +341,17 @@ export const PurchasePage = () => {
               invoiceLocked
                 ? "Cannot be changed after save"
                 : isEdit
-                  ? "One-time entry for old purchase — type or tap mic (e.g. INV 001)"
-                  : "From supplier bill — type or tap mic"
+                  ? "One-time entry for older purchases (e.g. INV-001)"
+                  : "As printed on the supplier bill"
             }
           >
-            <InvoiceNoField
+            <Input
               className={inputCompact}
               placeholder={isEdit ? "e.g. INV-001" : "e.g. INV-8842"}
               value={invoiceNo}
               disabled={invoiceLocked}
               readOnly={invoiceLocked}
-              onChange={setInvoiceNo}
+              onChange={(e) => setInvoiceNo(e.target.value)}
             />
           </FormField>
           <FormField label="Invoice date">
@@ -449,7 +459,7 @@ export const PurchasePage = () => {
                           }
                         />
                       </CompactField>
-                      <CompactField label="Cost">
+                      <CompactField label="Buy excl.">
                         <NumericInput
                           className={inputCompact}
                           min={0}
@@ -459,14 +469,33 @@ export const PurchasePage = () => {
                       </CompactField>
                     </div>
 
+                    {line.productId && line.cost > 0 ? (
+                      <p className="text-[10px] text-muted">
+                        Incl. VAT ({vatPct}%):{" "}
+                        <strong className="text-foreground">
+                          {nprNum(addVatToExcl(line.cost, vatPct))}
+                        </strong>{" "}
+                        per {line.uom}
+                      </p>
+                    ) : null}
+
                     {line.productId ? (
                       <p className="text-[10px] leading-snug text-muted">
                         <span>
-                          Inv. <strong className="text-foreground">{nprNum(lineInvoiced(line))}</strong>
+                          Excl.{" "}
+                          <strong className="text-foreground">
+                            {nprNum(lineExcl(line, line.invoiceQty))}
+                          </strong>
+                          {vatPct > 0 ? (
+                            <>
+                              {" "}
+                              · VAT {nprNum(lineVat(line, line.invoiceQty))}
+                            </>
+                          ) : null}
                         </span>
                         <span className="text-gray-300"> · </span>
                         <span className={isShort ? "text-warning-foreground" : ""}>
-                          Rcv. <strong>{nprNum(lineReceived(line))}</strong>
+                          Rcv. incl. <strong>{nprNum(lineIncl(line, line.receivedQty))}</strong>
                         </span>
                         {isShort ? (
                           <>
@@ -513,16 +542,34 @@ export const PurchasePage = () => {
         )}
 
         {lines.some((l) => l.productId) && (
-          <div className="rounded-lg border border-dashed border-teal-200/80 bg-teal-50/30 px-3 py-2 text-xs leading-relaxed">
-            <span className="font-semibold text-muted">Totals: </span>
-            <span>Invoiced {npr(totalInvoiced)}</span>
+          <div className="rounded-lg border border-dashed border-teal-200/80 bg-teal-50/30 px-3 py-2 text-xs leading-relaxed space-y-1">
+            <div className="flex justify-between gap-2">
+              <span className="text-muted">Subtotal (excl. VAT)</span>
+              <span className="font-semibold tabular-nums">
+                {npr(hasShort ? totalReceivedExcl : totalInvoicedExcl)}
+              </span>
+            </div>
+            {vatPct > 0 && (
+              <div className="flex justify-between gap-2">
+                <span className="text-muted">VAT ({vatPct}%)</span>
+                <span className="font-semibold tabular-nums">
+                  {npr(hasShort ? totalReceivedVat : totalInvoicedExcl > 0 ? totalInvoicedIncl - totalInvoicedExcl : 0)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between gap-2 border-t border-teal-200/60 pt-1">
+              <span className="font-semibold text-foreground">
+                {vatPct > 0 ? `Total (incl. ${vatPct}% VAT)` : "Total"}
+              </span>
+              <span className="font-bold tabular-nums">
+                {npr(hasShort ? totalReceivedIncl : totalInvoicedIncl)}
+              </span>
+            </div>
             {hasShort && (
-              <>
-                <span className="text-gray-300"> · </span>
-                <span>Received {npr(totalReceived)}</span>
-                <span className="text-gray-300"> · </span>
-                <span className="text-amber-800">Short −{npr(totalInvoiced - totalReceived)}</span>
-              </>
+              <p className="text-amber-800 text-[10px]">
+                Invoiced {npr(totalInvoicedIncl)} · Short −
+                {npr(totalInvoicedIncl - totalReceivedIncl)}
+              </p>
             )}
           </div>
         )}
@@ -531,13 +578,16 @@ export const PurchasePage = () => {
       <StickyBar
         compact
         rows={[
-          ...(hasShort
+          ...(vatPct > 0
             ? ([
-                ["Received", npr(totalReceived)],
-                ["Invoiced", npr(totalInvoiced)],
+                ["Subtotal excl.", npr(hasShort ? totalReceivedExcl : totalInvoicedExcl)],
+                [`VAT (${vatPct}%)`, npr(hasShort ? totalReceivedVat : totalInvoicedIncl - totalInvoicedExcl)],
               ] as [string, string][])
             : []),
-          ["Purchase total", npr(hasShort ? totalReceived : totalInvoiced)],
+          [
+            vatPct > 0 ? `Total (incl. ${vatPct}% VAT)` : "Total",
+            npr(hasShort ? totalReceivedIncl : totalInvoicedIncl),
+          ],
         ]}
         action={isEdit ? "Update purchase" : "Save"}
         onAction={handleSave}

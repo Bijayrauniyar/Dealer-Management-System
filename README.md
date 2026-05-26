@@ -192,7 +192,7 @@ cd app && npm run deploy:check   # lint + production build before you push
 
 1. Branch from main; keep changes focused.
 2. Run `npm run build` in `app/` before PR; run `e2e:smoke` / `e2e:matrix` when you touch RPCs or domain math.
-3. Update **`docs/backend/BACKEND-TODO.md`** or **`data-model.md`** if behaviour or schema expectations change.
+3. **Update docs with the code** — see **[Maintaining documentation](docs/README.md#maintaining-documentation)** (migrations, UX, `data-model.md`, feature-specific docs, `LLM_CONTEXT.md` changelog). Cursor applies `.cursor/rules/docs-on-change.mdc` automatically.
 4. New docs: add them to **[`docs/README.md`](docs/README.md)** so they stay discoverable.
 
 ---

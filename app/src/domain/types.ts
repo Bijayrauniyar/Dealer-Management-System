@@ -19,6 +19,8 @@ export type BusinessSettings = {
   panNumber: string;
   vatRegistered: boolean;
   vatNumber: string;
+  /** Default VAT % for purchases (always) and sales when VAT registered. */
+  defaultVatPct: number;
   billFooter: string;
   overdueDays: number;
   dueSoonDays: number;
@@ -209,11 +211,16 @@ export type PurchaseLineDetail = {
   productId: string;
   productName: string;
   qty: number;
-  rate: number;
+  uom: string;
+  rateExcl: number;
+  rateIncl: number;
+  vatAmount: number;
   amount: number;
 };
 
 export type PurchaseDetail = PurchaseListItem & {
+  subtotalExcl: number;
+  vatAmount: number;
   subtotal: number;
   notes: string;
   lines: PurchaseLineDetail[];

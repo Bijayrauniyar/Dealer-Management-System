@@ -89,6 +89,12 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Assigns INV-001, INV-002, … to rows missing supplier_invoice_no (per tenant, by date).
    - See docs/PURCHASE_REFERENCE_NUMBERS.md.
 
+18. Migration 0017 (purchase VAT — default_vat_pct, rate_excl, bill-style totals)
+   - Open: app/supabase/migrations/0017_purchase_vat.sql
+   - Copy entire file → Paste → Run → Success.
+   - Adds Settings → Default VAT %; purchase lines store excl + VAT split.
+   - UI details: docs/PURCHASE_REFERENCE_NUMBERS.md
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 

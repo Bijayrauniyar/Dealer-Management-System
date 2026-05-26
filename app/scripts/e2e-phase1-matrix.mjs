@@ -320,12 +320,15 @@ try {
 
   // --- PU1 Purchase ---
   let poQty = 50;
-  const poRate = 80;
-  let poTotal = poQty * poRate;
+  const poRateExcl = 80;
+  const poVatPct = 13;
+  let poTotalExcl = poQty * poRateExcl;
+  let poVat = Math.round(poTotalExcl * poVatPct / 100);
+  let poTotal = poTotalExcl + poVat;
   const { data: purRows, error: purErr } = await supabase.rpc("record_purchase", {
     p_purchase_date: T,
     p_supplier_id: supplierId,
-    p_lines: [{ product_id: productId, qty: poQty, rate: poRate }],
+    p_lines: [{ product_id: productId, qty: poQty, rate_excl: poRateExcl }],
     p_notes: `matrix-po-${stamp}`,
   });
   if (purErr) r.fail("purchase.record", purErr.message);
@@ -340,12 +343,14 @@ try {
 
   if (purchaseId) {
     poQty = 45;
-    poTotal = poQty * poRate;
+    poTotalExcl = poQty * poRateExcl;
+    poVat = Math.round(poTotalExcl * poVatPct / 100);
+    poTotal = poTotalExcl + poVat;
     const { error: poUpdErr } = await supabase.rpc("update_purchase", {
       p_purchase_id: purchaseId,
       p_supplier_id: supplierId,
       p_purchase_date: T,
-      p_lines: [{ product_id: productId, qty: poQty, rate: poRate }],
+      p_lines: [{ product_id: productId, qty: poQty, rate_excl: poRateExcl }],
       p_notes: `matrix-po-${stamp}-upd`,
     });
     if (poUpdErr) r.fail("purchase.update", poUpdErr.message);

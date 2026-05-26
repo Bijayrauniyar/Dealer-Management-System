@@ -3,7 +3,7 @@
  *
  * Pricing model:
  *   MRP          = price on product label (shown on bill, reference only)
- *   Buy price    = cost from Havmor (private — never shown on bills)
+ *   Buy price    = cost from Havmor excl. VAT (stored incl. in DB for purchase prefill)
  *   Markup %     = configurable % over buy price → auto-calculates sell price
  *   Sell price   = buy price × (1 + markup/100) — what we charge on bills
  *   VAT on bills = from tenant Settings (not per product)
@@ -28,7 +28,8 @@ import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { useBusinessSettings, useProducts, upsertProductLive } from "@/store/domain";
 import { supabase } from "@/lib/supabase";
-import { npr } from "@/lib/utils";
+import { addVatToExcl, getVatPct, purchasePriceExclFromProduct } from "@/lib/tax";
+import { npr, nprNum } from "@/lib/utils";
 import {
   UOM_OPTIONS,
   availableExtraUoms,
@@ -64,22 +65,29 @@ export const ProductFormPage = () => {
   const [description, setDescription] = useState(existing?.description ?? "");
 
   // ── Pricing ───────────────────────────────────────────────────────────────
-  const [mrp,       setMrp]       = useState(existing?.mrp       ?? 0);
-  const [buyPrice,  setBuyPrice]  = useState(existing?.costPrice  ?? 0);
+  const [mrp, setMrp] = useState(existing?.mrp ?? 0);
+  const defaultMarkup = business.defaultMarkupPct;
+  const vatPct = getVatPct(business);
+  const initialBuyExcl =
+    existing?.costPrice && existing.costPrice > 0
+      ? purchasePriceExclFromProduct(existing.costPrice, vatPct)
+      : 0;
+  const [buyPrice, setBuyPrice] = useState(initialBuyExcl);
 
   // Markup % — defaults from Settings, overridable per product
-  const defaultMarkup = business.defaultMarkupPct;
+
   const [markupPct, setMarkupPct] = useState(
     existing
-      ? existing.costPrice > 0
-        ? Math.round(((existing.sellingPrice - existing.costPrice) / existing.costPrice) * 100)
+      ? initialBuyExcl > 0
+        ? Math.round(((existing.sellingPrice - initialBuyExcl) / initialBuyExcl) * 100)
         : defaultMarkup
       : defaultMarkup,
   );
 
   // Sell price is derived from buy × (1 + markup/100), but can be overridden
   const [sellPrice, setSellPrice] = useState(
-    existing?.sellingPrice ?? (buyPrice > 0 ? Math.round(buyPrice * (1 + markupPct / 100)) : 0),
+    existing?.sellingPrice ??
+      (initialBuyExcl > 0 ? Math.round(initialBuyExcl * (1 + defaultMarkup / 100)) : 0),
   );
 
   const [discountPct,   setDiscountPct]   = useState(existing?.discountPct   ?? 0);
@@ -179,7 +187,6 @@ export const ProductFormPage = () => {
 
   const handleSave = async () => {
     if (!name.trim())   { toast.error("Product name is required."); return; }
-    if (sellPrice <= 0) { toast.error("Sell price must be greater than 0."); return; }
     if (buyPrice <= 0)  { toast.error("Buy price must be greater than 0."); return; }
     if (packUom.trim() && piecesPerPack < 2) {
       toast.error("Enter how many base units are in one pack (e.g. 10).");
@@ -209,7 +216,7 @@ export const ProductFormPage = () => {
         name: name.trim(),
         category,
         unit: uom,
-        purchase_price: buyPrice,
+        purchase_price: vatPct > 0 ? addVatToExcl(buyPrice, vatPct) : buyPrice,
         sale_price: sellPrice,
         mrp,
         uom_prices: buildUomPricesForSave(),
@@ -333,9 +340,9 @@ export const ProductFormPage = () => {
           <Info size={14} className="mt-0.5 shrink-0 text-teal-600" />
           <div className="text-xs text-teal-700 space-y-1">
             <p><strong>MRP</strong> — printed on product. Shown on bill as reference only.</p>
-            <p><strong>Buy price</strong> — what you pay Havmor. Private, never shown on bills.</p>
+            <p><strong>Buy price</strong> — what you pay Havmor, before VAT. With-VAT amount is calculated from Settings.</p>
             <p><strong>Markup %</strong> — auto-calculates sell price. Default from Settings ({defaultMarkup}%). Override per product.</p>
-            <p><strong>Sell price</strong> — charged to your customer, <em>excl. VAT</em>. Editable; updating it recalculates markup %.</p>
+            <p><strong>Sell price</strong> — optional; charged to your customer <em>excl. VAT</em>. Leave blank or set later; markup can fill it from buy price.</p>
           </div>
         </div>
 
@@ -345,7 +352,16 @@ export const ProductFormPage = () => {
           </FormField>
 
           {/* Buy price */}
-          <FormField label="Buy price (NPR)" hint="Your cost from Havmor — private, for profit calc only">
+          <FormField
+            label="Buy price excl. VAT (NPR)"
+            hint={
+              buyPrice > 0 && vatPct > 0
+                ? `With VAT (${vatPct}%): ${nprNum(addVatToExcl(buyPrice, vatPct))}`
+                : vatPct > 0
+                  ? `VAT ${vatPct}% from Settings`
+                  : undefined
+            }
+          >
             <NumericInput
               min={0}
               value={buyPrice}
@@ -372,8 +388,7 @@ export const ProductFormPage = () => {
 
             <FormField
               label="Sell price excl. VAT (NPR)"
-              hint="Auto-calculated. Type to override."
-              required
+              hint="Optional. Auto-calculated from buy × markup — type to override."
             >
               <div className="relative">
                 <NumericInput min={0} value={sellPrice} placeholder="0" onChange={handleSellChange} />
@@ -565,7 +580,7 @@ export const ProductFormPage = () => {
         action={isEdit ? "Update product" : "Add product"}
         onAction={handleSave}
         loading={saving}
-        disabled={!name.trim() || sellPrice <= 0}
+        disabled={!name.trim() || buyPrice <= 0}
       />
     </PageShell>
   );

@@ -2,6 +2,25 @@
 
 All project docs live under **`docs/`**. The **[project README](../README.md)** is the main onboarding entry (features, stack, layout, dev commands).
 
+**Agents & contributors:** After any feature, migration, or UX change, update the docs listed in [Maintaining documentation](#maintaining-documentation). The repo enforces this via Cursor rule `.cursor/rules/docs-on-change.mdc` (`alwaysApply`).
+
+---
+
+## Maintaining documentation
+
+Update docs in the **same change** as code — do not leave README/schema/UI docs stale.
+
+| If you changed… | Update at minimum |
+|-----------------|-------------------|
+| SQL migration | [`app/supabase/README.txt`](../app/supabase/README.txt), [`backend/data-model.md`](backend/data-model.md), [`phase1-use-cases-and-tests.md`](backend/phase1-use-cases-and-tests.md) pre-flight |
+| Purchases / supplier invoice / VAT | [`PURCHASE_REFERENCE_NUMBERS.md`](PURCHASE_REFERENCE_NUMBERS.md), `data-model.md` |
+| Products / pricing | `data-model.md` (§ products), [`phase1-manual-e2e-checklist.md`](backend/phase1-manual-e2e-checklist.md) § Products |
+| Settings fields | `data-model.md` (§ `tenant_settings`), manual checklist § Settings |
+| User-facing flow | [`LLM_CONTEXT.md`](LLM_CONTEXT.md) changelog + manual checklist row |
+| E2E script | `phase1-use-cases-and-tests.md` command table |
+
+Also add a dated line to **`docs/LLM_CONTEXT.md`** changelog and extend **`app/scripts/e2e-*.mjs`** when the behavior is assertable.
+
 ---
 
 ## Reading order
@@ -52,6 +71,7 @@ flowchart LR
 | File | When to open it |
 |------|------------------|
 | [backend/data-model.md](backend/data-model.md) | Schema, RLS ideas, formulas, Phase 2 (capital, bill amendments, export) |
+| [PURCHASE_REFERENCE_NUMBERS.md](PURCHASE_REFERENCE_NUMBERS.md) | Supplier invoice no. vs PO, migrations 0014–0017, purchase bill UI |
 | [backend/BACKEND-TODO.md](backend/BACKEND-TODO.md) | Implementation checklist, Phase 2 tasks, production quality bar |
 | [DEFERRED_WORK.md](DEFERRED_WORK.md) | **Deferred backlog register** — INV-1/INV-2, effort, touchpoints, how to maintain |
 | [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md) | Client pain points + pain-first roadmap |

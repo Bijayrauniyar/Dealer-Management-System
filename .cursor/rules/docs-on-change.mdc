@@ -1,0 +1,37 @@
+---
+description: Update project docs whenever code, schema, or UX changes (required)
+alwaysApply: true
+---
+
+# Documentation on change (required)
+
+When you **change app behavior**, **add a feature**, **add/alter a migration**, or **change user-visible UX**, update documentation in the **same task** (same PR/commit). Do not ship code-only unless the user explicitly asks to skip docs.
+
+## Minimum checklist
+
+1. **Identify impact** — UI, RPC/DB, settings, tests, deploy.
+2. **Update mapped docs** (below) — remove stale text (e.g. removed UI, old flows).
+3. **Migrations** — add step to `app/supabase/README.txt`; note in `docs/backend/phase1-use-cases-and-tests.md` pre-flight if tests need it.
+4. **Changelog** — one bullet in `docs/LLM_CONTEXT.md` (newest first, date + what changed).
+5. **Tests** — extend `app/scripts/e2e-*.mjs` when behavior is testable in source/live checks.
+6. **Manual QA** — add/adjust rows in `docs/backend/phase1-manual-e2e-checklist.md` for new screens or flows.
+
+## Doc map (what to touch)
+
+| Change type | Update |
+|-------------|--------|
+| New SQL migration | `app/supabase/README.txt`, `docs/backend/data-model.md`, `docs/backend/phase1-use-cases-and-tests.md` |
+| Purchase / supplier invoice / VAT | `docs/PURCHASE_REFERENCE_NUMBERS.md`, `data-model.md` (purchases/products pricing) |
+| Product pricing / catalog | `docs/backend/data-model.md` (products), manual checklist § Products |
+| Settings / tenant fields | `data-model.md` (`tenant_settings`), manual checklist § Settings |
+| Sales bill / print / PDF | `docs/backend/data-model.md` (sales), `phase1-use-cases` if maths/RPC |
+| New route or major page | `docs/LLM_CONTEXT.md` (routes/features), manual checklist if user-facing |
+| Deferred / future work only | `docs/DEFERRED_WORK.md` or `BACKEND-TODO.md` — not LLM_CONTEXT unless shipped |
+| New `npm run e2e:*` script | `docs/backend/phase1-use-cases-and-tests.md`, project `README.md` if user-facing |
+
+Hub index: `docs/README.md` — add a link when you add a new top-level doc.
+
+## Style
+
+- Match existing doc tone: short tables, links to migrations runbook.
+- Document **what users see** and **what DB stores** when they differ (e.g. buy excl. in UI, incl. in `purchase_price`).

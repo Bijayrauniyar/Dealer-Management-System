@@ -165,10 +165,10 @@ function runSourceChecks() {
     r.fail("purchaseDisplay.ts", "missing or exposes purchaseNo");
   }
 
-  if (detailPage && detailPage.includes("purchaseDisplayTitle")) {
-    r.pass("PurchaseDetailPage uses purchaseDisplayTitle");
+  if (detailPage && detailPage.includes("PurchaseBillView")) {
+    r.pass("PurchaseDetailPage uses PurchaseBillView");
   } else if (detailPage) {
-    r.fail("PurchaseDetailPage title", "should use purchaseDisplayTitle not purchaseNo");
+    r.fail("PurchaseDetailPage bill view", "missing PurchaseBillView");
   }
 
   const mig0014 = resolve(APP, "supabase/migrations/0014_supplier_invoice_no.sql");
@@ -183,6 +183,80 @@ function runSourceChecks() {
     r.pass("migration 0015_purchase_invoice_immutable.sql present");
   } else {
     r.fail("migration 0015", "missing file");
+  }
+
+  const mig0017 = resolve(APP, "supabase/migrations/0017_purchase_vat.sql");
+  if (existsSync(mig0017)) {
+    r.pass("migration 0017_purchase_vat.sql present");
+  } else {
+    r.fail("migration 0017", "missing file");
+  }
+
+  if (purchasePage && purchasePage.includes("Buy excl.")) {
+    r.pass("PurchasePage buy price excl VAT field");
+  } else if (purchasePage) {
+    r.fail("PurchasePage VAT entry", "missing Buy excl.");
+  }
+
+  const purchaseBill = readSrc("components/app/PurchaseBillView.tsx");
+  if (purchaseBill && purchaseBill.includes("Purchase invoice")) {
+    r.pass("PurchaseBillView component exists");
+  } else if (purchaseBill) {
+    r.fail("PurchaseBillView", "missing");
+  }
+
+  if (purchasePage && !purchasePage.includes("InvoiceNoField")) {
+    r.pass("PurchasePage invoice field without mic component");
+  } else if (purchasePage) {
+    r.fail("PurchasePage mic", "still uses InvoiceNoField");
+  }
+
+  if (purchasePage && purchasePage.includes("incl. ${vatPct}% VAT")) {
+    r.pass("PurchasePage total label includes VAT %");
+  } else if (purchasePage) {
+    r.fail("PurchasePage VAT label", "missing incl. % VAT on total");
+  }
+
+  if (
+    purchaseBill &&
+    purchaseBill.includes("grid-cols-2") &&
+    purchaseBill.includes("supplierTaxId") &&
+    !purchaseBill.includes("purchaseDisplaySubtitle")
+  ) {
+    r.pass("PurchaseBillView compact supplier + invoice header");
+  } else if (purchaseBill) {
+    r.fail("PurchaseBillView header", "expected merged two-column layout");
+  }
+
+  if (detailPage && !detailPage.includes("Edit updates lines and stock")) {
+    r.pass("PurchaseDetailPage no dev footer note");
+  } else if (detailPage) {
+    r.fail("PurchaseDetailPage footer", "unprofessional footer still present");
+  }
+
+  const productForm = readSrc("pages/products/ProductFormPage.tsx");
+  if (
+    productForm &&
+    productForm.includes("Buy price excl. VAT") &&
+    productForm.includes("addVatToExcl(buyPrice") &&
+    !productForm.includes("Sell price must be greater than 0")
+  ) {
+    r.pass("ProductFormPage buy excl VAT + optional sell price");
+  } else if (productForm) {
+    r.fail("ProductFormPage pricing", "buy excl / optional sell regression");
+  }
+
+  if (domainLive && domainLive.includes("rate_excl")) {
+    r.pass("domainLive purchase lines use rate_excl");
+  } else if (domainLive) {
+    r.fail("domainLive rate_excl", "missing");
+  }
+
+  const taxLib = readSrc("lib/tax.ts");
+  if (taxLib && taxLib.includes("getVatPct") && taxLib.includes("splitInclusiveAmount")) {
+    r.pass("lib/tax.ts helpers");
+  } else if (taxLib) {
+    r.fail("lib/tax.ts", "missing helpers");
   }
 }
 

@@ -49,6 +49,7 @@ type TenantSettingsRow = {
   default_markup_pct: number;
   default_min_qty: number;
   default_min_pack_qty: number;
+  default_vat_pct?: number;
 };
 
 export function SettingsPage() {
@@ -76,6 +77,7 @@ export function SettingsPage() {
   const [defaultMarkupPct, setDefaultMarkupPct] = useState(15);
   const [defaultMinQty, setDefaultMinQty] = useState(20);
   const [defaultMinPackQty, setDefaultMinPackQty] = useState(2);
+  const [defaultVatPct, setDefaultVatPct] = useState(13);
   const [saving, setSaving] = useState(false);
 
   const applyRow = (data: TenantSettingsRow) => {
@@ -104,6 +106,7 @@ export function SettingsPage() {
     setDefaultMarkupPct(data.default_markup_pct);
     setDefaultMinQty(data.default_min_qty);
     setDefaultMinPackQty(data.default_min_pack_qty ?? 2);
+    setDefaultVatPct(Number(data.default_vat_pct ?? 13));
   };
 
   useEffect(() => {
@@ -155,6 +158,7 @@ export function SettingsPage() {
       default_markup_pct: defaultMarkupPct,
       default_min_qty: defaultMinQty,
       default_min_pack_qty: defaultMinPackQty,
+      default_vat_pct: defaultVatPct,
     };
 
     const { error } = await supabase.from("tenant_settings").update(payload).eq("tenant_id", tenantId);
@@ -257,6 +261,12 @@ export function SettingsPage() {
 
           <SectionTitle icon={Receipt} label="Invoice / bill settings" />
           <div className="space-y-4">
+            <FormField
+              label="Default VAT (%)"
+              hint="Used on purchase bills (always) and sales bills when VAT registered"
+            >
+              <NumericInput min={0} max={100} value={defaultVatPct} onChange={setDefaultVatPct} />
+            </FormField>
             <FormField label="Invoice prefix">
               <Input value={prefix} onChange={(e) => setPrefix(e.target.value)} maxLength={6} />
             </FormField>

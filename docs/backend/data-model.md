@@ -57,6 +57,7 @@ One row per tenant — stores the full business profile that appears on invoices
 | overdue_days | integer DEFAULT 7 | Bills past due by this many days are flagged as Overdue |
 | due_soon_days | integer DEFAULT 3 | Bills due within this many days get a reminder |
 | default_markup_pct | integer DEFAULT 15 | Default % markup over buy price used to auto-calculate sell price on new products. Overridable per product. |
+| default_vat_pct | numeric DEFAULT 13 | Default VAT % for purchase bills and sales when tenant is VAT registered (`0017`). |
 | default_min_qty | integer DEFAULT 20 | Default low-stock threshold applied when creating a new product. Overridable per product. |
 | updated_at | timestamptz | |
 
@@ -86,11 +87,11 @@ One row per tenant — stores the full business profile that appears on invoices
 
 **Pricing model (important for billing):**
 - `mrp` — Maximum Retail Price printed on the product by the manufacturer. Displayed on the sales bill for the customer's reference. Never used in calculations.
-- `cost_price` — What the dealer pays Havmor (the buy price). **Private — never shown on bills or to customers.** Used only for profit/margin calculation in the Company Overview and Dashboard.
-- `selling_price` — The dealer's price charged to their customers, **exclusive of VAT**. This is the `rate` printed on each line of the sales bill.
+- `cost_price` (DB: `purchase_price`) — Buy price from supplier, stored **VAT-inclusive**. **Private — never shown on bills.** The product form lets the dealer type buy price **excl. VAT**; the app converts using `tenant_settings.default_vat_pct` before save. Purchase entry prefills line cost as **excl.** via the same split.
+- `selling_price` — Price charged to customers, **exclusive of VAT** (may be `0` until set). This is the basis for sale line rates when billing.
 - `discount_pct` — Standard percentage discount auto-applied on new bills for this product (0 = none).
-- `vat_applicable` — If true, 13% VAT is added at the bill total level (not per line). The `selling_price` is the VAT-exclusive base.
-- **Auto-calculation rule (FE only, no stored column):** `selling_price = cost_price × (1 + markup_pct / 100)`. `markup_pct` defaults to `tenant_settings.default_markup_pct` but is computed on the fly in the product form; only the final `selling_price` is persisted. Changing the sell price manually back-calculates the effective markup % for display only.
+- `vat_applicable` — If true, VAT at `default_vat_pct` is added at the bill total level (not per line). The `selling_price` is the VAT-exclusive base.
+- **Auto-calculation (FE):** Markup applies to buy **excl.** in the form; `selling_price = buy_excl × (1 + markup_pct / 100)`. `markup_pct` defaults to `default_markup_pct`. Sell price is optional on save; manual sell price back-calculates markup % for display.
 
 **On a sales bill line (printed invoice):**
 ```
@@ -106,7 +107,7 @@ Then at bill footer:
 Subtotal (Σ line amounts)
 − Discount (bill-level flat or %, shown as "X% of subtotal" or "flat amount")
 + Bill terms (e.g. Transport charges)
-+ VAT 13% (on taxable base = subtotal − discount + bill_terms)
++ VAT at default_vat_pct% (on taxable base = subtotal − discount + bill_terms; 13% if unset)
 = Grand Total
 ```
 
@@ -119,10 +120,10 @@ Subtotal (Σ line amounts)
 | uom | text DEFAULT 'PCS' | Unit of Measure: PCS, Box, Ltr, Kg, Pkt, Ctn, Doz |
 | description | text | Flavour, size, pack details |
 | mrp | numeric NOT NULL | MRP on product — shown on bill, not used in calc |
-| cost_price | numeric NOT NULL | Buy price from supplier — private, profit calc only |
-| selling_price | numeric NOT NULL | Our price to customer, excl. VAT |
+| cost_price | numeric NOT NULL | Buy price (VAT-inclusive in DB); form entry is excl. VAT |
+| selling_price | numeric NOT NULL | Our price to customer, excl. VAT (0 allowed) |
 | discount_pct | numeric DEFAULT 0 | Standard % discount given on this product |
-| vat_applicable | boolean DEFAULT false | If true, 13% VAT added at bill footer |
+| vat_applicable | boolean DEFAULT false | If true, VAT at default_vat_pct added at bill footer |
 | on_hand | integer DEFAULT 0 | Updated on each sale/purchase/return/damage |
 | min_qty | integer DEFAULT 0 | Low-stock alert threshold — configurable per product |
 | is_active | boolean DEFAULT true | Soft-delete |
@@ -293,20 +294,42 @@ One row per bill this payment touches (FIFO):
 
 ---
 
-### `purchases`
+### `purchases` *(implemented — see also [Purchase reference numbers](../PURCHASE_REFERENCE_NUMBERS.md))*
+
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
 | tenant_id | uuid FK | |
 | supplier_id | uuid FK → suppliers | |
-| invoice_no | text | |
-| date | date NOT NULL | |
+| purchase_no | text | Internal PO e.g. `PO-00022` — not shown in UI |
+| supplier_invoice_no | text | Supplier’s bill number (`0014`); immutable after first save (`0015`/`0016`) |
+| purchase_date | date NOT NULL | |
 | due_date | date | |
-| total | numeric NOT NULL | |
+| subtotal_excl | numeric | Sum of line excl. amounts (`0017`) |
+| vat_amount | numeric | VAT on purchase (`0017`) |
+| subtotal / total | numeric | Incl. VAT totals |
+| paid | numeric | Supplier payments applied |
+| payment_status | text | paid / partial / unpaid |
+| notes | text | |
 | created_by | uuid FK → users | |
 | created_at | timestamptz | |
 
-### `purchase_lines`
+### `purchase_items` *(live table; replaces design doc `purchase_lines` below)*
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| purchase_id | uuid FK → purchases | |
+| product_id | uuid FK → products | |
+| qty | integer | Received qty for stock |
+| rate_excl | numeric | Unit cost excl. VAT (`0017`) |
+| rate | numeric | Unit cost incl. VAT per unit |
+| unit | text | UOM when multi-UOM enabled |
+
+RPCs: `record_purchase`, `update_purchase` (from `0013`+). UI: `PurchasePage`, `PurchaseBillView`.
+
+### `purchase_lines` *(design sketch — not the live table name)*
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |

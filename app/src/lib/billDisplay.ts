@@ -1,7 +1,11 @@
 import type { BusinessSettings, Sale, SaleLine } from "@/domain/types";
+import { DEFAULT_VAT_PCT, getVatPct } from "@/lib/tax";
 import { fmtDate } from "@/lib/utils";
 
-export const BILL_VAT_RATE = 13;
+/** @deprecated Use getVatPct(settings) */
+export const BILL_VAT_RATE = DEFAULT_VAT_PCT;
+
+export { getVatPct };
 
 /** Whether bills for this shop add VAT at footer (tenant Settings — not per product). */
 export function tenantChargesVat(
@@ -98,6 +102,13 @@ export function billShowsLineDiscColumn(
 ): boolean {
   if (sale && billShowsFooterDiscount(sale)) return false;
   return lines.some(billLineHasDiscount);
+}
+
+/** One name on bill: legal/registered if set, else trading name. */
+export function sellerBillName(b: Pick<BusinessSettings, "legalName" | "name">): string {
+  const legal = b.legalName.trim();
+  const trading = b.name.trim();
+  return legal || trading || "—";
 }
 
 /** Address + phone under shop name (left column of letterhead). */

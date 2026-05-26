@@ -34,6 +34,7 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   panNumber: "",
   vatRegistered: false,
   vatNumber: "",
+  defaultVatPct: 13,
   billFooter: "",
   overdueDays: 7,
   dueSoonDays: 3,

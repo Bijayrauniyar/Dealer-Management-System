@@ -123,7 +123,8 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 | S6 | Bill footer multi-line text | Save → open new bill **Print preview** → footer visible |
 | S7 | Overdue days = `7`, Due soon = `3` | Save → (notifications/home use these when live) |
 | S8 | Default markup % and min qty | New product form pre-fills or hints use these |
-| S9 | **Edge:** Save with empty trading name | Validation error or safe default |
+| S9 | **Default VAT %** e.g. 13 | Product buy hint and purchase totals use this rate |
+| S10 | **Edge:** Save with empty trading name | Validation error or safe default |
 
 ---
 
@@ -131,10 +132,10 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| P1 | More → Products → New: code, name, buy/sell/MRP, category, min qty | Saves; appears in list |
+| P1 | More → Products → New: name, buy **excl. VAT**, MRP, category, min qty; sell optional | Saves; buy stored incl. in DB; hint shows with-VAT |
 | P2 | Edit product: change sell price | List and sale picker show new price |
 | P3 | Search product by name | Filters list |
-| P4 | **Edge:** Sell price &lt; buy price | Allowed or warning per product policy |
+| P4 | **Edge:** Sell price 0 or &lt; buy excl. | Sell optional; margin preview when both &gt; 0 |
 | P5 | Use product on sale; check Stock page | On-hand decreases after sale |
 
 ---
@@ -245,11 +246,13 @@ open     = total − paid
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| PU1 | Purchase: supplier + product, qty 50 rate 80 | `purchases` total 4000; stock +50 |
-| PU2 | **Multi-line purchase** | Subtotal = sum of lines |
-| PU3 | Supplier payment **500** on PO 4000 | `purchases.paid` = 500 (or FIFO across POs) |
+| PU1 | Purchase: supplier + **invoice no.** + product, qty 50, buy excl. 80 | `purchases` total incl. VAT; stock +50 |
+| PU2 | **Multi-line purchase** | Subtotal excl + VAT % = total on screen and DB |
+| PU3 | Supplier payment **500** on unpaid purchase | `purchases.paid` = 500 (or FIFO across POs) |
 | PU4 | Second PO unpaid; pay again | Older PO paid first (FIFO) — note actual behaviour |
 | PU5 | Stock page after purchase | Closing stock increased |
+| PU6 | Purchase detail bill | Compact header: supplier left, invoice + date + supplier VAT right; no PO in UI |
+| PU7 | Edit purchase | Invoice no. locked if already set; lines/date/supplier update |
 
 ---
 

@@ -630,14 +630,14 @@ export async function commitReturnLive(opts: {
 }
 
 function purchaseLinesToRpc(
-  lines: { productId: string; receivedQty: number; cost: number }[],
-): { product_id: string; qty: number; rate: number }[] {
+  lines: { productId: string; receivedQty: number; rateExcl: number }[],
+): { product_id: string; qty: number; rate_excl: number }[] {
   return lines
     .filter((l) => l.receivedQty > 0)
     .map((l) => ({
       product_id: l.productId,
       qty: l.receivedQty,
-      rate: l.cost,
+      rate_excl: l.rateExcl,
     }));
 }
 
@@ -645,7 +645,7 @@ export async function commitPurchaseLive(opts: {
   supplierId: string;
   purchaseDate: string;
   supplierInvoiceNo?: string | null;
-  lines: { productId: string; receivedQty: number; cost: number }[];
+  lines: { productId: string; receivedQty: number; rateExcl: number }[];
   totalReceived: number;
 }): Promise<{ purchaseNo: string; purchaseId: string }> {
   const { data, error } = await supabase.rpc("record_purchase", {
@@ -672,7 +672,7 @@ export async function commitPurchaseUpdateLive(opts: {
   purchaseDate: string;
   supplierInvoiceNo?: string | null;
   notes?: string | null;
-  lines: { productId: string; receivedQty: number; cost: number }[];
+  lines: { productId: string; receivedQty: number; rateExcl: number }[];
 }): Promise<{ purchaseNo: string }> {
   const inv =
     opts.supplierInvoiceNo !== undefined && opts.supplierInvoiceNo !== null
@@ -987,6 +987,7 @@ type TenantSettingsRow = {
   pan_number: string | null;
   vat_registered: boolean | null;
   vat_number: string | null;
+  default_vat_pct?: number | null;
   invoice_prefix: string | null;
   bill_footer: string | null;
   overdue_days: number | null;
@@ -1015,6 +1016,7 @@ export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
     panNumber: row.pan_number ?? D.panNumber,
     vatRegistered: row.vat_registered ?? D.vatRegistered,
     vatNumber: row.vat_number ?? D.vatNumber,
+    defaultVatPct: Number(row.default_vat_pct ?? D.defaultVatPct),
     billFooter: row.bill_footer ?? D.billFooter,
     overdueDays: row.overdue_days ?? D.overdueDays,
     dueSoonDays: row.due_soon_days ?? D.dueSoonDays,
@@ -1224,7 +1226,8 @@ export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
 }
 
 export async function fetchPurchaseDetailLive(purchaseId: string): Promise<PurchaseDetail | null> {
-  const detailSelect = `${PURCHASE_LIST_SELECT}, subtotal, notes`;
+  const detailSelect =
+    `${PURCHASE_LIST_SELECT}, subtotal, subtotal_excl, vat_amount, notes`;
   let header: unknown = null;
   let error: { message?: string } | null = null;
   const full = await supabase
@@ -1234,10 +1237,17 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
     .maybeSingle();
   header = full.data;
   error = full.error;
-  if (error && isMissingColumnError(error, "supplier_invoice_no")) {
+  if (
+    error &&
+    (isMissingColumnError(error, "supplier_invoice_no") ||
+      isMissingColumnError(error, "subtotal_excl") ||
+      isMissingColumnError(error, "vat_amount"))
+  ) {
+    let legacySel = purchaseSelectWithoutInvoiceCol(detailSelect);
+    legacySel = legacySel.replace(", subtotal_excl, vat_amount", "").replace("subtotal_excl, vat_amount, ", "");
     const legacy = await supabase
       .from("purchases")
-      .select(purchaseSelectWithoutInvoiceCol(detailSelect))
+      .select(legacySel)
       .eq("id", purchaseId)
       .maybeSingle();
     header = legacy.data;
@@ -1246,36 +1256,74 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
   if (error) throw error;
   if (!header) return null;
 
-  const { data: items, error: itemErr } = await supabase
+  let itemRows: unknown[] | null = null;
+  let itemErr: { message?: string } | null = null;
+  const itemsFull = await supabase
     .from("purchase_items")
-    .select("product_id, qty, rate, total, products(name)")
+    .select("product_id, qty, rate, rate_excl, total, products(name, unit)")
     .eq("purchase_id", purchaseId);
+  itemRows = itemsFull.data;
+  itemErr = itemsFull.error;
+  if (itemErr && isMissingColumnError(itemErr, "rate_excl")) {
+    const itemsLegacy = await supabase
+      .from("purchase_items")
+      .select("product_id, qty, rate, total, products(name, unit)")
+      .eq("purchase_id", purchaseId);
+    itemRows = itemsLegacy.data;
+    itemErr = itemsLegacy.error;
+  }
   if (itemErr) throw itemErr;
 
   const base = mapPurchaseListRow(header);
-  const h = header as { subtotal: number; notes: string | null };
+  const h = header as {
+    subtotal: number;
+    subtotal_excl?: number | null;
+    vat_amount?: number | null;
+    notes: string | null;
+  };
 
-  const lines = (items ?? []).map((raw) => {
+  const lines = (itemRows ?? []).map((raw) => {
     const row = raw as {
       product_id: string;
       qty: number;
       rate: number;
+      rate_excl?: number | null;
       total: number;
-      products?: { name: string } | { name: string }[] | null;
+      products?: { name: string; unit?: string } | { name: string; unit?: string }[] | null;
     };
     const prod = Array.isArray(row.products) ? row.products[0] : row.products;
+    const qty = Number(row.qty);
+    const rateIncl = Number(row.rate);
+    const rateExcl =
+      row.rate_excl != null ? Number(row.rate_excl) : rateIncl;
+    const amount = Number(row.total);
+    const vatAmount = Math.max(0, Math.round(amount - qty * rateExcl));
     return {
       productId: row.product_id,
       productName: prod?.name ?? "Product",
-      qty: Number(row.qty),
-      rate: Number(row.rate),
-      amount: Number(row.total),
+      qty,
+      uom: prod?.unit?.trim() || "PCS",
+      rateExcl,
+      rateIncl,
+      vatAmount,
+      amount,
     };
   });
 
+  const subtotalExcl =
+    h.subtotal_excl != null
+      ? Number(h.subtotal_excl)
+      : lines.reduce((s, l) => s + l.qty * l.rateExcl, 0);
+  const vatAmount =
+    h.vat_amount != null
+      ? Number(h.vat_amount)
+      : lines.reduce((s, l) => s + l.vatAmount, 0);
+
   return {
     ...base,
-    subtotal: Number(h.subtotal),
+    subtotalExcl,
+    vatAmount,
+    subtotal: Number(h.subtotal) || subtotalExcl + vatAmount,
     notes: h.notes?.trim() ?? "",
     lines,
   };

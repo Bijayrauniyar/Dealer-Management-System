@@ -2,13 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, FilePlus, Pencil, Wallet } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
-import { Card, CardContent } from "@/components/ui/card";
+import { PurchaseBillView } from "@/components/app/PurchaseBillView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { PurchaseDetail } from "@/domain/types";
+import type { PurchaseDetail, Supplier } from "@/domain/types";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
-import { purchaseDisplayTitle, purchaseDisplaySubtitle } from "@/lib/purchaseDisplay";
-import { npr, fmtDate } from "@/lib/utils";
+import { useBusinessSettings, useSuppliers } from "@/store/domain";
 
 const PAYMENT_BADGE: Record<
   PurchaseDetail["paymentStatus"],
@@ -22,6 +21,8 @@ const PAYMENT_BADGE: Record<
 export const PurchaseDetailPage = () => {
   const { purchaseId } = useParams<{ purchaseId: string }>();
   const navigate = useNavigate();
+  const business = useBusinessSettings();
+  const SUPPLIERS = useSuppliers();
   const [detail, setDetail] = useState<PurchaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +70,7 @@ export const PurchaseDetailPage = () => {
     );
   }
 
+  const supplier: Supplier | undefined = SUPPLIERS.find((s) => s.id === detail.supplierId);
   const cfg = PAYMENT_BADGE[detail.paymentStatus];
   const balance = Math.max(0, detail.total - detail.paid);
 
@@ -82,11 +84,7 @@ export const PurchaseDetailPage = () => {
         <ArrowLeft size={16} /> {detail.supplierName}
       </button>
 
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-bold text-foreground">{purchaseDisplayTitle(detail)}</h1>
-          <p className="text-sm text-muted">{purchaseDisplaySubtitle(detail)}</p>
-        </div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <Badge variant={cfg.variant}>{cfg.label}</Badge>
       </div>
 
@@ -127,58 +125,12 @@ export const PurchaseDetailPage = () => {
         </Button>
       </div>
 
-      <Card className="mb-4">
-        <CardContent className="space-y-2 p-4 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted">Subtotal</span>
-            <span className="font-semibold">{npr(detail.subtotal)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted">Total</span>
-            <span className="font-bold">{npr(detail.total)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted">Paid</span>
-            <span className="font-semibold text-success-foreground">{npr(detail.paid)}</span>
-          </div>
-          {balance > 0 && (
-            <div className="flex justify-between border-t border-border-subtle pt-2">
-              <span className="text-muted">Balance due</span>
-              <span className="font-bold text-danger">{npr(balance)}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-0 px-4">
-          <p className="border-b border-border-subtle py-2 text-[10px] font-semibold uppercase tracking-wide text-muted">
-            Line items
-          </p>
-          {detail.lines.map((line) => (
-            <div
-              key={`${line.productId}-${line.qty}-${line.rate}`}
-              className="flex justify-between gap-2 border-b border-border-subtle py-3 last:border-0"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">{line.productName}</p>
-                <p className="text-xs text-muted">
-                  {line.qty} × {npr(line.rate)}
-                </p>
-              </div>
-              <p className="shrink-0 text-sm font-semibold">{npr(line.amount)}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {detail.notes && (
-        <p className="mt-4 text-sm text-muted italic">{detail.notes}</p>
+      {supplier ? (
+        <PurchaseBillView purchase={detail} supplier={supplier} business={business} />
+      ) : (
+        <p className="text-sm text-muted">Supplier details unavailable.</p>
       )}
 
-      <p className="mt-4 text-center text-xs text-muted">
-        Edit updates stock and payable. Total cannot go below amount already paid on this PO.
-      </p>
     </PageShell>
   );
 };
