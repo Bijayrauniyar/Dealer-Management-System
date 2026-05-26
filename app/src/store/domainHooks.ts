@@ -27,6 +27,7 @@ import {
   fetchCapitalEntriesLive,
   insertCapitalEntryLive,
   commitPurchaseLive,
+  commitPurchaseUpdateLive,
   commitReturnLive,
   commitSaleLive,
   commitSupplierPaymentLive,
@@ -42,7 +43,13 @@ import {
   upsertDailyCashLive,
   insertSupplierLive,
 } from "@/lib/live/domainLive";
-import type { CommitPaymentOpts, CommitPurchaseOpts, CommitReturnOpts, CommitSupplierPaymentOpts } from "./commitTypes";
+import type {
+  CommitPaymentOpts,
+  CommitPurchaseOpts,
+  CommitPurchaseUpdateOpts,
+  CommitReturnOpts,
+  CommitSupplierPaymentOpts,
+} from "./commitTypes";
 
 function useCapitalQuery() {
   return useQuery({
@@ -211,6 +218,10 @@ export async function commitReturn(opts: CommitReturnOpts): Promise<void> {
 
 export async function commitPurchase(opts: CommitPurchaseOpts): Promise<void> {
   await commitPurchaseLive(opts);
+}
+
+export async function commitPurchaseUpdate(opts: CommitPurchaseUpdateOpts): Promise<{ purchaseNo: string }> {
+  return commitPurchaseUpdateLive(opts);
 }
 
 export async function commitSupplierPayment(opts: CommitSupplierPaymentOpts): Promise<void> {

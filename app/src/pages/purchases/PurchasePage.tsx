@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
@@ -12,7 +12,13 @@ import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useSuppliers, useProducts, commitPurchase } from "@/store/domain";
+import {
+  useSuppliers,
+  useProducts,
+  commitPurchase,
+  commitPurchaseUpdate,
+} from "@/store/domain";
+import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
 import type { Product } from "@/domain/types";
 import {
   billQtyToBaseUnits,
@@ -73,6 +79,8 @@ const CompactField = ({
 export const PurchasePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { purchaseId: editPurchaseId } = useParams<{ purchaseId?: string }>();
+  const isEdit = Boolean(editPurchaseId);
   const SUPPLIERS = useSuppliers();
   const PRODUCTS = useProducts();
 
@@ -80,18 +88,65 @@ export const PurchasePage = () => {
     (location.state as { supplierId?: string } | null)?.supplierId ?? "";
 
   const [supplierId, setSupplierId] = useState("");
-
-  useEffect(() => {
-    if (!presetSupplierId) return;
-    if (SUPPLIERS.some((s) => s.id === presetSupplierId)) {
-      setSupplierId(presetSupplierId);
-    }
-  }, [presetSupplierId, SUPPLIERS]);
+  const [purchaseNo, setPurchaseNo] = useState("");
+  const [paidOnPurchase, setPaidOnPurchase] = useState(0);
+  const [loadingEdit, setLoadingEdit] = useState(isEdit);
+  const [editLoadError, setEditLoadError] = useState<string | null>(null);
   const [invoiceNo, setInvoiceNo] = useState("");
   const [date, setDate] = useState(toDateInput());
   const [dueDate, setDueDate] = useState("");
   const [lines, setLines] = useState<Line[]>([mkLine()]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isEdit || !presetSupplierId) return;
+    if (SUPPLIERS.some((s) => s.id === presetSupplierId)) {
+      setSupplierId(presetSupplierId);
+    }
+  }, [presetSupplierId, SUPPLIERS, isEdit]);
+
+  useEffect(() => {
+    if (!isEdit || !editPurchaseId) return;
+    let cancelled = false;
+    setLoadingEdit(true);
+    setEditLoadError(null);
+    void fetchPurchaseDetailLive(editPurchaseId)
+      .then((detail) => {
+        if (cancelled) return;
+        if (!detail) {
+          setEditLoadError("Purchase not found.");
+          return;
+        }
+        setSupplierId(detail.supplierId);
+        setPurchaseNo(detail.purchaseNo);
+        setPaidOnPurchase(detail.paid);
+        setDate(detail.date.slice(0, 10));
+        setLines(
+          detail.lines.length
+            ? detail.lines.map((l, i) => ({
+                id: i + 1,
+                productId: l.productId,
+                productName: l.productName,
+                uom: "PCS",
+                invoiceQty: l.qty,
+                receivedQty: l.qty,
+                cost: l.rate,
+              }))
+            : [mkLine()],
+        );
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setEditLoadError(e instanceof Error ? e.message : "Could not load purchase");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingEdit(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, editPurchaseId]);
 
   const lineInvoiced = (l: Line) => l.invoiceQty * l.cost;
   const lineReceived = (l: Line) => l.receivedQty * l.cost;
@@ -154,26 +209,45 @@ export const PurchasePage = () => {
       toast.error("Every row needs a product.");
       return;
     }
+    const rpcLines = lines
+      .filter((l) => l.productId && l.receivedQty > 0)
+      .map((l) => {
+        const { receivedQty, cost } = lineForStockRpc(l);
+        return { productId: l.productId, receivedQty, cost };
+      });
+
+    if (isEdit && totalReceived < paidOnPurchase) {
+      toast.error(
+        `Received total (${npr(totalReceived)}) cannot be less than already paid (${npr(paidOnPurchase)}).`,
+      );
+      return;
+    }
+
     setSaving(true);
     try {
-      await new Promise((r) => setTimeout(r, 200));
-      await commitPurchase({
-        supplierId,
-        purchaseDate: date,
-        totalReceived,
-        lines: lines
-          .filter((l) => l.productId && l.receivedQty > 0)
-          .map((l) => {
-            const { receivedQty, cost } = lineForStockRpc(l);
-            return { productId: l.productId, receivedQty, cost };
-          }),
-      });
-      toast.success(
-        hasShort
-          ? `Purchase saved. Stock updated. ${shortLines.length} short line(s).`
-          : "Purchase saved. Stock updated.",
-      );
-      navigate(-1);
+      if (isEdit && editPurchaseId) {
+        const { purchaseNo: outNo } = await commitPurchaseUpdate({
+          purchaseId: editPurchaseId,
+          supplierId,
+          purchaseDate: date,
+          lines: rpcLines,
+        });
+        toast.success(`Purchase ${outNo || purchaseNo} updated. Stock adjusted.`);
+        navigate(`/app/purchases/${editPurchaseId}`, { replace: true });
+      } else {
+        await commitPurchase({
+          supplierId,
+          purchaseDate: date,
+          totalReceived,
+          lines: rpcLines,
+        });
+        toast.success(
+          hasShort
+            ? `Purchase saved. Stock updated. ${shortLines.length} short line(s).`
+            : "Purchase saved. Stock updated.",
+        );
+        navigate(-1);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Purchase failed");
     } finally {
@@ -181,15 +255,45 @@ export const PurchasePage = () => {
     }
   };
 
+  if (isEdit && loadingEdit) {
+    return (
+      <PageShell>
+        <p className="text-sm text-muted">Loading purchase…</p>
+      </PageShell>
+    );
+  }
+
+  if (isEdit && editLoadError) {
+    return (
+      <PageShell>
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-3 flex items-center gap-1 text-sm font-medium text-teal-600"
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
+        <p className="text-sm text-danger">{editLoadError}</p>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell stickyBar>
       <button
+        type="button"
         onClick={() => navigate(-1)}
         className="mb-3 flex items-center gap-1 text-sm font-medium text-teal-600"
       >
         <ArrowLeft size={16} /> Back
       </button>
-      <h1 className="mb-4 text-lg font-semibold">New purchase</h1>
+      <h1 className="mb-1 text-lg font-semibold">{isEdit ? "Edit purchase" : "New purchase"}</h1>
+      {isEdit && purchaseNo && (
+        <p className="mb-3 text-sm text-muted">
+          {purchaseNo}
+          {paidOnPurchase > 0 ? ` · Paid ${npr(paidOnPurchase)}` : ""}
+        </p>
+      )}
 
       <div className="space-y-3">
         <FormField label="Supplier" required>
@@ -204,11 +308,12 @@ export const PurchasePage = () => {
         </FormField>
 
         <div className="grid grid-cols-2 gap-2">
-          <FormField label="Invoice no.">
+          <FormField label={isEdit ? "PO no." : "Invoice no."}>
             <Input
               className={inputCompact}
               placeholder="INV-001"
-              value={invoiceNo}
+              value={isEdit ? purchaseNo : invoiceNo}
+              disabled={isEdit}
               onChange={(e) => setInvoiceNo(e.target.value)}
             />
           </FormField>
@@ -407,7 +512,7 @@ export const PurchasePage = () => {
             : []),
           ["Purchase total", npr(hasShort ? totalReceived : totalInvoiced)],
         ]}
-        action="Save"
+        action={isEdit ? "Update purchase" : "Save"}
         onAction={handleSave}
         loading={saving}
         disabled={!supplierId || lines.every((l) => !l.productId)}

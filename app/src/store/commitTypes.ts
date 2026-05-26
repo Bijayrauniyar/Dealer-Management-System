@@ -23,6 +23,14 @@ export interface CommitPurchaseOpts {
   totalReceived: number;
 }
 
+export interface CommitPurchaseUpdateOpts {
+  purchaseId: string;
+  supplierId: string;
+  purchaseDate: string;
+  notes?: string | null;
+  lines: { productId: string; receivedQty: number; cost: number }[];
+}
+
 export interface CommitSupplierPaymentOpts {
   supplierId: string;
   amount: number;

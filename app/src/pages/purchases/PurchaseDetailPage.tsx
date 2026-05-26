@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FilePlus, Wallet } from "lucide-react";
+import { ArrowLeft, FilePlus, Pencil, Wallet } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -89,11 +89,20 @@ export const PurchaseDetailPage = () => {
         <Badge variant={cfg.variant}>{cfg.label}</Badge>
       </div>
 
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          className="flex-1 min-w-[8rem]"
+          type="button"
+          onClick={() => navigate(`/app/purchases/edit/${detail.id}`)}
+        >
+          <Pencil size={14} /> Edit purchase
+        </Button>
         {balance > 0 && (
           <Button
             size="sm"
-            className="flex-1"
+            variant="outline"
+            className="flex-1 min-w-[8rem]"
             type="button"
             onClick={() =>
               navigate("/app/supplier-payments/new", {
@@ -107,7 +116,7 @@ export const PurchaseDetailPage = () => {
         <Button
           size="sm"
           variant="outline"
-          className="flex-1"
+          className="flex-1 min-w-[8rem]"
           type="button"
           onClick={() =>
             navigate("/app/purchases/new", { state: { supplierId: detail.supplierId } })
@@ -167,7 +176,7 @@ export const PurchaseDetailPage = () => {
       )}
 
       <p className="mt-4 text-center text-xs text-muted">
-        Purchases are read-only after save. To correct stock or amounts, contact support or record an adjusting entry manually.
+        Edit updates stock and payable. Total cannot go below amount already paid on this PO.
       </p>
     </PageShell>
   );

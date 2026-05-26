@@ -20,6 +20,7 @@ export {
   commitPayment,
   commitReturn,
   commitPurchase,
+  commitPurchaseUpdate,
   commitSupplierPayment,
   commitNewSupplier,
   commitDailyCashClose,
@@ -31,5 +32,11 @@ export {
   commitCapitalEntry,
   useDashboardPeriodTotals,
 } from "./domainHooks";
-export type { CommitPaymentOpts, CommitPurchaseOpts, CommitReturnOpts, CommitSupplierPaymentOpts } from "./commitTypes";
+export type {
+  CommitPaymentOpts,
+  CommitPurchaseOpts,
+  CommitPurchaseUpdateOpts,
+  CommitReturnOpts,
+  CommitSupplierPaymentOpts,
+} from "./commitTypes";
 export { upsertProductLive } from "@/lib/live/domainLive";

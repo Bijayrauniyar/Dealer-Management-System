@@ -71,6 +71,10 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Copy entire file → Paste → Run → Success.
    - Same-UOM schemes (buy 10 get 1) work without this migration.
 
+14. Migration 0013 (update_purchase — edit supplier invoices from the app)
+   - Open: app/supabase/migrations/0013_update_purchase.sql
+   - Copy entire file → Paste → Run → Success.
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 

@@ -319,9 +319,9 @@ try {
   }
 
   // --- PU1 Purchase ---
-  const poQty = 50;
+  let poQty = 50;
   const poRate = 80;
-  const poTotal = poQty * poRate;
+  let poTotal = poQty * poRate;
   const { data: purRows, error: purErr } = await supabase.rpc("record_purchase", {
     p_purchase_date: T,
     p_supplier_id: supplierId,
@@ -336,6 +336,36 @@ try {
     const { data: pur } = await supabase.from("purchases").select("total, paid").eq("id", purchaseId).single();
     r.assertClose(pur?.total, poTotal, "purchase.total");
     r.assertClose(pur?.paid, 0, "purchase.paid initially");
+  }
+
+  if (purchaseId) {
+    poQty = 45;
+    poTotal = poQty * poRate;
+    const { error: poUpdErr } = await supabase.rpc("update_purchase", {
+      p_purchase_id: purchaseId,
+      p_supplier_id: supplierId,
+      p_purchase_date: T,
+      p_lines: [{ product_id: productId, qty: poQty, rate: poRate }],
+      p_notes: `matrix-po-${stamp}-upd`,
+    });
+    if (poUpdErr) r.fail("purchase.update", poUpdErr.message);
+    else {
+      r.pass("purchase.update");
+      const { data: purU } = await supabase
+        .from("purchases")
+        .select("total, paid, subtotal")
+        .eq("id", purchaseId)
+        .single();
+      r.assertClose(purU?.total, poTotal, "purchase.update total");
+      r.assertClose(purU?.paid, 0, "purchase.update paid unchanged");
+      const { data: piU } = await supabase
+        .from("purchase_items")
+        .select("qty")
+        .eq("purchase_id", purchaseId)
+        .eq("product_id", productId)
+        .maybeSingle();
+      r.assertClose(piU?.qty, poQty, "purchase.update line qty");
+    }
   }
 
   // --- PU2 Supplier payment ---

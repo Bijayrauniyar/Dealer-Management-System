@@ -65,6 +65,7 @@ const AppRoutesInner = () => (
       <Route path="returns/new" element={<ReturnPage />} />
       <Route path="damages/new" element={<DamagePage />} />
       <Route path="purchases/new" element={<PurchasePage />} />
+      <Route path="purchases/edit/:purchaseId" element={<PurchasePage />} />
       <Route path="purchases/:purchaseId" element={<PurchaseDetailPage />} />
       <Route path="supplier-payments/new" element={<SupplierPaymentPage />} />
       <Route path="expenses/new" element={<ExpensePage />} />

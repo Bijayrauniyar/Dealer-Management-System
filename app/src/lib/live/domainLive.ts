@@ -615,28 +615,53 @@ export async function commitReturnLive(opts: {
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
 }
 
-export async function commitPurchaseLive(opts: {
-  supplierId: string;
-  purchaseDate: string;
-  lines: { productId: string; receivedQty: number; cost: number }[];
-  totalReceived: number;
-}): Promise<void> {
-  const lines = opts.lines
+function purchaseLinesToRpc(
+  lines: { productId: string; receivedQty: number; cost: number }[],
+): { product_id: string; qty: number; rate: number }[] {
+  return lines
     .filter((l) => l.receivedQty > 0)
     .map((l) => ({
       product_id: l.productId,
       qty: l.receivedQty,
       rate: l.cost,
     }));
+}
 
+export async function commitPurchaseLive(opts: {
+  supplierId: string;
+  purchaseDate: string;
+  lines: { productId: string; receivedQty: number; cost: number }[];
+  totalReceived: number;
+}): Promise<void> {
   const { error } = await supabase.rpc("record_purchase", {
     p_purchase_date: opts.purchaseDate,
     p_supplier_id: opts.supplierId,
-    p_lines: lines,
+    p_lines: purchaseLinesToRpc(opts.lines),
     p_notes: null,
   });
   if (error) throw error;
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+}
+
+export async function commitPurchaseUpdateLive(opts: {
+  purchaseId: string;
+  supplierId: string;
+  purchaseDate: string;
+  notes?: string | null;
+  lines: { productId: string; receivedQty: number; cost: number }[];
+}): Promise<{ purchaseNo: string }> {
+  const { data, error } = await supabase.rpc("update_purchase", {
+    p_purchase_id: opts.purchaseId,
+    p_supplier_id: opts.supplierId,
+    p_purchase_date: opts.purchaseDate,
+    p_lines: purchaseLinesToRpc(opts.lines),
+    p_notes: opts.notes ?? null,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  const purchaseNo = (row as { purchase_no?: string })?.purchase_no ?? "";
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  return { purchaseNo };
 }
 
 export async function commitSupplierPaymentLive(opts: {

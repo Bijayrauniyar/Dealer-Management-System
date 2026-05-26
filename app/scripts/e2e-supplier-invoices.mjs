@@ -70,6 +70,11 @@ function runSourceChecks() {
     } else {
       r.fail("PurchaseDetailPage fetch", "missing");
     }
+    if (detailPage.includes("Edit purchase")) {
+      r.pass("PurchaseDetailPage Edit button");
+    } else {
+      r.fail("PurchaseDetailPage Edit", "missing");
+    }
   }
 
   const router = readSrc("routes/AppRouter.tsx");
@@ -113,6 +118,24 @@ function runSourceChecks() {
   } else if (domainLive) {
     r.fail("domainLive", "missing fetchPurchaseDetailLive");
   }
+
+  if (domainLive && domainLive.includes("commitPurchaseUpdateLive")) {
+    r.pass("commitPurchaseUpdateLive in domainLive");
+  } else if (domainLive) {
+    r.fail("domainLive", "missing commitPurchaseUpdateLive");
+  }
+
+  if (router && router.includes("purchases/edit/:purchaseId")) {
+    r.pass("Route purchases/edit/:purchaseId");
+  } else if (router) {
+    r.fail("Route purchase edit", "missing");
+  }
+
+  if (purchasePage && purchasePage.includes("commitPurchaseUpdate")) {
+    r.pass("PurchasePage uses commitPurchaseUpdate");
+  } else if (purchasePage) {
+    r.fail("PurchasePage edit save", "missing commitPurchaseUpdate");
+  }
 }
 
 async function runLiveChecks() {
@@ -130,6 +153,24 @@ async function runLiveChecks() {
     return;
   }
   r.pass("live.suppliers", `${suppliers.length} row(s)`);
+  const probeSupplierId = suppliers[0].id;
+
+  const { error: rpcProbe } = await supabase.rpc("update_purchase", {
+    p_purchase_id: "00000000-0000-0000-0000-000000000000",
+    p_supplier_id: probeSupplierId,
+    p_purchase_date: new Date().toISOString().slice(0, 10),
+    p_lines: [],
+    p_notes: null,
+  });
+  if (rpcProbe?.message?.includes("Could not find the function")) {
+    r.fail("live.update_purchase.rpc", "Run migration 0013_update_purchase.sql in Supabase");
+  } else if (rpcProbe?.message?.includes("Purchase not found")) {
+    r.pass("live.update_purchase.rpc", "callable");
+  } else if (!rpcProbe) {
+    r.fail("live.update_purchase.rpc", "unexpected success on fake id");
+  } else {
+    r.pass("live.update_purchase.rpc", rpcProbe.message.slice(0, 60));
+  }
 
   const { data: purchases, error: pErr } = await supabase
     .from("purchases")
