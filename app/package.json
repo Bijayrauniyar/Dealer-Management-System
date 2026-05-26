@@ -24,6 +24,8 @@
     "e2e:stock": "node scripts/e2e-stock-dates.mjs",
     "e2e:stock:live": "node scripts/e2e-stock-dates.mjs --live",
     "e2e:stock-bill": "npm run e2e:bill && npm run e2e:stock:live",
+    "e2e:suppliers": "node scripts/e2e-supplier-invoices.mjs",
+    "e2e:suppliers:live": "node scripts/e2e-supplier-invoices.mjs --live",
     "e2e:bill:ui": "node scripts/e2e-bill-print.mjs --ui",
     "e2e:bill:full": "node scripts/e2e-bill-print.mjs --live --ui",
     "e2e:bill:visual": "node scripts/e2e-bill-visual.mjs",

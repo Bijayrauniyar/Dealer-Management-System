@@ -30,6 +30,8 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `npm run e2e:bill:live` | Same + verify recent bills: Σ line amount = subtotal |
 | `npm run e2e:bill:ui` | Same + browser bill DOM + `app/test-output/bill-print-ui.png` (needs `npm run dev`) |
 | `npm run e2e:bill:full` | `e2e:bill` + `--live` + `--ui` |
+| `npm run e2e:suppliers` | **Supplier invoices** — routes, button wiring, types (no login) |
+| `npm run e2e:suppliers:live` | Same + DB: `supplier_id`, purchase lines, `payment_status` |
 | `npm run e2e:bill:visual` | **Screenshots** (mobile + desktop) + **PDF download** text check (`test-output/`) |
 | `npm run e2e:ui` | **Browser UI** — forms + navigation (needs `npm run dev`) |
 | `npm run e2e:ui:setup` | Install Playwright Chromium (once) |
