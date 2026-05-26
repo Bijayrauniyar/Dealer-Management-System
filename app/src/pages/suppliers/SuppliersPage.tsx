@@ -10,7 +10,15 @@ import type { Supplier } from "@/domain/types";
 import { npr } from "@/lib/utils";
 import { usePagination } from "@/lib/usePagination";
 
-const SupplierCard = ({ s }: { s: Supplier }) => {
+const SupplierCard = ({
+  s,
+  onRecordPayment,
+  onViewInvoices,
+}: {
+  s: Supplier;
+  onRecordPayment: (supplierId: string) => void;
+  onViewInvoices: (supplierId: string) => void;
+}) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -108,15 +116,23 @@ const SupplierCard = ({ s }: { s: Supplier }) => {
           <div className="flex gap-2 pt-2">
             <Button
               size="sm"
-              onClick={() => {}}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRecordPayment(s.id);
+              }}
               className="flex-1 text-xs"
             >
               Record payment
             </Button>
             <Button
               size="sm"
+              type="button"
               variant="outline"
-              onClick={() => {}}
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewInvoices(s.id);
+              }}
               className="flex-1 text-xs"
             >
               View invoices
@@ -171,7 +187,14 @@ export const SuppliersPage = () => {
       <Card>
         <CardContent className="p-0 px-4">
           {visible.map((s) => (
-            <SupplierCard key={s.id} s={s} />
+            <SupplierCard
+              key={s.id}
+              s={s}
+              onRecordPayment={(id) =>
+                navigate("/app/supplier-payments/new", { state: { supplierId: id } })
+              }
+              onViewInvoices={(id) => navigate(`/app/suppliers/${id}/invoices`)}
+            />
           ))}
         </CardContent>
       </Card>

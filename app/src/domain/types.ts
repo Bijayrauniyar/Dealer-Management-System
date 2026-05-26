@@ -197,7 +197,24 @@ export type PurchaseListItem = {
   purchaseNo: string;
   date: string;
   total: number;
+  supplierId: string;
   supplierName: string;
+  paid: number;
+  paymentStatus: "unpaid" | "partial" | "paid";
+};
+
+export type PurchaseLineDetail = {
+  productId: string;
+  productName: string;
+  qty: number;
+  rate: number;
+  amount: number;
+};
+
+export type PurchaseDetail = PurchaseListItem & {
+  subtotal: number;
+  notes: string;
+  lines: PurchaseLineDetail[];
 };
 
 export type PnlTotals = {

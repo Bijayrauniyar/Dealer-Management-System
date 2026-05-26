@@ -15,6 +15,7 @@ import type {
   PnlTotals,
   Product,
   ProductScheme,
+  PurchaseDetail,
   PurchaseListItem,
   Sale,
   SaleLine,
@@ -1105,30 +1106,88 @@ export async function fetchExpensesListLive(): Promise<ExpenseListItem[]> {
   }));
 }
 
+function mapPurchaseListRow(raw: unknown): PurchaseListItem {
+  const r = raw as {
+    id: string;
+    purchase_no: string;
+    purchase_date: string;
+    total: number;
+    supplier_id: string;
+    paid: number;
+    payment_status: string;
+    suppliers?: { name: string } | { name: string }[] | null;
+  };
+  const sup = Array.isArray(r.suppliers) ? r.suppliers[0] : r.suppliers;
+  const status = r.payment_status;
+  const paymentStatus: PurchaseListItem["paymentStatus"] =
+    status === "paid" || status === "partial" ? status : "unpaid";
+  return {
+    id: r.id,
+    purchaseNo: r.purchase_no,
+    date: r.purchase_date,
+    total: Number(r.total),
+    supplierId: r.supplier_id,
+    supplierName: sup?.name ?? "",
+    paid: Number(r.paid) || 0,
+    paymentStatus,
+  };
+}
+
+const PURCHASE_LIST_SELECT =
+  "id, purchase_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)";
+
 export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
   const { data, error } = await supabase
     .from("purchases")
-    .select("id, purchase_no, purchase_date, total, suppliers(name)")
+    .select(PURCHASE_LIST_SELECT)
     .order("purchase_date", { ascending: false })
     .limit(200);
   if (error) throw error;
-  return (data ?? []).map((raw) => {
-    const r = raw as {
-      id: string;
-      purchase_no: string;
-      purchase_date: string;
+  return (data ?? []).map(mapPurchaseListRow);
+}
+
+export async function fetchPurchaseDetailLive(purchaseId: string): Promise<PurchaseDetail | null> {
+  const { data: header, error } = await supabase
+    .from("purchases")
+    .select(`${PURCHASE_LIST_SELECT}, subtotal, notes`)
+    .eq("id", purchaseId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!header) return null;
+
+  const { data: items, error: itemErr } = await supabase
+    .from("purchase_items")
+    .select("product_id, qty, rate, total, products(name)")
+    .eq("purchase_id", purchaseId);
+  if (itemErr) throw itemErr;
+
+  const base = mapPurchaseListRow(header);
+  const h = header as { subtotal: number; notes: string | null };
+
+  const lines = (items ?? []).map((raw) => {
+    const row = raw as {
+      product_id: string;
+      qty: number;
+      rate: number;
       total: number;
-      suppliers?: { name: string } | { name: string }[] | null;
+      products?: { name: string } | { name: string }[] | null;
     };
-    const sup = Array.isArray(r.suppliers) ? r.suppliers[0] : r.suppliers;
+    const prod = Array.isArray(row.products) ? row.products[0] : row.products;
     return {
-      id: r.id,
-      purchaseNo: r.purchase_no,
-      date: r.purchase_date,
-      total: Number(r.total),
-      supplierName: sup?.name ?? "",
+      productId: row.product_id,
+      productName: prod?.name ?? "Product",
+      qty: Number(row.qty),
+      rate: Number(row.rate),
+      amount: Number(row.total),
     };
   });
+
+  return {
+    ...base,
+    subtotal: Number(h.subtotal),
+    notes: h.notes?.trim() ?? "",
+    lines,
+  };
 }
 
 /** KPIs for dashboard selected period (exclusive end semantics: use inclusive dates in SQL). */

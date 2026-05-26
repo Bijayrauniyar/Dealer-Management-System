@@ -14,6 +14,7 @@ import { PaymentPage } from "@/pages/payments/PaymentPage";
 import { ReturnPage } from "@/pages/returns/ReturnPage";
 import { DamagePage } from "@/pages/damage/DamagePage";
 import { PurchasePage } from "@/pages/purchases/PurchasePage";
+import { PurchaseDetailPage } from "@/pages/purchases/PurchaseDetailPage";
 import { SupplierPaymentPage } from "@/pages/supplier-payment/SupplierPaymentPage";
 import { ExpensePage } from "@/pages/expense/ExpensePage";
 import { DailyCashPage } from "@/pages/daily-cash/DailyCashPage";
@@ -24,6 +25,7 @@ import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { CustomerFormPage } from "@/pages/customers/CustomerFormPage";
 import { SuppliersPage } from "@/pages/suppliers/SuppliersPage";
 import { SupplierFormPage } from "@/pages/suppliers/SupplierFormPage";
+import { SupplierInvoicesPage } from "@/pages/suppliers/SupplierInvoicesPage";
 import { StockPage } from "@/pages/stock/StockPage";
 import { MorePage } from "@/pages/more/MorePage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
@@ -63,6 +65,7 @@ const AppRoutesInner = () => (
       <Route path="returns/new" element={<ReturnPage />} />
       <Route path="damages/new" element={<DamagePage />} />
       <Route path="purchases/new" element={<PurchasePage />} />
+      <Route path="purchases/:purchaseId" element={<PurchaseDetailPage />} />
       <Route path="supplier-payments/new" element={<SupplierPaymentPage />} />
       <Route path="expenses/new" element={<ExpensePage />} />
       <Route path="daily-cash" element={<DailyCashPage />} />
@@ -79,6 +82,7 @@ const AppRoutesInner = () => (
       <Route path="customers/:id" element={<CustomerDetailPage />} />
       <Route path="suppliers" element={<SuppliersPage />} />
       <Route path="suppliers/new" element={<SupplierFormPage />} />
+      <Route path="suppliers/:supplierId/invoices" element={<SupplierInvoicesPage />} />
       <Route path="stock" element={<StockPage />} />
       <Route path="company" element={<CompanyOverviewPage />} />
       <Route path="capital" element={<CapitalListPage />} />

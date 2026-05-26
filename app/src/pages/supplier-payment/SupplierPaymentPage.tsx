@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
@@ -42,7 +42,11 @@ function getOpenInvoices(supplierId: string, suppliers: Supplier[]): OpenInvoice
 
 export const SupplierPaymentPage = () => {
   const navigate  = useNavigate();
+  const location  = useLocation();
   const SUPPLIERS = useSuppliers();
+
+  const presetSupplierId =
+    (location.state as { supplierId?: string } | null)?.supplierId ?? "";
 
   const [supplierId, setSupplierId] = useState("");
   const [amount, setAmount]         = useState("");
@@ -53,6 +57,13 @@ export const SupplierPaymentPage = () => {
   const [saving, setSaving]         = useState(false);
 
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!presetSupplierId) return;
+    if (SUPPLIERS.some((s) => s.id === presetSupplierId)) {
+      setSupplierId(presetSupplierId);
+    }
+  }, [presetSupplierId, SUPPLIERS]);
 
   const supplierOptions  = SUPPLIERS.map((s) => ({ id: s.id, label: s.name, sub: `${s.paymentTermsDays}d terms` }));
   const selectedSupplier = SUPPLIERS.find((s) => s.id === supplierId);

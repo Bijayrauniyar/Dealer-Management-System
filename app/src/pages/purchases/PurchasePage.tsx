@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
@@ -72,9 +72,21 @@ const CompactField = ({
 
 export const PurchasePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const SUPPLIERS = useSuppliers();
   const PRODUCTS = useProducts();
+
+  const presetSupplierId =
+    (location.state as { supplierId?: string } | null)?.supplierId ?? "";
+
   const [supplierId, setSupplierId] = useState("");
+
+  useEffect(() => {
+    if (!presetSupplierId) return;
+    if (SUPPLIERS.some((s) => s.id === presetSupplierId)) {
+      setSupplierId(presetSupplierId);
+    }
+  }, [presetSupplierId, SUPPLIERS]);
   const [invoiceNo, setInvoiceNo] = useState("");
   const [date, setDate] = useState(toDateInput());
   const [dueDate, setDueDate] = useState("");
