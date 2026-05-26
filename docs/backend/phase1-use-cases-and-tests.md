@@ -15,6 +15,7 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `tenants.status = 'active'` | `npm run e2e:live` marks a **failure** if the signed-in user’s tenant is still `pending`. Fix: SQL `update tenants set status = 'active' where id = '<tenant_id>';` or apply migration **0004**, or use `SUPABASE_SERVICE_ROLE_KEY` in `create-e2e-user-and-test.mjs`. |
 | `.env.local` + `.e2e-credentials.local` | URL, anon key, and test user email/password (see table below). |
 | `0007` applied | Matrix exercises **`update_sales_bill`**; UI **Edit bill** uses the same RPC. |
+| `0013` applied | **`update_purchase`**; UI **Edit purchase** on supplier invoice detail. |
 | `0008`–`0010` applied | Matrix **`uom.*`** cases: pack sale (2 Box → 20 PCS stock), `sales_items.unit`, `update_sales_bill` with `unit`. |
 
 ---

@@ -75,6 +75,20 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Open: app/supabase/migrations/0013_update_purchase.sql
    - Copy entire file → Paste → Run → Success.
 
+15. Migration 0014 (supplier_invoice_no — save supplier bill number on purchase)
+   - Open: app/supabase/migrations/0014_supplier_invoice_no.sql
+   - Copy entire file → Paste → Run → Success.
+
+16. Migration 0015 (invoice no. immutable on edit — update_purchase skips supplier_invoice_no)
+   - Open: app/supabase/migrations/0015_purchase_invoice_immutable.sql
+   - Copy entire file → Paste → Run → Success.
+
+17. Migration 0016 (backfill INV-001… for old purchases + one-time set on edit)
+   - Open: app/supabase/migrations/0016_purchase_invoice_backfill.sql
+   - Copy entire file → Paste → Run → Success.
+   - Assigns INV-001, INV-002, … to rows missing supplier_invoice_no (per tenant, by date).
+   - See docs/PURCHASE_REFERENCE_NUMBERS.md.
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 

@@ -119,6 +119,17 @@ function runSourceChecks() {
     r.fail("domainLive", "missing fetchPurchaseDetailLive");
   }
 
+  if (
+    domainLive &&
+    domainLive.includes("PURCHASE_LIST_SELECT_LEGACY") &&
+    domainLive.includes("isMissingColumnError") &&
+    domainLive.includes("supplier_invoice_no")
+  ) {
+    r.pass("domainLive legacy purchase select when 0014 not applied");
+  } else if (domainLive) {
+    r.fail("domainLive purchase fallback", "missing legacy select for supplier_invoice_no");
+  }
+
   if (domainLive && domainLive.includes("commitPurchaseUpdateLive")) {
     r.pass("commitPurchaseUpdateLive in domainLive");
   } else if (domainLive) {
@@ -135,6 +146,43 @@ function runSourceChecks() {
     r.pass("PurchasePage uses commitPurchaseUpdate");
   } else if (purchasePage) {
     r.fail("PurchasePage edit save", "missing commitPurchaseUpdate");
+  }
+
+  if (purchasePage && purchasePage.includes("supplierInvoiceNo") && purchasePage.includes("commitPurchase({")) {
+    r.pass("PurchasePage passes supplierInvoiceNo on create");
+  } else if (purchasePage) {
+    r.fail("PurchasePage supplier invoice", "missing supplierInvoiceNo on create");
+  }
+
+  if (purchasePage && purchasePage.includes("purchaseDisplayTitle")) {
+    r.fail("PurchasePage", "should not import purchaseDisplayTitle (PO hidden from form)");
+  }
+
+  const purchaseDisplay = readSrc("lib/purchaseDisplay.ts");
+  if (purchaseDisplay && purchaseDisplay.includes("purchaseDisplayTitle") && !purchaseDisplay.includes("purchaseNo")) {
+    r.pass("purchaseDisplay.ts hides PO from labels");
+  } else if (purchaseDisplay) {
+    r.fail("purchaseDisplay.ts", "missing or exposes purchaseNo");
+  }
+
+  if (detailPage && detailPage.includes("purchaseDisplayTitle")) {
+    r.pass("PurchaseDetailPage uses purchaseDisplayTitle");
+  } else if (detailPage) {
+    r.fail("PurchaseDetailPage title", "should use purchaseDisplayTitle not purchaseNo");
+  }
+
+  const mig0014 = resolve(APP, "supabase/migrations/0014_supplier_invoice_no.sql");
+  if (existsSync(mig0014)) {
+    r.pass("migration 0014_supplier_invoice_no.sql present");
+  } else {
+    r.fail("migration 0014", "missing file");
+  }
+
+  const mig0015 = resolve(APP, "supabase/migrations/0015_purchase_invoice_immutable.sql");
+  if (existsSync(mig0015)) {
+    r.pass("migration 0015_purchase_invoice_immutable.sql present");
+  } else {
+    r.fail("migration 0015", "missing file");
   }
 }
 
@@ -174,10 +222,39 @@ async function runLiveChecks() {
 
   const { data: purchases, error: pErr } = await supabase
     .from("purchases")
-    .select("id, purchase_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)")
+    .select(
+      "id, purchase_no, supplier_invoice_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)",
+    )
     .order("purchase_date", { ascending: false })
     .limit(20);
+  if (pErr?.message?.includes("supplier_invoice_no")) {
+    r.pass("live.purchases.0014", "column missing — run 0014_supplier_invoice_no.sql in Supabase");
+    const legacy = await supabase
+      .from("purchases")
+      .select(
+        "id, purchase_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)",
+      )
+      .order("purchase_date", { ascending: false })
+      .limit(5);
+    if (legacy.error) throw legacy.error;
+    r.pass("live.purchases.legacy_select", `${legacy.data?.length ?? 0} row(s) without supplier_invoice_no`);
+    if (!legacy.data?.length) {
+      r.pass("live.purchase.detail", "skip — no purchases");
+      return;
+    }
+    const pid = legacy.data[0].id;
+    const detail = await supabase
+      .from("purchases")
+      .select("id, purchase_no, purchase_date, total, supplier_id, paid, payment_status, subtotal, notes, suppliers(name)")
+      .eq("id", pid)
+      .maybeSingle();
+    if (detail.error) r.fail("live.purchase.detail", detail.error.message);
+    else if (detail.data) r.pass("live.purchase.detail", `id=${String(pid).slice(0, 8)}`);
+    else r.fail("live.purchase.detail", "not found");
+    return;
+  }
   if (pErr) throw pErr;
+  r.pass("live.purchases.supplier_invoice_no column", "readable");
 
   const rows = purchases ?? [];
   if (!rows.length) {

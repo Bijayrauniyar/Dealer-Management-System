@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PurchaseDetail } from "@/domain/types";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
+import { purchaseDisplayTitle, purchaseDisplaySubtitle } from "@/lib/purchaseDisplay";
 import { npr, fmtDate } from "@/lib/utils";
 
 const PAYMENT_BADGE: Record<
@@ -83,8 +84,8 @@ export const PurchaseDetailPage = () => {
 
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-foreground">{detail.purchaseNo}</h1>
-          <p className="text-sm text-muted">{fmtDate(detail.date)} · {detail.supplierName}</p>
+          <h1 className="text-lg font-bold text-foreground">{purchaseDisplayTitle(detail)}</h1>
+          <p className="text-sm text-muted">{purchaseDisplaySubtitle(detail)}</p>
         </div>
         <Badge variant={cfg.variant}>{cfg.label}</Badge>
       </div>

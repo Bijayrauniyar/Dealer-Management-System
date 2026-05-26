@@ -5,7 +5,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useSuppliers } from "@/store/domain";
+import { useDomainBundleErrorMessage, useDomainBundleLoadState, useSuppliers } from "@/store/domain";
 import type { Supplier } from "@/domain/types";
 import { npr } from "@/lib/utils";
 import { usePagination } from "@/lib/usePagination";
@@ -147,6 +147,8 @@ const SupplierCard = ({
 export const SuppliersPage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const loadState = useDomainBundleLoadState();
+  const loadError = useDomainBundleErrorMessage();
   const SUPPLIERS = useSuppliers();
 
   const filtered = SUPPLIERS.filter((s) =>
@@ -186,6 +188,20 @@ export const SuppliersPage = () => {
 
       <Card>
         <CardContent className="p-0 px-4">
+          {loadState === "loading" && (
+            <p className="py-10 text-center text-sm text-muted">Loading suppliers…</p>
+          )}
+          {loadState === "error" && (
+            <p className="py-10 px-4 text-center text-sm text-danger">
+              Could not load suppliers.
+              {loadError ? ` ${loadError}` : ""}
+            </p>
+          )}
+          {loadState === "ready" && filtered.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted">
+              {query ? "No suppliers match your search." : "No suppliers yet. Tap Add supplier above."}
+            </p>
+          )}
           {visible.map((s) => (
             <SupplierCard
               key={s.id}

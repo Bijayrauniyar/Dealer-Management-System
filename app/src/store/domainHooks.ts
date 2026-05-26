@@ -93,6 +93,12 @@ export function useDomainBundleLoadState(): "loading" | "error" | "ready" {
   return "ready";
 }
 
+export function useDomainBundleErrorMessage(): string | null {
+  const q = useDomainBundleQuery();
+  if (!q.isError || !q.error) return null;
+  return q.error instanceof Error ? q.error.message : String(q.error);
+}
+
 export function useBusinessSettings(): BusinessSettings {
   const q = useDomainBundleQuery();
   return useMemo(
@@ -216,8 +222,10 @@ export async function commitReturn(opts: CommitReturnOpts): Promise<void> {
   await commitReturnLive(opts);
 }
 
-export async function commitPurchase(opts: CommitPurchaseOpts): Promise<void> {
-  await commitPurchaseLive(opts);
+export async function commitPurchase(
+  opts: CommitPurchaseOpts,
+): Promise<{ purchaseNo: string; purchaseId: string }> {
+  return commitPurchaseLive(opts);
 }
 
 export async function commitPurchaseUpdate(opts: CommitPurchaseUpdateOpts): Promise<{ purchaseNo: string }> {

@@ -5,6 +5,7 @@ import { ListRow } from "@/components/app/ListRow";
 import { Card, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/app/KpiCard";
 import { useExpensesList, usePayments, usePnlTotals, usePurchasesList, useSales, useSuppliers } from "@/store/domain";
+import { purchaseDisplayTitle, purchaseDisplaySubtitle } from "@/lib/purchaseDisplay";
 import { npr, fmtDate } from "@/lib/utils";
 
 const CONFIG: Record<string, { title: string; description: string }> = {
@@ -112,9 +113,9 @@ export const PeriodListPage = () => {
             {purchases.map((p) => (
               <ListRow
                 key={p.id}
-                left={p.supplierName || p.purchaseNo}
+                left={purchaseDisplayTitle(p)}
                 right={npr(p.total)}
-                sub={`${fmtDate(p.date)} · ${p.purchaseNo}`}
+                sub={purchaseDisplaySubtitle(p)}
               />
             ))}
           </CardContent>

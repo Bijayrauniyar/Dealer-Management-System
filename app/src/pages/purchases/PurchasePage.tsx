@@ -8,6 +8,8 @@ import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InvoiceNoField } from "@/components/app/InvoiceNoField";
+import { normalizeInvoiceNoSpoken } from "@/lib/voiceInvoiceNo";
 import { NumericInput } from "@/components/app/NumericInput";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -88,11 +90,11 @@ export const PurchasePage = () => {
     (location.state as { supplierId?: string } | null)?.supplierId ?? "";
 
   const [supplierId, setSupplierId] = useState("");
-  const [purchaseNo, setPurchaseNo] = useState("");
   const [paidOnPurchase, setPaidOnPurchase] = useState(0);
   const [loadingEdit, setLoadingEdit] = useState(isEdit);
   const [editLoadError, setEditLoadError] = useState<string | null>(null);
   const [invoiceNo, setInvoiceNo] = useState("");
+  const [invoiceLocked, setInvoiceLocked] = useState(false);
   const [date, setDate] = useState(toDateInput());
   const [dueDate, setDueDate] = useState("");
   const [lines, setLines] = useState<Line[]>([mkLine()]);
@@ -118,7 +120,8 @@ export const PurchasePage = () => {
           return;
         }
         setSupplierId(detail.supplierId);
-        setPurchaseNo(detail.purchaseNo);
+        setInvoiceNo(detail.supplierInvoiceNo);
+        setInvoiceLocked(Boolean(detail.supplierInvoiceNo?.trim()));
         setPaidOnPurchase(detail.paid);
         setDate(detail.date.slice(0, 10));
         setLines(
@@ -209,6 +212,11 @@ export const PurchasePage = () => {
       toast.error("Every row needs a product.");
       return;
     }
+    const normalizedInvoice = normalizeInvoiceNoSpoken(invoiceNo);
+    if ((!isEdit || !invoiceLocked) && !normalizedInvoice) {
+      toast.error("Enter invoice number from the supplier bill.");
+      return;
+    }
     const rpcLines = lines
       .filter((l) => l.productId && l.receivedQty > 0)
       .map((l) => {
@@ -226,26 +234,37 @@ export const PurchasePage = () => {
     setSaving(true);
     try {
       if (isEdit && editPurchaseId) {
-        const { purchaseNo: outNo } = await commitPurchaseUpdate({
+        await commitPurchaseUpdate({
           purchaseId: editPurchaseId,
           supplierId,
           purchaseDate: date,
           lines: rpcLines,
+          ...(!invoiceLocked && normalizedInvoice
+            ? { supplierInvoiceNo: normalizedInvoice }
+            : {}),
         });
-        toast.success(`Purchase ${outNo || purchaseNo} updated. Stock adjusted.`);
+        if (!invoiceLocked && normalizedInvoice) setInvoiceLocked(true);
+        const label = normalizedInvoice || "Purchase";
+        toast.success(`${label} updated. Stock adjusted.`);
         navigate(`/app/purchases/${editPurchaseId}`, { replace: true });
       } else {
-        await commitPurchase({
+        const { purchaseId } = await commitPurchase({
           supplierId,
           purchaseDate: date,
+          supplierInvoiceNo: normalizedInvoice,
           totalReceived,
           lines: rpcLines,
         });
+        const label = normalizedInvoice;
         toast.success(
           hasShort
-            ? `Purchase saved. Stock updated. ${shortLines.length} short line(s).`
-            : "Purchase saved. Stock updated.",
+            ? `Invoice ${label} saved. Stock updated. ${shortLines.length} short line(s).`
+            : `Invoice ${label} saved. Stock updated.`,
         );
+        if (purchaseId) {
+          navigate(`/app/purchases/${purchaseId}`, { replace: true });
+          return;
+        }
         navigate(-1);
       }
     } catch (e) {
@@ -288,11 +307,8 @@ export const PurchasePage = () => {
         <ArrowLeft size={16} /> Back
       </button>
       <h1 className="mb-1 text-lg font-semibold">{isEdit ? "Edit purchase" : "New purchase"}</h1>
-      {isEdit && purchaseNo && (
-        <p className="mb-3 text-sm text-muted">
-          {purchaseNo}
-          {paidOnPurchase > 0 ? ` · Paid ${npr(paidOnPurchase)}` : ""}
-        </p>
+      {isEdit && paidOnPurchase > 0 && (
+        <p className="mb-3 text-sm text-muted">Paid {npr(paidOnPurchase)} on this purchase</p>
       )}
 
       <div className="space-y-3">
@@ -308,13 +324,24 @@ export const PurchasePage = () => {
         </FormField>
 
         <div className="grid grid-cols-2 gap-2">
-          <FormField label={isEdit ? "PO no." : "Invoice no."}>
-            <Input
+          <FormField
+            label="Invoice no."
+            required={!invoiceLocked}
+            hint={
+              invoiceLocked
+                ? "Cannot be changed after save"
+                : isEdit
+                  ? "One-time entry for old purchase — type or tap mic (e.g. INV 001)"
+                  : "From supplier bill — type or tap mic"
+            }
+          >
+            <InvoiceNoField
               className={inputCompact}
-              placeholder="INV-001"
-              value={isEdit ? purchaseNo : invoiceNo}
-              disabled={isEdit}
-              onChange={(e) => setInvoiceNo(e.target.value)}
+              placeholder={isEdit ? "e.g. INV-001" : "e.g. INV-8842"}
+              value={invoiceNo}
+              disabled={invoiceLocked}
+              readOnly={invoiceLocked}
+              onChange={setInvoiceNo}
             />
           </FormField>
           <FormField label="Invoice date">

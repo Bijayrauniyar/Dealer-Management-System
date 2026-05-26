@@ -23,6 +23,7 @@ import type {
   BillStatus,
 } from "@/domain/types";
 import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
+import { normalizeInvoiceNoSpoken } from "@/lib/voiceInvoiceNo";
 import type { DashboardPeriodTotals } from "@/domain/defaults";
 import { isFocSaleLine } from "@/lib/billFoc";
 import { billLineAmount } from "@/lib/saleLineMath";
@@ -86,6 +87,19 @@ const PRODUCT_SELECT_LEGACY =
 function isMissingColumnError(err: { message?: string } | null, col: string): boolean {
   const m = err?.message ?? "";
   return m.includes(col) && (m.includes("does not exist") || m.includes("Could not find"));
+}
+
+function purchaseRpcError(err: { message?: string } | null, opts?: { settingInvoice?: boolean }): Error {
+  const m = err?.message ?? "Purchase failed";
+  if (
+    opts?.settingInvoice &&
+    (m.includes("Could not find the function") || m.includes("p_supplier_invoice_no"))
+  ) {
+    return new Error(
+      "Cannot save invoice number yet. Run migration 0016_purchase_invoice_backfill.sql in Supabase (README step 17), then try again.",
+    );
+  }
+  return new Error(m);
 }
 
 export async function fetchProductsLive(): Promise<Product[]> {
@@ -630,34 +644,49 @@ function purchaseLinesToRpc(
 export async function commitPurchaseLive(opts: {
   supplierId: string;
   purchaseDate: string;
+  supplierInvoiceNo?: string | null;
   lines: { productId: string; receivedQty: number; cost: number }[];
   totalReceived: number;
-}): Promise<void> {
-  const { error } = await supabase.rpc("record_purchase", {
+}): Promise<{ purchaseNo: string; purchaseId: string }> {
+  const { data, error } = await supabase.rpc("record_purchase", {
     p_purchase_date: opts.purchaseDate,
     p_supplier_id: opts.supplierId,
     p_lines: purchaseLinesToRpc(opts.lines),
     p_notes: null,
+    p_supplier_invoice_no: opts.supplierInvoiceNo
+      ? normalizeInvoiceNoSpoken(opts.supplierInvoiceNo) || null
+      : null,
   });
-  if (error) throw error;
+  if (error) throw purchaseRpcError(error, { settingInvoice: Boolean(opts.supplierInvoiceNo?.trim()) });
+  const row = Array.isArray(data) ? data[0] : data;
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  return {
+    purchaseId: (row as { purchase_id?: string })?.purchase_id ?? "",
+    purchaseNo: (row as { purchase_no?: string })?.purchase_no ?? "",
+  };
 }
 
 export async function commitPurchaseUpdateLive(opts: {
   purchaseId: string;
   supplierId: string;
   purchaseDate: string;
+  supplierInvoiceNo?: string | null;
   notes?: string | null;
   lines: { productId: string; receivedQty: number; cost: number }[];
 }): Promise<{ purchaseNo: string }> {
+  const inv =
+    opts.supplierInvoiceNo !== undefined && opts.supplierInvoiceNo !== null
+      ? normalizeInvoiceNoSpoken(opts.supplierInvoiceNo) || null
+      : null;
   const { data, error } = await supabase.rpc("update_purchase", {
     p_purchase_id: opts.purchaseId,
     p_supplier_id: opts.supplierId,
     p_purchase_date: opts.purchaseDate,
     p_lines: purchaseLinesToRpc(opts.lines),
     p_notes: opts.notes ?? null,
+    ...(inv !== null ? { p_supplier_invoice_no: inv } : {}),
   });
-  if (error) throw error;
+  if (error) throw purchaseRpcError(error, { settingInvoice: inv !== null });
   const row = Array.isArray(data) ? data[0] : data;
   const purchaseNo = (row as { purchase_no?: string })?.purchase_no ?? "";
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
@@ -1135,6 +1164,7 @@ function mapPurchaseListRow(raw: unknown): PurchaseListItem {
   const r = raw as {
     id: string;
     purchase_no: string;
+    supplier_invoice_no: string | null;
     purchase_date: string;
     total: number;
     supplier_id: string;
@@ -1149,6 +1179,7 @@ function mapPurchaseListRow(raw: unknown): PurchaseListItem {
   return {
     id: r.id,
     purchaseNo: r.purchase_no,
+    supplierInvoiceNo: r.supplier_invoice_no?.trim() ?? "",
     date: r.purchase_date,
     total: Number(r.total),
     supplierId: r.supplier_id,
@@ -1159,24 +1190,59 @@ function mapPurchaseListRow(raw: unknown): PurchaseListItem {
 }
 
 const PURCHASE_LIST_SELECT =
+  "id, purchase_no, supplier_invoice_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)";
+const PURCHASE_LIST_SELECT_LEGACY =
   "id, purchase_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)";
 
+function purchaseSelectWithoutInvoiceCol(select: string): string {
+  return select
+    .replace("supplier_invoice_no, ", "")
+    .replace(", supplier_invoice_no", "");
+}
+
 export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
-  const { data, error } = await supabase
+  let data: unknown[] | null = null;
+  let error: { message?: string } | null = null;
+  const full = await supabase
     .from("purchases")
     .select(PURCHASE_LIST_SELECT)
     .order("purchase_date", { ascending: false })
     .limit(200);
+  data = full.data;
+  error = full.error;
+  if (error && isMissingColumnError(error, "supplier_invoice_no")) {
+    const legacy = await supabase
+      .from("purchases")
+      .select(PURCHASE_LIST_SELECT_LEGACY)
+      .order("purchase_date", { ascending: false })
+      .limit(200);
+    data = legacy.data;
+    error = legacy.error;
+  }
   if (error) throw error;
   return (data ?? []).map(mapPurchaseListRow);
 }
 
 export async function fetchPurchaseDetailLive(purchaseId: string): Promise<PurchaseDetail | null> {
-  const { data: header, error } = await supabase
+  const detailSelect = `${PURCHASE_LIST_SELECT}, subtotal, notes`;
+  let header: unknown = null;
+  let error: { message?: string } | null = null;
+  const full = await supabase
     .from("purchases")
-    .select(`${PURCHASE_LIST_SELECT}, subtotal, notes`)
+    .select(detailSelect)
     .eq("id", purchaseId)
     .maybeSingle();
+  header = full.data;
+  error = full.error;
+  if (error && isMissingColumnError(error, "supplier_invoice_no")) {
+    const legacy = await supabase
+      .from("purchases")
+      .select(purchaseSelectWithoutInvoiceCol(detailSelect))
+      .eq("id", purchaseId)
+      .maybeSingle();
+    header = legacy.data;
+    error = legacy.error;
+  }
   if (error) throw error;
   if (!header) return null;
 

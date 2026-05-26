@@ -195,6 +195,8 @@ export type ExpenseListItem = {
 export type PurchaseListItem = {
   id: string;
   purchaseNo: string;
+  /** Number on the supplier's tax invoice (optional). */
+  supplierInvoiceNo: string;
   date: string;
   total: number;
   supplierId: string;

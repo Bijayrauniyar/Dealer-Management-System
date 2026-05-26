@@ -19,6 +19,7 @@ export interface CommitReturnOpts {
 export interface CommitPurchaseOpts {
   supplierId: string;
   purchaseDate: string;
+  supplierInvoiceNo?: string | null;
   lines: { productId: string; receivedQty: number; cost: number }[];
   totalReceived: number;
 }
@@ -27,6 +28,8 @@ export interface CommitPurchaseUpdateOpts {
   purchaseId: string;
   supplierId: string;
   purchaseDate: string;
+  /** Set once when purchase has no invoice no. yet; omitted when already locked. */
+  supplierInvoiceNo?: string | null;
   notes?: string | null;
   lines: { productId: string; receivedQty: number; cost: number }[];
 }

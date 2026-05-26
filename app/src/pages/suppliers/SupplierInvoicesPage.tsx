@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePurchasesList, useSuppliers } from "@/store/domain";
 import type { PurchaseListItem } from "@/domain/types";
+import { purchaseDisplayTitle, purchaseDisplaySubtitle } from "@/lib/purchaseDisplay";
 import { npr, fmtDate } from "@/lib/utils";
 
 const PAYMENT_BADGE: Record<
@@ -106,12 +107,14 @@ export const SupplierInvoicesPage = () => {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-teal-600">{inv.purchaseNo}</span>
+                      <span className="text-sm font-semibold text-teal-600">
+                        {purchaseDisplayTitle(inv)}
+                      </span>
                       <Badge variant={cfg.variant} className="text-[10px]">
                         {cfg.label}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted">{fmtDate(inv.date)}</p>
+                    <p className="mt-0.5 text-xs text-muted">{purchaseDisplaySubtitle(inv)}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <div className="text-right">
@@ -130,7 +133,7 @@ export const SupplierInvoicesPage = () => {
       </Card>
 
       <p className="mt-4 text-center text-xs text-muted">
-        Tap an invoice to view line items. Purchases cannot be edited after save — record a new purchase if needed.
+        Tap an invoice to view line items. Invoice number is set when you record the purchase and cannot be changed later.
       </p>
     </PageShell>
   );
