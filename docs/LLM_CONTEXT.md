@@ -382,6 +382,8 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2 featu
 
 ## Changelog (newest first)
 
+- **2026-05-26** — `GTM_NEPAL.md` §5: Nepal VAT/IRD bill field audit, compliance levels A/B, product compliance pack (export P0, Tax Invoice title P1).
+- **2026-05-26** — GTM + PRODUCT_EVOLUTION: stock model (purchase-driven IN vs adjustment later), Nepal E-Billing complement; see `docs/GTM_NEPAL.md`.
 - **2026-05-26** — Added `docs/GTM_NEPAL.md`: Nepal ICP, SaaS pricing draft, positioning, USP/AI, must-haves, open questions for strategy.
 - **2026-05-20** — Purchases/products VAT UX: buy excl. on product + purchase lines; optional sell; invoice text-only; `PurchaseBillView` compact header + supplier VAT; `default_vat_pct` in Settings. See `docs/PURCHASE_REFERENCE_NUMBERS.md`.
 - **2026-05-20** — `DEFERRED_WORK.md`: maintainable backlog register (INV-1/INV-2 effort, touchpoints, acceptance); docs hub + BACKEND-TODO link.

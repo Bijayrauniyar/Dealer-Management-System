@@ -1,6 +1,6 @@
 # Product evolution — client pain points first
 
-**Navigate:** [Docs hub](README.md) · [Nepal GTM & pricing](GTM_NEPAL.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Data export spec](DATA_EXPORT_SPEC.md) · [LLM context](LLM_CONTEXT.md)
+**Navigate:** [Docs hub](README.md) · [Nepal GTM & pricing](GTM_NEPAL.md) · [VAT / IRD checklist](GTM_NEPAL.md#5-nepal-vat--ird-compliance-checklist) · [Backend checklist](backend/BACKEND-TODO.md) · [Data export spec](DATA_EXPORT_SPEC.md) · [LLM context](LLM_CONTEXT.md)
 
 **Purpose:** Evolve from the Havmor ice-cream pilot into a **generic Nepal distributor platform** — without a long “feature count” roadmap. Every item below ties to a **real user pain** or a **broken/half-built screen** today.
 
@@ -128,10 +128,36 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | 16 | Simple delivery note from bill | Route sales workflow |
 | 17 | Notifications (2-A) | Owner wants SMS for overdue |
 | 18 | Multi-warehouse / expiry | Pharma or multi-godown client |
+| 19 | **Stock adjustment** (opening / count correction, no supplier) | Tenant asks “stock entry like Swastik” — see [GTM_NEPAL.md § Stock model](GTM_NEPAL.md#stock-model-purchase-vs-stock-entry) |
 
 ---
 
-## 5. Genericization without bloat
+## 5. Stock model (purchase vs stock entry)
+
+**Decision:** Keep **Purchase** as the normal way stock **increases** (supplier bill + payable + `purchase_items`). Do **not** add a parallel “stock entry” menu in v1 that duplicates purchase for daily buying.
+
+| Flow | Screen / RPC | Affects `v_stock` |
+|------|--------------|-------------------|
+| Buy from supplier | `PurchasePage` → `record_purchase` | `purchased` += received qty |
+| Sell | `SaleEntryPage` → `create_sales_bill` | `sold` |
+| Customer return | `ReturnPage` → `apply_goods_return` | `returned` |
+| Damage | `DamagePage` → `record_damage` | `damaged` |
+| Opening qty | `products.opening_stock` | Base in formula — **weak UI** today |
+| Count fix without supplier | **Missing** | P1: `record_stock_adjustment` or import |
+
+**Client messaging**
+
+- Correct: *“Record a **purchase** when goods arrive from supplier; stock updates from received quantity.”*
+- Wrong: *“Use stock entry for normal buying.”* (that splits document and supplier ledger in other ERPs)
+- Honest gap: *“Opening stock and count corrections: import, first purchase, or **stock adjustment** (planned).”*
+
+**Anti-pattern:** Telling staff to create a **fake purchase** to fix physical count — breaks purchase book and supplier balance. Build adjustment before scale.
+
+Full GTM notes: [GTM_NEPAL.md](GTM_NEPAL.md).
+
+---
+
+## 6. Genericization without bloat
 
 | Change | Why | When |
 |--------|-----|------|
@@ -139,11 +165,12 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | Optional MRP column on bill | Grocery/hardware may not use MRP | P1 setting |
 | Feature flags in `tenant_settings` | Turn off scheme/capital until built | P1 |
 | Keep single godown stock | Matches 90% Nepal wholesalers | Always until proven otherwise |
+| Keep purchase-driven stock IN | Supplier invoice + payable stay one document | Always for v1 |
 | Keep RPC money/stock model | Already correct for trust | Always |
 
 ---
 
-## 6. Architecture tied to pains (not refactor for sport)
+## 7. Architecture tied to pains (not refactor for sport)
 
 | Pain | Technical fix |
 |------|----------------|
@@ -154,7 +181,7 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 
 ---
 
-## 7. Anti-patterns for this product
+## 8. Anti-patterns for this product
 
 - Shipping **new menus** that do not persist (worse than hidden).
 - **10 Phase 2 modules** at 20% each — finish export + trust first.
@@ -164,7 +191,7 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 
 ---
 
-## 8. How this doc connects to other lists
+## 9. How this doc connects to other lists
 
 | Doc | Role |
 |-----|------|
@@ -172,13 +199,14 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | [DEFERRED_WORK.md](DEFERRED_WORK.md) | Deferred items: effort, touchpoints, acceptance (INV-1, INV-2, …) |
 | [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) | Technical export design |
 | [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | Naming before rebrand |
+| [GTM_NEPAL.md](GTM_NEPAL.md) | ICP, pricing, stock model, Nepal E-Billing positioning |
 | **This file** | **Why** we build something — client pain order |
 
 When adding a BACKEND-TODO item, ask: **Which row in §2 does this fix?** If none, defer.
 
 ---
 
-## 9. Success metrics (practical)
+## 10. Success metrics (practical)
 
 | Metric | Meaning |
 |--------|---------|

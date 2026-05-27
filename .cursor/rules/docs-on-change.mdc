@@ -26,7 +26,7 @@ When you **change app behavior**, **add a feature**, **add/alter a migration**, 
 | Settings / tenant fields | `data-model.md` (`tenant_settings`), manual checklist § Settings |
 | Sales bill / print / PDF | `docs/backend/data-model.md` (sales), `phase1-use-cases` if maths/RPC |
 | New route or major page | `docs/LLM_CONTEXT.md` (routes/features), manual checklist if user-facing |
-| GTM / pricing / ICP / positioning | `docs/GTM_NEPAL.md` (open questions + revision log) |
+| GTM / pricing / ICP / VAT·IRD / stock model | `docs/GTM_NEPAL.md` (§5 VAT/IRD, stock model) + `PRODUCT_EVOLUTION.md` |
 | Deferred / future work only | `docs/DEFERRED_WORK.md` or `BACKEND-TODO.md` — not LLM_CONTEXT unless shipped |
 | New `npm run e2e:*` script | `docs/backend/phase1-use-cases-and-tests.md`, project `README.md` if user-facing |
 

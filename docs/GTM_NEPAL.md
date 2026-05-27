@@ -47,8 +47,9 @@
 | **Local Nepal DMS/ERP** | MrSolution, Swastik, CrossOver, BISage | Same buyer; we win on **simpler UX + cloud + modern purchase/VAT bill**; they win on **offline/van/mature IRD depth** until we ship |
 | **India desktop (via partners)** | BUSY, Marg, Tally | Tally = CA habit; BUSY/Marg = FMCG depth; we are **lighter + Nepal-first story** |
 | **Brand SFA** | Bizom, FieldAssist, BeatRoute | Wrong buyer — brands pay, not small dealer |
+| **IRD / NFRS accounting** | [Nepal E-Billing](https://nepalebilling.com/) | Compliance + books; we **complement** (ops + registers export), not replace IRD certify in v1 |
 
-See also competitor landscape notes from strategy sessions (India/Nepal desktop + cloud DMS). No separate file yet — add `COMPETITOR_LANDSCAPE.md` if needed.
+See also competitor landscape notes from strategy sessions (India/Nepal desktop + cloud DMS).
 
 ---
 
@@ -123,9 +124,150 @@ Supplier purchase (+ invoice no., VAT excl) → stock ↑
 
 **End-to-end % for ICP:** ~**80%** product fit; ~**20%** gaps block **renewal** and **second vertical**.
 
+### Stock model (purchase vs stock entry)
+
+Many ERPs show **Purchase entry** and **Stock entry** as separate menus. They are different ideas; Havmor intentionally keeps **purchase as the main stock-IN path** for normal buying.
+
+| | **Purchase entry** | **Stock entry / adjustment** (others) |
+|---|-------------------|--------------------------------------|
+| **When** | Goods bought from **supplier** with a bill | Opening balance, count correction, samples, transfer — **no** supplier invoice |
+| **Money** | **Supplier payable**, VAT purchase book | Usually no supplier ledger |
+| **Stock** | **Increases** by **received** qty on purchase lines | +/- qty without a purchase document |
+
+**How Havmor calculates on-hand stock** (`v_stock`):
+
+```text
+closing = opening_stock
+        + sum(purchase_items.qty)   ← from Purchase bills
+        - sold + returned - damaged
+```
+
+| Stock change | In app today |
+|--------------|--------------|
+| Stock **in** from supplier | **Purchase** (`record_purchase` → `purchase_items`) |
+| Stock **out** | **Sale** |
+| Stock **up** (customer return) | **Return** |
+| Stock **down** (breakage) | **Damage** |
+| Opening balance | `products.opening_stock` in DB — **no dedicated UI**; use import or first purchase |
+| Count correction without supplier | **Not built** — do not fake a purchase |
+
+**Product decision (2026-05-26):**
+
+- **Keep** purchase-driven stock for daily ops — links cost, supplier invoice no., and payable (see [PURCHASE_REFERENCE_NUMBERS.md](PURCHASE_REFERENCE_NUMBERS.md)).
+- **Do not** copy full dual-menu ERP (purchase + stock + transfer) in v1.
+- **Add later (P1):** simple **Stock adjustment** (opening / count correction / sample) **without** supplier — when a paying tenant asks or at 2nd onboarding.
+- **Sales pitch:** *“Stock comes in on **Purchase**; sales, returns, and damage update automatically.”*
+
+**Stock page** (`/app/stock`): read-only view of on-hand; copy says updated on purchase and sale.
+
+### Nepal E-Billing — what to adopt vs defer
+
+[Nepal E-Billing](https://nepalebilling.com/) is **IRD/NFRS accounting**, not wholesaler DMS. Borrow **accountant expectations**, not the whole product.
+
+| Adopt (align Havmor) | Defer |
+|----------------------|-------|
+| **Sales + purchase VAT registers** (CSV export) | IRD certified e-submit |
+| Period **VAT summary** (output vs input) | NFRS chart of accounts / GL |
+| Invoice fields complete (PAN/VAT, bill no., date) | Full fixed-asset depreciation |
+| **Daily / period ops report** for owner | Recurring billing, online pay on invoice |
+| Position: **“Works alongside Nepal E-Billing”** | Claim “replaces IRD system” |
+
+Details: [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) §8 (registers, not IRD XML).
+
 ---
 
-## 5. Must-have features (table stakes)
+## 5. Nepal VAT / IRD compliance checklist
+
+**Not legal advice.** Use this for product and sales decisions; confirm with a **CA** or IRD guidance for each tenant’s registration (PAN-only vs VAT registered vs IRD e-billing mandate).
+
+### Two compliance levels
+
+| Level | Meaning | Havmor |
+|-------|---------|--------|
+| **A — Good business invoice** | Printed/PDF bill with correct parties, serial no., dates, line totals, VAT math | **Mostly met** (`BillPrintView`, Settings, purchase bill) |
+| **B — Full IRD / e-billing** | IRD-certified system, statutory books, often **submission** to IRD, NFRS accounts | **Not met** — complement [Nepal E-Billing](https://nepalebilling.com/) or CA workflow |
+
+**Positioning (do not over-promise):**
+
+> Havmor issues VAT-style sales and purchase documents and keeps stock and udhar in sync. Export **sales and purchase registers** for your accountant. It is **not** a replacement for IRD-certified e-billing until integrated.
+
+### Sales tax invoice — field audit
+
+Implemented in `app/src/components/app/BillPrintView.tsx`, `app/src/lib/billDisplay.ts`, Settings (`tenant_settings`).
+
+| Field (typical Nepal VAT invoice) | Havmor | Notes |
+|-----------------------------------|--------|-------|
+| Seller legal / trading name | Yes | `sellerBillName` |
+| Seller address, phone | Yes | `sellerContactLine` — complete in Settings |
+| Seller **VAT** or **PAN** | Yes | VAT if `vatRegistered` + number; else PAN (`sellerTaxId`) |
+| **Serial bill / invoice no.** | Yes | `billNo` + tenant `invoice_prefix` |
+| Invoice **date** (AD) | Yes | `sale.date` |
+| **Bikram Sambat date** | Yes | `toMiti` on bill |
+| Buyer name, address, phone | Yes | “To:” block |
+| Buyer **PAN** | Yes | If on customer master |
+| Buyer **VAT** number | **No** | P1 — add optional `customers.vat_number` for B2B |
+| Line: description, qty, UOM | Yes | Particulars, qty, unit |
+| Line: taxable amount | Yes | Line amount column |
+| **HSN / commodity code** | No | Rare for small FMCG wholesaler; defer |
+| Subtotal (taxable) | Yes | Subtotal row |
+| Bill discount / terms | Yes | When used |
+| **VAT % and VAT amount** | Yes | When VAT registered (`sale.vatRate`, `vatAmount`) |
+| **Grand total** | Yes | |
+| **Amount in words** | Yes | `amountInWords` |
+| Custom footer | Yes | Settings `bill_footer` |
+| Document title **“Tax Invoice”** | **Partial** | Today: **“Sales details”** (`billDocumentTitle`) — P1 rename when VAT registered |
+| IRD **QR / IRN / realtime submit** | No | Nepal E-Billing / IRD API — defer |
+
+### Purchase side (input VAT)
+
+| Field | Havmor | Notes |
+|-------|--------|-------|
+| Supplier invoice no. | Yes | `supplier_invoice_no` |
+| Supplier name, address, VAT/PAN | Yes | `PurchaseBillView` |
+| Line rate excl, VAT, amount incl | Yes | Migration 0017 |
+| **Purchase VAT book (export)** | **No** | P0 — [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) |
+
+### What blocks selling (by segment)
+
+**Most small wholesalers (your ICP)** — operational, not IRD API:
+
+| Blocker | Priority |
+|---------|----------|
+| No **CSV export** (sales / purchase / outstanding) | **P0** |
+| Rebrand / generic categories | **P0** |
+| App slow with many bills | **P0** |
+| Stock oversell (RPC) | **P1** INV-1 |
+
+**VAT-strict / accountant-led shops** — also need:
+
+| Blocker | Priority |
+|---------|----------|
+| Period **VAT summary** export (output − input) | **P0** with registers |
+| **Tax Invoice** title on print | **P1** product |
+| Customer **VAT** on bill | **P1** |
+| IRD **e-bill certification** | **Defer** unless customer mandates |
+
+### Product changes (compliance pack — recommended order)
+
+| # | Change | Effort |
+|---|--------|--------|
+| C1 | **Export P0** — sales VAT register, purchase VAT register, period summary | Large — EXP-1 |
+| C2 | Settings validation — address + tax number before VAT bills | Small |
+| C3 | Bill title **“Tax Invoice”** when `vatRegistered` | Small — `billDisplay.ts` |
+| C4 | Optional **customer VAT number** on master + print | Small migration + UI |
+| C5 | IRD API / certified e-billing | **Major** — separate project |
+
+### vs competitors (compliance only)
+
+| Product | Strength |
+|---------|----------|
+| [Nepal E-Billing](https://nepalebilling.com/) | IRD verified, NFRS, VAT/purchase books |
+| Swastik / MrSolution | Long local IRD-certified positioning |
+| **Havmor** | Wholesaler **ops** + purchase VAT split; **export + bill fields** to close gap |
+
+---
+
+## 6. Must-have features (table stakes)
 
 Dealers will **not pay monthly** without these:
 
@@ -145,7 +287,7 @@ Dealers will **not pay monthly** without these:
 
 ---
 
-## 6. Unique selling points (USP)
+## 7. Unique selling points (USP)
 
 ### Non-AI (credible today)
 
@@ -171,7 +313,7 @@ Sell **concrete assistants** on **tenant data**, not “AI ERP”.
 
 ---
 
-## 7. Roadmap vs revenue (solo founder)
+## 8. Roadmap vs revenue (solo founder)
 
 Aligned with [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md) — **pain-first**, not feature count.
 
@@ -206,7 +348,7 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ---
 
-## 8. Pricing (draft — NPR / month)
+## 9. Pricing (draft — NPR / month)
 
 **Principle:** Per **company**, not per salesman. Annual optional (~2 months free).
 
@@ -222,7 +364,7 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ---
 
-## 9. Sales qualification (5 questions)
+## 10. Sales qualification (5 questions)
 
 | # | Question | Fit if… |
 |---|----------|---------|
@@ -234,7 +376,7 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ---
 
-## 10. Go-to-market (Nepal)
+## 11. Go-to-market (Nepal)
 
 | Channel | Action |
 |---------|--------|
@@ -247,7 +389,7 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ---
 
-## 11. Changes needed in existing product (checklist)
+## 12. Changes needed in existing product (checklist)
 
 Before heavy AI or van modules:
 
@@ -259,10 +401,14 @@ Before heavy AI or van modules:
 - [ ] INV-1 oversell in RPC
 - [ ] Purchase PDF/print parity with sales bill (if missing)
 - [ ] Onboarding doc for tenant (10 products, 5 customers, 1 purchase, 1 sale)
+- [ ] Stock adjustment RPC + UI (opening / count correction) — only when 2nd tenant needs it
+- [ ] VAT bill: **Tax Invoice** title when VAT registered (`billDisplay.ts`)
+- [ ] Optional customer **VAT number** on bill (B2B)
+- [ ] Settings: require address + tax id when VAT registered
 
 ---
 
-## 12. Open questions (for next discussion)
+## 13. Open questions (for next discussion)
 
 Record answers here as you decide:
 
@@ -270,16 +416,19 @@ Record answers here as you decide:
 |---|----------|--------|
 | 1 | Product name for market (not Havmor)? | TBD — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) |
 | 2 | Nepali (BS) date on printed bills required for v1? | TBD |
-| 3 | IRD e-billing / certified invoice scope? | TBD |
+| 3 | IRD e-billing / certified invoice scope? | **Complement** — export VAT/purchase books; IRD submit deferred ([DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md)) |
 | 4 | TDS / PAN workflows mandatory? | TBD |
 | 5 | Max users per plan (enforce in app)? | TBD |
 | 6 | Payment collection (eSewa/Khalti subscription)? | TBD |
 | 7 | Founding customer count and discount duration? | TBD |
 | 8 | First vertical after ice-cream (beverages vs general FMCG)? | TBD |
+| 9 | Separate stock entry / adjustment screen? | **Defer** — purchase = main IN; add adjustment P1 when onboarding demands |
+| 10 | Bill title “Tax Invoice” for VAT shops? | **Yes** — P1; see [§5](#5-nepal-vat--ird-compliance-checklist) |
+| 11 | Customer VAT number on bill? | **P1** — B2B; PAN exists today |
 
 ---
 
-## 13. Related docs
+## 14. Related docs
 
 | Doc | Role |
 |-----|------|
@@ -292,8 +441,10 @@ Record answers here as you decide:
 
 ---
 
-## 14. Revision log
+## 15. Revision log
 
 | Date | Change |
 |------|--------|
+| 2026-05-26 | §5 Nepal VAT / IRD compliance checklist (bill field audit, two levels A/B, compliance pack) |
+| 2026-05-26 | Stock model (purchase vs adjustment); Nepal E-Billing adopt/defer table |
 | 2026-05-26 | Initial GTM working doc from product/strategy discussion |

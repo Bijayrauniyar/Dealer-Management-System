@@ -17,7 +17,7 @@ Update docs in the **same change** as code — do not leave README/schema/UI doc
 | Products / pricing | `data-model.md` (§ products), [`phase1-manual-e2e-checklist.md`](backend/phase1-manual-e2e-checklist.md) § Products |
 | Settings fields | `data-model.md` (§ `tenant_settings`), manual checklist § Settings |
 | User-facing flow | [`LLM_CONTEXT.md`](LLM_CONTEXT.md) changelog + manual checklist row |
-| GTM / pricing / ICP | [`GTM_NEPAL.md`](GTM_NEPAL.md) + revision log §14 |
+| GTM / pricing / ICP / VAT·IRD | [`GTM_NEPAL.md`](GTM_NEPAL.md) — §5 compliance checklist + revision log |
 | E2E script | `phase1-use-cases-and-tests.md` command table |
 
 Also add a dated line to **`docs/LLM_CONTEXT.md`** changelog and extend **`app/scripts/e2e-*.mjs`** when the behavior is assertable.
@@ -35,7 +35,7 @@ Follow this path the first time you touch the repo:
 | 3 | [Migrations runbook](../app/supabase/README.txt) | Exact SQL file order: `0001` → `0002` → `0003` → `0005` → `0006` → `0007` (optional `0004` dev) |
 | 4 | [Testing against live Supabase](backend/testing-live-supabase.md) | Dashboard auth, first-run checklist, where to see data |
 | 5 | [Backend checklist](backend/BACKEND-TODO.md) | Done vs planned (Phase 0–2), what to build next |
-| 5b | [Nepal GTM & pricing (working)](GTM_NEPAL.md) | ICP, positioning, SaaS tiers, USP, sales qualification — **strategy discussions** |
+| 5b | [Nepal GTM & pricing (working)](GTM_NEPAL.md) | ICP, pricing, **§5 VAT/IRD bill checklist**, stock model, Nepal E-Billing — **strategy** |
 | 5c | [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) | What to build next and **why** — client pains, not feature count |
 | 5d | [Deferred work register](DEFERRED_WORK.md) | **Plan later:** INV-1/INV-2, export, supplier scheme — effort, files, acceptance |
 | 5e | [Data export spec](DATA_EXPORT_SPEC.md) | Phase 2-E: reporting, migration ZIP, backup (**deferred** — backlog only) |
@@ -76,7 +76,7 @@ flowchart LR
 | [PURCHASE_REFERENCE_NUMBERS.md](PURCHASE_REFERENCE_NUMBERS.md) | Supplier invoice no. vs PO, migrations 0014–0017, purchase bill UI |
 | [backend/BACKEND-TODO.md](backend/BACKEND-TODO.md) | Implementation checklist, Phase 2 tasks, production quality bar |
 | [DEFERRED_WORK.md](DEFERRED_WORK.md) | **Deferred backlog register** — INV-1/INV-2, effort, touchpoints, how to maintain |
-| [GTM_NEPAL.md](GTM_NEPAL.md) | Nepal market: ICP, positioning, NPR SaaS tiers, USP, AI roadmap, open questions |
+| [GTM_NEPAL.md](GTM_NEPAL.md) | Nepal market: ICP, pricing, **VAT/IRD compliance §5**, stock model, USP, open questions |
 | [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md) | Client pain points + pain-first roadmap |
 | [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) | Phase 2-E export design (deferred) |
 | [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | Product name & rebrand brief (deferred) |

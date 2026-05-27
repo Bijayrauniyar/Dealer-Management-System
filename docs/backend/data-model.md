@@ -348,9 +348,10 @@ RPCs: `record_purchase`, `update_purchase` (from `0013`+). UI: `PurchasePage`, `
 - On the *next* purchase against the same supplier, the UI surfaces pending short-receives so the dealer can match and clear them (i.e. "deduct X units from new invoice").
 - Backend: add a `short_receives` table (or a partial-receive view) to track pending short amounts per supplier.
 
-**Side effects:**
-- Increment `products.on_hand` by `received_qty` (not invoice_qty).
-- Increment `suppliers.outstanding` by invoiced amount if credit.
+**Side effects (stock):**
+- Stock on-hand comes from view `v_stock`: `opening_stock + purchased − sold − damaged + returned` (purchased = sum of `purchase_items.qty`).
+- **Normal stock IN = purchase**, not a separate stock-entry document. Opening qty uses `products.opening_stock`; count correction without supplier is **not in app UI yet** — see [GTM_NEPAL.md § Stock model](../GTM_NEPAL.md#stock-model-purchase-vs-stock-entry).
+- Supplier payable follows purchase total (credit purchases).
 
 ---
 
