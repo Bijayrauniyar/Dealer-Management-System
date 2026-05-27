@@ -6,17 +6,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Format a number as NPR currency. */
+const nprAmountFormat = { minimumFractionDigits: 0, maximumFractionDigits: 2 };
+
+/** Format a number as NPR currency (up to 2 decimal places / paisa). */
 export const npr = (value: number | null | undefined) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "NPR",
-    maximumFractionDigits: 0,
+    ...nprAmountFormat,
   }).format(value ?? 0);
 
 /** Format just the number part (no currency symbol). */
 export const nprNum = (value: number | null | undefined) =>
-  new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value ?? 0);
+  new Intl.NumberFormat("en-IN", nprAmountFormat).format(value ?? 0);
 
 /** ISO date string → readable date e.g. "14 May 2026". */
 export const fmtDate = (iso: string) =>

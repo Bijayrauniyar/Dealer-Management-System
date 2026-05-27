@@ -7,6 +7,7 @@ import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericMoneyProps } from "@/lib/money";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomers, commitCustomer } from "@/store/domain";
 
@@ -90,7 +91,13 @@ export const CustomerFormPage = () => {
           />
         </FormField>
         <FormField label="Credit limit (NPR)" hint="Max outstanding allowed; 0 = no limit set">
-          <NumericInput min={0} value={creditLimit} placeholder="0" onChange={setCreditLimit} />
+          <NumericInput
+            {...numericMoneyProps}
+            min={0}
+            value={creditLimit}
+            placeholder="0"
+            onChange={setCreditLimit}
+          />
         </FormField>
       </div>
 

@@ -7,6 +7,7 @@ import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericMoneyProps } from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { EXPENSE_CATEGORIES } from "@/domain/catalogs";
@@ -59,7 +60,12 @@ export const ExpensePage = () => {
           </Select>
         </FormField>
         <FormField label="Amount (NPR)" required>
-          <NumericInput min={0} value={Number(amount) || 0} onChange={(v) => setAmount(v === 0 ? "" : String(v))} />
+          <NumericInput
+            {...numericMoneyProps}
+            min={0}
+            value={Number(amount) || 0}
+            onChange={(v) => setAmount(v === 0 ? "" : String(v))}
+          />
         </FormField>
         <FormField label="Date"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></FormField>
         <FormField label="Notes"><Textarea placeholder="Details" value={notes} onChange={(e) => setNotes(e.target.value)} /></FormField>

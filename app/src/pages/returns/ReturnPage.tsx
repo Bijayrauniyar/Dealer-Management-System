@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useCustomers, useSales, commitReturn } from "@/store/domain";
+import { roundMoney } from "@/lib/money";
 import { npr, fmtDate } from "@/lib/utils";
 
 type ReturnLine = {
@@ -73,7 +74,7 @@ export const ReturnPage = () => {
   const returnLines  = lines.filter((l) => l.returnQty > 0);
   // Bug fix: apply per-line discount same as original billing so credit = what customer paid
   const lineCredit   = (l: ReturnLine) =>
-    Math.round(l.returnQty * l.rate * (1 - (l.discountPct ?? 0) / 100));
+    roundMoney(l.returnQty * l.rate * (1 - (l.discountPct ?? 0) / 100));
   const creditAmount   = returnLines.reduce((s, l) => s + lineCredit(l), 0);
   const totalReturnQty = returnLines.reduce((s, l) => s + l.returnQty, 0);
 

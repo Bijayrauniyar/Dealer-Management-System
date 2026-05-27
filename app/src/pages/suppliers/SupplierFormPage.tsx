@@ -7,6 +7,7 @@ import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericMoneyProps } from "@/lib/money";
 import { Textarea } from "@/components/ui/textarea";
 import { commitNewSupplier } from "@/store/domain";
 
@@ -66,7 +67,13 @@ export const SupplierFormPage = () => {
           label="Opening payable (NPR)"
           hint="What you already owed this supplier before using the app, if any"
         >
-          <NumericInput min={0} value={openingPayable} placeholder="0" onChange={setOpeningPayable} />
+          <NumericInput
+            {...numericMoneyProps}
+            min={0}
+            value={openingPayable}
+            placeholder="0"
+            onChange={setOpeningPayable}
+          />
         </FormField>
       </div>
 

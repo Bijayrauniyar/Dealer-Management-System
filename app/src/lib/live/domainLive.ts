@@ -23,6 +23,7 @@ import type {
   BillStatus,
 } from "@/domain/types";
 import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
+import { roundMoney } from "@/lib/money";
 import { normalizeInvoiceNoSpoken } from "@/lib/voiceInvoiceNo";
 import type { DashboardPeriodTotals } from "@/domain/defaults";
 import { isFocSaleLine } from "@/lib/billFoc";
@@ -351,7 +352,7 @@ export async function fetchSalesLive(): Promise<Sale[]> {
     let discountValue = 0;
     if (disc > 0 && sub > 0) {
       const pct = Math.round((disc / sub) * 100);
-      if (pct >= 1 && pct <= 100 && Math.abs(Math.round((sub * pct) / 100) - disc) <= 1) {
+      if (pct >= 1 && pct <= 100 && Math.abs(roundMoney((sub * pct) / 100) - disc) <= 0.01) {
         discountType = "percent";
         discountValue = pct;
       } else {
@@ -1297,7 +1298,7 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
     const rateExcl =
       row.rate_excl != null ? Number(row.rate_excl) : rateIncl;
     const amount = Number(row.total);
-    const vatAmount = Math.max(0, Math.round(amount - qty * rateExcl));
+    const vatAmount = Math.max(0, roundMoney(amount - qty * rateExcl));
     return {
       productId: row.product_id,
       productName: prod?.name ?? "Product",

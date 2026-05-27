@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import type { InputHTMLAttributes } from "react";
+import { formatAmountForInput, roundMoney } from "@/lib/money";
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
   value: number;
@@ -8,13 +9,14 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | 
   min?: number;
   max?: number;
   allowDecimal?: boolean;
+  /** Decimal places when allowDecimal (default 2 for money). */
+  decimalPlaces?: number;
   error?: string;
 };
 
 /**
  * Number input that shows empty instead of 0 while editing (Karobar-style).
- * Use this instead of &lt;Input type="number" value={n} onChange={e =&gt; setN(Number(e.target.value))} /&gt;
- * — native number inputs cannot be cleared when the value is 0.
+ * Use allowDecimal + decimalPlaces for NPR amounts (paisa).
  */
 export const NumericInput = ({
   value,
@@ -22,6 +24,7 @@ export const NumericInput = ({
   min,
   max,
   allowDecimal = false,
+  decimalPlaces = 2,
   error,
   onBlur,
   onFocus,
@@ -31,8 +34,12 @@ export const NumericInput = ({
   const [text, setText] = useState("");
 
   const displayFromValue = useCallback(
-    (v: number) => (v === 0 ? "" : String(v)),
-    [],
+    (v: number) => {
+      if (v === 0) return "";
+      if (allowDecimal) return formatAmountForInput(v, decimalPlaces);
+      return String(v);
+    },
+    [allowDecimal, decimalPlaces],
   );
 
   useEffect(() => {
@@ -45,13 +52,19 @@ export const NumericInput = ({
       onChange(0);
       return;
     }
-    const n = allowDecimal ? parseFloat(trimmed) : parseInt(trimmed, 10);
+    let n = allowDecimal ? parseFloat(trimmed) : parseInt(trimmed, 10);
     if (Number.isNaN(n)) return;
+    if (allowDecimal) n = roundMoney(n, decimalPlaces);
     let v = n;
     if (min != null) v = Math.max(min, v);
     if (max != null) v = Math.min(max, v);
     onChange(v);
   };
+
+  const decimalPattern =
+    decimalPlaces > 0
+      ? new RegExp(`^-?\\d*(?:\\.\\d{0,${decimalPlaces}})?$`)
+      : /^-?\d*$/;
 
   return (
     <Input
@@ -62,7 +75,7 @@ export const NumericInput = ({
       value={focused ? text : displayFromValue(value)}
       onFocus={(e) => {
         setFocused(true);
-        setText(value === 0 ? "" : String(value));
+        setText(displayFromValue(value));
         onFocus?.(e);
       }}
       onBlur={(e) => {
@@ -74,7 +87,7 @@ export const NumericInput = ({
       onChange={(e) => {
         const next = e.target.value;
         if (allowDecimal) {
-          if (next === "" || /^-?\d*\.?\d*$/.test(next)) setText(next);
+          if (next === "" || decimalPattern.test(next)) setText(next);
         } else if (next === "" || /^-?\d*$/.test(next)) {
           setText(next);
         }

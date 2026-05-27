@@ -28,6 +28,8 @@ import {
   useSchemes,
 } from "@/store/domain";
 import { getVatPct, tenantChargesVat } from "@/lib/billDisplay";
+import { numericMoneyProps, roundMoney } from "@/lib/money";
+import { addVatToExcl } from "@/lib/tax";
 import { buildSaleProductPickerOptions } from "@/lib/stockAlert";
 import { stripFocSuffixFromName } from "@/lib/billFoc";
 import { syncSchemeFreeLines, schemeHintForLine, type SaleDraftLine } from "@/lib/schemeApply";
@@ -157,15 +159,15 @@ export const SaleEntryPage = () => {
 
   const discountAmt = (() => {
     const v = Number(discountValue) || 0;
-    if (discountType === "percent") return Math.round((subtotal * v) / 100);
-    return Math.min(v, subtotal);
+    if (discountType === "percent") return roundMoney((subtotal * v) / 100);
+    return Math.min(roundMoney(v), subtotal);
   })();
 
-  const afterDiscount  = subtotal - discountAmt;
-  const termsAmt       = Number(billTermsAmt) || 0;
-  const taxBase        = afterDiscount + termsAmt;
-  const vatAmt         = tenantVat ? Math.round(taxBase * vatPct / 100) : 0;
-  const grandTotal     = taxBase + vatAmt;
+  const afterDiscount  = roundMoney(subtotal - discountAmt);
+  const termsAmt       = roundMoney(Number(billTermsAmt) || 0);
+  const taxBase        = roundMoney(afterDiscount + termsAmt);
+  const vatAmt         = tenantVat ? roundMoney(taxBase * vatPct / 100) : 0;
+  const grandTotal     = roundMoney(taxBase + vatAmt);
   const recordedPaid   = isEdit && existing ? Number(existing.paidNow) : 0;
   const paidAmt        = isEdit ? recordedPaid : Math.min(Number(paidNow) || 0, grandTotal);
   const balanceDue     = grandTotal - paidAmt;
@@ -528,8 +530,12 @@ export const SaleEntryPage = () => {
                       label={`MRP (NPR)`}
                       hint={line.productId ? `Per ${line.uom || "unit"} · on bill` : "On printed bill"}
                     >
-                      <NumericInput min={0} value={line.mrp}
-                        onChange={(v) => updateLine(line.id, { mrp: v })} />
+                      <NumericInput
+                        {...numericMoneyProps}
+                        min={0}
+                        value={line.mrp}
+                        onChange={(v) => updateLine(line.id, { mrp: v })}
+                      />
                     </FormField>
                     <FormField label="Amount">
                       <div className="flex h-11 flex-col justify-center rounded-lg bg-slate-50 px-3">
@@ -544,13 +550,17 @@ export const SaleEntryPage = () => {
                       <p className="mt-1">
                         Sell price: <strong className="text-teal-700">{nprNum(line.rate)}</strong>
                         {tenantVat && (
-                          <> · Incl. {vatPct}% VAT: {nprNum(Math.round(line.rate * (1 + vatPct / 100)))}</>
+                          <> · Incl. {vatPct}% VAT: {nprNum(addVatToExcl(line.rate, vatPct))}</>
                         )}
                       </p>
                       <div className="mt-2">
                         <FormField label="Dealer rate (NPR)">
-                          <NumericInput min={0} value={line.rate}
-                            onChange={(v) => updateLine(line.id, { rate: v })} />
+                          <NumericInput
+                            {...numericMoneyProps}
+                            min={0}
+                            value={line.rate}
+                            onChange={(v) => updateLine(line.id, { rate: v })}
+                          />
                         </FormField>
                       </div>
                     </div>
@@ -582,6 +592,7 @@ export const SaleEntryPage = () => {
               </FormField>
               <FormField label={discountType === "percent" ? "Discount %" : "Discount (NPR)"}>
                 <NumericInput
+                  {...numericMoneyProps}
                   min={0}
                   max={discountType === "percent" ? 100 : subtotal}
                   value={Number(discountValue) || 0}
@@ -610,8 +621,12 @@ export const SaleEntryPage = () => {
                   onChange={(e) => setBillTerms(e.target.value)} />
               </FormField>
               <FormField label="Amount (NPR)">
-                <NumericInput min={0} value={Number(billTermsAmt) || 0}
-                  onChange={(v) => setBillTermsAmt(v === 0 ? "" : String(v))} />
+                <NumericInput
+                  {...numericMoneyProps}
+                  min={0}
+                  value={Number(billTermsAmt) || 0}
+                  onChange={(v) => setBillTermsAmt(v === 0 ? "" : String(v))}
+                />
               </FormField>
             </div>
           </CardContent>
@@ -635,6 +650,7 @@ export const SaleEntryPage = () => {
             ) : (
               <FormField label="Amount received (NPR)" hint={`Grand total: ${npr(grandTotal)} · 0 = credit`}>
                 <NumericInput
+                  {...numericMoneyProps}
                   min={0}
                   max={grandTotal}
                   value={Number(paidNow) || 0}

@@ -21,6 +21,7 @@ import {
   commitPurchaseUpdate,
 } from "@/store/domain";
 import { getVatPct, addVatToExcl, vatAmountFromExcl, purchasePriceExclFromProduct } from "@/lib/tax";
+import { numericMoneyProps, roundMoney } from "@/lib/money";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
 import type { Product } from "@/domain/types";
 import {
@@ -209,7 +210,7 @@ export const PurchasePage = () => {
       product.uomConversion ?? null,
     );
     const lineTotalExcl = line.receivedQty * line.cost;
-    const rateExclPerBase = baseQty > 0 ? Math.round(lineTotalExcl / baseQty) : line.cost;
+    const rateExclPerBase = baseQty > 0 ? roundMoney(lineTotalExcl / baseQty) : line.cost;
     return { receivedQty: baseQty, rateExcl: rateExclPerBase };
   };
 
@@ -461,6 +462,7 @@ export const PurchasePage = () => {
                       </CompactField>
                       <CompactField label="Buy excl.">
                         <NumericInput
+                          {...numericMoneyProps}
                           className={inputCompact}
                           min={0}
                           value={line.cost}

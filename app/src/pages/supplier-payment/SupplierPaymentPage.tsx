@@ -9,6 +9,7 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericMoneyProps } from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_MODES } from "@/domain/catalogs";
@@ -249,6 +250,7 @@ export const SupplierPaymentPage = () => {
         {/* ── Amount ── */}
         <FormField label="Amount (NPR)" required>
           <NumericInput
+            {...numericMoneyProps}
             min={0}
             max={selectedTotal > 0 ? selectedTotal : undefined}
             placeholder={selectedTotal > 0 ? `Max ${selectedTotal}` : "0"}

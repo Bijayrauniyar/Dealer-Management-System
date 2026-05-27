@@ -8,6 +8,7 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericMoneyProps } from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
@@ -110,7 +111,12 @@ export const CapitalEntryPage = () => {
           required
           hint={isLoan ? "Full loan amount received" : "What you paid / invested"}
         >
-          <NumericInput min={0} value={Number(amount) || 0} onChange={(v) => setAmount(v === 0 ? "" : String(v))} />
+          <NumericInput
+            {...numericMoneyProps}
+            min={0}
+            value={Number(amount) || 0}
+            onChange={(v) => setAmount(v === 0 ? "" : String(v))}
+          />
         </FormField>
 
         {/* ── Current value (for fixed assets) ── */}
@@ -120,6 +126,7 @@ export const CapitalEntryPage = () => {
             hint="What it's worth today after use. Leave blank to use purchase price."
           >
             <NumericInput
+              {...numericMoneyProps}
               min={0}
               value={Number(currentValue) || 0}
               onChange={(v) => setCurrentValue(v === 0 ? "" : String(v))}

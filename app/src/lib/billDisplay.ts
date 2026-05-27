@@ -1,4 +1,5 @@
 import type { BusinessSettings, Sale, SaleLine } from "@/domain/types";
+import { roundMoney } from "@/lib/money";
 import { DEFAULT_VAT_PCT, getVatPct } from "@/lib/tax";
 import { fmtDate } from "@/lib/utils";
 import { buildSellerContactLine, formatSellerAddressSegments } from "./sellerAddressLine";
@@ -61,8 +62,8 @@ export function billLineHasDiscount(line: SaleLine): boolean {
   const mrp = Number(line.mrp) || 0;
   const qty = Number(line.qty) || 0;
   if (mrp <= 0 || qty <= 0) return false;
-  const gross = Math.round(qty * mrp);
-  const amt = line.amount != null ? Math.round(line.amount) : Math.round(qty * line.rate);
+  const gross = roundMoney(qty * mrp);
+  const amt = line.amount != null ? roundMoney(line.amount) : roundMoney(qty * line.rate);
   return amt < gross;
 }
 

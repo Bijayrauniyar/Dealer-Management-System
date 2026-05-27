@@ -25,6 +25,7 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericMoneyProps, roundMoney } from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { useBusinessSettings, useProducts, upsertProductLive } from "@/store/domain";
 import { supabase } from "@/lib/supabase";
@@ -87,7 +88,7 @@ export const ProductFormPage = () => {
   // Sell price is derived from buy × (1 + markup/100), but can be overridden
   const [sellPrice, setSellPrice] = useState(
     existing?.sellingPrice ??
-      (initialBuyExcl > 0 ? Math.round(initialBuyExcl * (1 + defaultMarkup / 100)) : 0),
+      (initialBuyExcl > 0 ? roundMoney(initialBuyExcl * (1 + defaultMarkup / 100)) : 0),
   );
 
   const [discountPct,   setDiscountPct]   = useState(existing?.discountPct   ?? 0);
@@ -125,7 +126,7 @@ export const ProductFormPage = () => {
 
   // ── Linked price calculations ─────────────────────────────────────────────
   const recalcSellFromMarkup = (buy: number, markup: number) => {
-    if (buy > 0) setSellPrice(Math.round(buy * (1 + markup / 100)));
+    if (buy > 0) setSellPrice(roundMoney(buy * (1 + markup / 100)));
   };
 
   const handleBuyChange = (v: number) => {
@@ -148,7 +149,7 @@ export const ProductFormPage = () => {
 
   // Reset sell price from current buy + markup
   const resetSellFromMarkup = () => {
-    if (buyPrice > 0) setSellPrice(Math.round(buyPrice * (1 + markupPct / 100)));
+    if (buyPrice > 0) setSellPrice(roundMoney(buyPrice * (1 + markupPct / 100)));
   };
 
   // ── Derived preview ───────────────────────────────────────────────────────
@@ -348,7 +349,7 @@ export const ProductFormPage = () => {
 
         <div className="space-y-4">
           <FormField label="MRP (NPR)" hint="Price on the product label — shown on bill for customer reference">
-            <NumericInput min={0} value={mrp} placeholder="0" onChange={setMrp} />
+            <NumericInput {...numericMoneyProps} min={0} value={mrp} placeholder="0" onChange={setMrp} />
           </FormField>
 
           {/* Buy price */}
@@ -363,6 +364,7 @@ export const ProductFormPage = () => {
             }
           >
             <NumericInput
+              {...numericMoneyProps}
               min={0}
               value={buyPrice}
               placeholder="0"
@@ -391,7 +393,13 @@ export const ProductFormPage = () => {
               hint="Optional. Auto-calculated from buy × markup — type to override."
             >
               <div className="relative">
-                <NumericInput min={0} value={sellPrice} placeholder="0" onChange={handleSellChange} />
+                <NumericInput
+                  {...numericMoneyProps}
+                  min={0}
+                  value={sellPrice}
+                  placeholder="0"
+                  onChange={handleSellChange}
+                />
                 {/* Reset button — recalculate from buy × markup */}
                 {buyPrice > 0 && (
                   <button
@@ -456,6 +464,7 @@ export const ProductFormPage = () => {
                   </FormField>
                   <FormField label="MRP (NPR)">
                     <NumericInput
+                      {...numericMoneyProps}
                       min={0}
                       value={row.mrp}
                       onChange={(v) =>
@@ -467,6 +476,7 @@ export const ProductFormPage = () => {
                   </FormField>
                   <FormField label="Sell excl. VAT">
                     <NumericInput
+                      {...numericMoneyProps}
                       min={0}
                       value={row.sellingPrice}
                       onChange={(v) =>

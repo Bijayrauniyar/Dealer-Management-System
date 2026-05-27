@@ -1,3 +1,5 @@
+import { roundMoney } from "@/lib/money";
+
 /** MRP-based bill line calculations (customer-facing invoice). */
 
 export type LinePricing = {
@@ -13,10 +15,10 @@ export function lineAmountFromMrp(l: LinePricing): number {
   const qty = Number(l.qty) || 0;
   const disc = Number(l.discountPct ?? 0);
   if (mrp > 0) {
-    return Math.round(qty * mrp * (1 - disc / 100));
+    return roundMoney(qty * mrp * (1 - disc / 100));
   }
   const rate = Number(l.rate) || 0;
-  return Math.round(qty * rate * (1 - disc / 100));
+  return roundMoney(qty * rate * (1 - disc / 100));
 }
 
 /** Line amount on printed/downloaded bill (matches DB subtotal). */
@@ -28,9 +30,9 @@ export function billLineAmount(line: {
   amount?: number;
 }): number {
   if (line.amount != null && Number.isFinite(line.amount)) {
-    return Math.round(line.amount);
+    return roundMoney(line.amount);
   }
-  const fromRate = Math.round(line.qty * line.rate);
+  const fromRate = roundMoney(line.qty * line.rate);
   if (line.rate > 0) return fromRate;
   return lineAmountFromMrp({
     qty: line.qty,
@@ -44,5 +46,5 @@ export function billLineAmount(line: {
 export function effectiveRateForRpc(l: LinePricing): number {
   const qty = Number(l.qty) || 0;
   if (qty <= 0) return 0;
-  return Math.round(lineAmountFromMrp(l) / qty);
+  return roundMoney(lineAmountFromMrp(l) / qty);
 }

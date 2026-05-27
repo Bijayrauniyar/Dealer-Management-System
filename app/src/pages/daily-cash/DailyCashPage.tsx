@@ -9,6 +9,7 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericMoneyProps } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { commitDailyCashClose, useDailyCashBreakdown } from "@/store/domain";
@@ -206,6 +207,7 @@ export const DailyCashPage = () => {
               <span className="ml-1 text-xs text-muted-foreground">(personal → business)</span>
             </p>
             <NumericInput
+              {...numericMoneyProps}
               min={0}
               placeholder="0"
               value={ownerInject}
@@ -253,6 +255,7 @@ export const DailyCashPage = () => {
         <CardContent className="space-y-3 p-4">
           <FormField label="Cash in drawer / safe (NPR)" required>
             <NumericInput
+              {...numericMoneyProps}
               min={0}
               placeholder="Count and enter actual cash"
               value={Number(physicalCount) || 0}

@@ -59,6 +59,11 @@ function runUnitTests() {
     "bill.amount PCS line",
   );
   r.assertClose(billLineAmount({ qty: 2, rate: 50, mrp: 60, amount: 99 }), 99, "bill.amount prefers stored amount");
+  r.assertClose(
+    billLineAmount({ qty: 3, rate: 10.25, mrp: 0 }),
+    30.75,
+    "bill.amount supports decimal rate (paisa)",
+  );
 
   const freshmentSegments = formatSellerAddressSegments({
     addressLine1: "Birgunj Nepal",

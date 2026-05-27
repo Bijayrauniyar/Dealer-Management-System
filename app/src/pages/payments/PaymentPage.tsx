@@ -9,6 +9,7 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericMoneyProps } from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_MODES } from "@/domain/catalogs";
@@ -219,6 +220,7 @@ export const PaymentPage = () => {
         {/* ── Amount ── */}
         <FormField label="Amount received (NPR)" required>
           <NumericInput
+            {...numericMoneyProps}
             min={0}
             value={Number(amount) || 0}
             onChange={(v) => setAmount(v === 0 ? "" : String(v))}

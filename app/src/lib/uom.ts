@@ -1,4 +1,5 @@
 import type { Product, ProductUomConversion, ProductUomPrice } from "@/domain/types";
+import { roundMoney } from "@/lib/money";
 import { effectiveRateForRpc } from "@/lib/saleLineMath";
 
 /** Standard units — pick when adding extra prices on product master. */
@@ -106,8 +107,8 @@ export function priceForPackFromBase(
   piecesPerPack: number,
 ): ProductUomPrice {
   return {
-    mrp: Math.round(base.mrp * piecesPerPack),
-    sellingPrice: Math.round(base.sellingPrice * piecesPerPack),
+    mrp: roundMoney(base.mrp * piecesPerPack),
+    sellingPrice: roundMoney(base.sellingPrice * piecesPerPack),
   };
 }
 
@@ -117,8 +118,8 @@ export function priceForBaseFromPack(
 ): ProductUomPrice {
   if (piecesPerPack < 1) return { mrp: 0, sellingPrice: 0 };
   return {
-    mrp: Math.round(pack.mrp / piecesPerPack),
-    sellingPrice: Math.round(pack.sellingPrice / piecesPerPack),
+    mrp: roundMoney(pack.mrp / piecesPerPack),
+    sellingPrice: roundMoney(pack.sellingPrice / piecesPerPack),
   };
 }
 

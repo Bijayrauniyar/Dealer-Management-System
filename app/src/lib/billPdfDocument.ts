@@ -15,6 +15,7 @@ import {
   sellerContactLine,
   sellerTaxId,
 } from "@/lib/billDisplay";
+import { roundMoney } from "@/lib/money";
 import { billLineAmount } from "@/lib/saleLineMath";
 import { amountInWords, fmtDate, nprNum, toMiti } from "@/lib/utils";
 
@@ -46,7 +47,7 @@ function lineDiscPct(line: SaleLine): number {
   const mrp = Number(line.mrp) || 0;
   const qty = Number(line.qty) || 0;
   if (mrp <= 0 || qty <= 0) return 0;
-  const gross = Math.round(qty * mrp);
+  const gross = roundMoney(qty * mrp);
   const amt = billLineAmount(line);
   if (amt >= gross) return 0;
   return Math.round((1 - amt / gross) * 100);

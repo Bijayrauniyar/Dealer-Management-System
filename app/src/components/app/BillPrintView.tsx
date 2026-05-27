@@ -24,6 +24,7 @@ import {
   billLineParticulars,
   isFocSaleLine,
 } from "@/lib/billFoc";
+import { roundMoney } from "@/lib/money";
 import { billLineAmount } from "@/lib/saleLineMath";
 
 type Props = {
@@ -53,7 +54,7 @@ function lineDiscPct(line: { qty: number; mrp?: number; rate: number; discountPc
   const mrp = Number(line.mrp) || 0;
   const qty = Number(line.qty) || 0;
   if (mrp <= 0 || qty <= 0) return 0;
-  const gross = Math.round(qty * mrp);
+  const gross = roundMoney(qty * mrp);
   const amt = billLineAmount(line);
   if (amt >= gross) return 0;
   return Math.round((1 - amt / gross) * 100);

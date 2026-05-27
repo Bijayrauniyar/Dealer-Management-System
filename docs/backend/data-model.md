@@ -99,7 +99,7 @@ S.N | Particulars | MRP | Qty | Unit | Disc% | Amount
 ```
 - **MRP** — snapshot from `products.mrp` at billing (editable on sale screen).
 - **Disc%** — snapshot of `products.discount_pct`. Column shown only when ≥ 1 line has a discount.
-- **Amount** — `qty × mrp × (1 − discount_pct / 100)`. Rounded to nearest integer.
+- **Amount** — `qty × mrp × (1 − discount_pct / 100)`. Rounded to 2 decimal places (paisa) in app via `roundMoney`.
 - **Rate (DB only)** — `sales_items.rate` stores effective unit price `round(Amount / qty)` so server `subtotal = sum(qty×rate)` matches the UI. Dealer sell price is kept in the app for margin reference only, not printed.
 
 Then at bill footer:
@@ -190,7 +190,7 @@ Subtotal (Σ line amounts)
 | mrp | numeric DEFAULT 0 | Snapshot of product MRP at billing time — for bill display only, not used in any calculation |
 | rate | numeric NOT NULL | Snapshot of `products.selling_price` (excl. VAT) at billing time |
 | discount_pct | numeric DEFAULT 0 | Snapshot of `products.discount_pct` — per-line product discount % |
-| line_total | numeric GENERATED | `qty × rate × (1 − discount_pct / 100)` — rounds to nearest integer |
+| line_total | numeric GENERATED | `qty × rate × (1 − discount_pct / 100)` — stored as numeric(12,2) |
 | add_less | numeric DEFAULT 0 | Phase 2: per-line adjustment (+/−) |
 
 > **Important:** `sales.subtotal` = `SUM(sale_lines.line_total)` — per-line discounts are already baked in before the bill-level discount is applied.

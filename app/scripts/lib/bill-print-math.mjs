@@ -3,23 +3,29 @@
  * Keep in sync with: src/lib/saleLineMath.ts, src/lib/uom.ts (hydrate path in domainLive.ts).
  */
 
+function roundMoney(value, decimals = 2) {
+  if (!Number.isFinite(value)) return 0;
+  const factor = 10 ** decimals;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+
 export function lineAmountFromMrp(l) {
   const mrp = Number(l.mrp) || 0;
   const qty = Number(l.qty) || 0;
   const disc = Number(l.discountPct ?? 0);
   if (mrp > 0) {
-    return Math.round(qty * mrp * (1 - disc / 100));
+    return roundMoney(qty * mrp * (1 - disc / 100));
   }
   const rate = Number(l.rate) || 0;
-  return Math.round(qty * rate * (1 - disc / 100));
+  return roundMoney(qty * rate * (1 - disc / 100));
 }
 
 /** Line amount on printed/downloaded bill (matches DB subtotal). */
 export function billLineAmount(line) {
   if (line.amount != null && Number.isFinite(line.amount)) {
-    return Math.round(line.amount);
+    return roundMoney(line.amount);
   }
-  const fromRate = Math.round(line.qty * line.rate);
+  const fromRate = roundMoney(line.qty * line.rate);
   if (line.rate > 0) return fromRate;
   return lineAmountFromMrp({
     qty: line.qty,
@@ -60,16 +66,16 @@ export function parseUomConversion(raw, baseUom) {
 
 function priceForPackFromBase(base, piecesPerPack) {
   return {
-    mrp: Math.round(base.mrp * piecesPerPack),
-    sellingPrice: Math.round(base.sellingPrice * piecesPerPack),
+    mrp: roundMoney(base.mrp * piecesPerPack),
+    sellingPrice: roundMoney(base.sellingPrice * piecesPerPack),
   };
 }
 
 function priceForBaseFromPack(pack, piecesPerPack) {
   if (piecesPerPack < 1) return { mrp: 0, sellingPrice: 0 };
   return {
-    mrp: Math.round(pack.mrp / piecesPerPack),
-    sellingPrice: Math.round(pack.sellingPrice / piecesPerPack),
+    mrp: roundMoney(pack.mrp / piecesPerPack),
+    sellingPrice: roundMoney(pack.sellingPrice / piecesPerPack),
   };
 }
 

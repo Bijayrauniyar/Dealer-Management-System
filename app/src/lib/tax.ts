@@ -1,4 +1,5 @@
 import type { BusinessSettings } from "@/domain/types";
+import { roundMoney } from "@/lib/money";
 
 /** @deprecated Use getVatPct(settings) — kept for gradual migration */
 export const DEFAULT_VAT_PCT = 13;
@@ -11,13 +12,13 @@ export function getVatPct(
 }
 
 export function addVatToExcl(excl: number, vatPct: number): number {
-  if (excl <= 0 || vatPct <= 0) return Math.round(excl);
-  return Math.round(excl * (1 + vatPct / 100));
+  if (excl <= 0 || vatPct <= 0) return roundMoney(excl);
+  return roundMoney(excl * (1 + vatPct / 100));
 }
 
 export function vatAmountFromExcl(excl: number, vatPct: number): number {
   if (excl <= 0 || vatPct <= 0) return 0;
-  return Math.round(excl * (vatPct / 100));
+  return roundMoney(excl * (vatPct / 100));
 }
 
 /** Split a VAT-inclusive unit or line amount into excl + vat + incl. */
@@ -25,11 +26,11 @@ export function splitInclusiveAmount(
   incl: number,
   vatPct: number,
 ): { excl: number; vat: number; incl: number } {
-  const roundedIncl = Math.round(incl);
+  const roundedIncl = roundMoney(incl);
   if (roundedIncl <= 0) return { excl: 0, vat: 0, incl: 0 };
   if (vatPct <= 0) return { excl: roundedIncl, vat: 0, incl: roundedIncl };
-  const excl = Math.round(roundedIncl / (1 + vatPct / 100));
-  const vat = roundedIncl - excl;
+  const excl = roundMoney(roundedIncl / (1 + vatPct / 100));
+  const vat = roundMoney(roundedIncl - excl);
   return { excl, vat, incl: roundedIncl };
 }
 
