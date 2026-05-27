@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](README.md) · [Gemma 4 system prompt](GEMMA_SYSTEM_PROMPT.md) · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
 
-**Last updated:** 2026-05-21
+**Last updated:** 2026-05-26
 
 **Gemma 4 26B:** paste **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** into System instructions, then attach this file each session.
 
@@ -382,6 +382,7 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2 featu
 
 ## Changelog (newest first)
 
+- **2026-05-26** — Bill letterhead: `sellerContactLine` dedupes repeated place names (e.g. Nepal in address + province + country); Settings hints on address fields.
 - **2026-05-26** — `GTM_NEPAL.md` §5: Nepal VAT/IRD bill field audit, compliance levels A/B, product compliance pack (export P0, Tax Invoice title P1).
 - **2026-05-26** — GTM + PRODUCT_EVOLUTION: stock model (purchase-driven IN vs adjustment later), Nepal E-Billing complement; see `docs/GTM_NEPAL.md`.
 - **2026-05-26** — Added `docs/GTM_NEPAL.md`: Nepal ICP, SaaS pricing draft, positioning, USP/AI, must-haves, open questions for strategy.

@@ -25,6 +25,10 @@ import {
   buildSaleProductPickerOptions,
 } from "./lib/stock-picker.mjs";
 import { createE2eReporter, createAuthedClient, parseNpr } from "./lib/e2e-helpers.mjs";
+import {
+  buildSellerContactLine,
+  formatSellerAddressSegments,
+} from "../src/lib/sellerAddressLine.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP = resolve(__dirname, "..");
@@ -55,6 +59,24 @@ function runUnitTests() {
     "bill.amount PCS line",
   );
   r.assertClose(billLineAmount({ qty: 2, rate: 50, mrp: 60, amount: 99 }), 99, "bill.amount prefers stored amount");
+
+  const freshmentSegments = formatSellerAddressSegments({
+    addressLine1: "Birgunj Nepal",
+    addressLine2: "Nepal",
+    district: "Parsa",
+    province: "Nepal",
+    country: "Nepal",
+  });
+  r.assertEq(
+    freshmentSegments.join(" · "),
+    "Birgunj Nepal · Parsa",
+    "seller address dedupes repeated Nepal (Freshment-style settings)",
+  );
+  r.assertEq(
+    buildSellerContactLine(freshmentSegments, { mobile: "9845982192", phone: "" }),
+    "Birgunj Nepal · Parsa · Ph 9845982192",
+    "seller contact line with phone",
+  );
 
   const hydrated = hydrateBillLineFromDbItem({
     qty: 1,

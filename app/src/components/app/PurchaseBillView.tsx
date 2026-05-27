@@ -43,6 +43,7 @@ function supplierTaxId(s: Supplier): { label: "VAT" | "PAN"; number: string } | 
 export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
   const vatPct = getVatPct(business);
   const sellerTax = sellerTaxId(business);
+  const sellerContact = sellerContactLine(business);
   const supTax = supplierTaxId(supplier);
   const balance = Math.max(0, purchase.total - purchase.paid);
   const title = purchaseDisplayTitle(purchase);
@@ -66,10 +67,8 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold leading-tight text-gray-900">{sellerBillName(business)}</p>
-              {sellerContactLine(business) ? (
-                <p className="mt-0.5 text-[9px] leading-snug text-gray-600">
-                  {sellerContactLine(business)}
-                </p>
+              {sellerContact ? (
+                <p className="mt-0.5 text-[9px] leading-snug text-gray-600">{sellerContact}</p>
               ) : null}
             </div>
             {sellerTax ? (

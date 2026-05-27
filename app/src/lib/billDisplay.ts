@@ -1,6 +1,7 @@
 import type { BusinessSettings, Sale, SaleLine } from "@/domain/types";
 import { DEFAULT_VAT_PCT, getVatPct } from "@/lib/tax";
 import { fmtDate } from "@/lib/utils";
+import { buildSellerContactLine, formatSellerAddressSegments } from "./sellerAddressLine";
 
 /** @deprecated Use getVatPct(settings) */
 export const BILL_VAT_RATE = DEFAULT_VAT_PCT;
@@ -111,21 +112,21 @@ export function sellerBillName(b: Pick<BusinessSettings, "legalName" | "name">):
   return legal || trading || "—";
 }
 
-/** Address + phone under shop name (left column of letterhead). */
+/** Address + phone under shop name (left column of letterhead). Dedupes repeated place names from Settings. */
 export function sellerContactLine(
   b: Pick<
     BusinessSettings,
     "addressLine1" | "addressLine2" | "district" | "province" | "country" | "mobile" | "phone"
   >,
 ): string {
-  const row1 = [b.addressLine1, b.addressLine2].map((s) => (s ?? "").trim()).filter(Boolean).join(", ");
-  const row2 = [b.district, b.province, b.country]
-    .map((s) => (s ?? "").trim())
-    .filter(Boolean)
-    .join(" · ");
-  const addr = [row1, row2].filter(Boolean).join(" · ");
-  const phone = (b.mobile || b.phone).trim();
-  return [addr, phone ? `Ph ${phone}` : ""].filter(Boolean).join(" · ");
+  const segments = formatSellerAddressSegments({
+    addressLine1: b.addressLine1,
+    addressLine2: b.addressLine2,
+    district: b.district,
+    province: b.province,
+    country: b.country,
+  });
+  return buildSellerContactLine(segments, { mobile: b.mobile, phone: b.phone });
 }
 
 /** Seller tax line on bill: VAT if registered + number set, else PAN if set — never both. */

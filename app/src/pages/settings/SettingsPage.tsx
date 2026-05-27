@@ -212,16 +212,22 @@ export function SettingsPage() {
 
           <SectionTitle icon={MapPin} label="Business address" />
           <div className="space-y-4">
-            <FormField label="Address line 1">
+            <FormField
+              label="Address line 1"
+              hint="Street and city (e.g. Birgunj). Avoid putting district or country here if you use the fields below."
+            >
               <Input value={addr1} onChange={(e) => setAddr1(e.target.value)} />
             </FormField>
-            <FormField label="Address line 2">
+            <FormField label="Address line 2" hint="Optional — ward, landmark, etc.">
               <Input value={addr2} onChange={(e) => setAddr2(e.target.value)} />
             </FormField>
             <FormField label="District">
               <Input value={district} onChange={(e) => setDistrict(e.target.value)} />
             </FormField>
-            <FormField label="Province">
+            <FormField
+              label="Province"
+              hint="Province name (e.g. Madhesh, Bagmati). Do not enter Nepal — country is added on bills automatically."
+            >
               <Input value={province} onChange={(e) => setProvince(e.target.value)} />
             </FormField>
           </div>
