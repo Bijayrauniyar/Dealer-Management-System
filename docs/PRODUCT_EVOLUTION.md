@@ -1,6 +1,6 @@
 # Product evolution — client pain points first
 
-**Navigate:** [Docs hub](README.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Data export spec](DATA_EXPORT_SPEC.md) · [LLM context](LLM_CONTEXT.md)
+**Navigate:** [Docs hub](README.md) · [Nepal GTM & pricing](GTM_NEPAL.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Data export spec](DATA_EXPORT_SPEC.md) · [LLM context](LLM_CONTEXT.md)
 
 **Purpose:** Evolve from the Havmor ice-cream pilot into a **generic Nepal distributor platform** — without a long “feature count” roadmap. Every item below ties to a **real user pain** or a **broken/half-built screen** today.
 

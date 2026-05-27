@@ -17,6 +17,7 @@ Update docs in the **same change** as code — do not leave README/schema/UI doc
 | Products / pricing | `data-model.md` (§ products), [`phase1-manual-e2e-checklist.md`](backend/phase1-manual-e2e-checklist.md) § Products |
 | Settings fields | `data-model.md` (§ `tenant_settings`), manual checklist § Settings |
 | User-facing flow | [`LLM_CONTEXT.md`](LLM_CONTEXT.md) changelog + manual checklist row |
+| GTM / pricing / ICP | [`GTM_NEPAL.md`](GTM_NEPAL.md) + revision log §14 |
 | E2E script | `phase1-use-cases-and-tests.md` command table |
 
 Also add a dated line to **`docs/LLM_CONTEXT.md`** changelog and extend **`app/scripts/e2e-*.mjs`** when the behavior is assertable.
@@ -34,9 +35,10 @@ Follow this path the first time you touch the repo:
 | 3 | [Migrations runbook](../app/supabase/README.txt) | Exact SQL file order: `0001` → `0002` → `0003` → `0005` → `0006` → `0007` (optional `0004` dev) |
 | 4 | [Testing against live Supabase](backend/testing-live-supabase.md) | Dashboard auth, first-run checklist, where to see data |
 | 5 | [Backend checklist](backend/BACKEND-TODO.md) | Done vs planned (Phase 0–2), what to build next |
-| 5b | [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) | What to build next and **why** — client pains, not feature count |
-| 5c | [Deferred work register](DEFERRED_WORK.md) | **Plan later:** INV-1/INV-2, export, supplier scheme — effort, files, acceptance |
-| 5d | [Data export spec](DATA_EXPORT_SPEC.md) | Phase 2-E: reporting, migration ZIP, backup (**deferred** — backlog only) |
+| 5b | [Nepal GTM & pricing (working)](GTM_NEPAL.md) | ICP, positioning, SaaS tiers, USP, sales qualification — **strategy discussions** |
+| 5c | [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) | What to build next and **why** — client pains, not feature count |
+| 5d | [Deferred work register](DEFERRED_WORK.md) | **Plan later:** INV-1/INV-2, export, supplier scheme — effort, files, acceptance |
+| 5e | [Data export spec](DATA_EXPORT_SPEC.md) | Phase 2-E: reporting, migration ZIP, backup (**deferred** — backlog only) |
 | 6 | [Data model](backend/data-model.md) | Tables, views, Phase 2 design (capital policy, bill amendments) |
 | 7 | [Phase 1 — automated tests](backend/phase1-use-cases-and-tests.md) | `npm run e2e:*` matrix and RPC expectations |
 | 8 | [Phase 1 — manual E2E](backend/phase1-manual-e2e-checklist.md) | What scripts skip; full human QA |
@@ -74,6 +76,7 @@ flowchart LR
 | [PURCHASE_REFERENCE_NUMBERS.md](PURCHASE_REFERENCE_NUMBERS.md) | Supplier invoice no. vs PO, migrations 0014–0017, purchase bill UI |
 | [backend/BACKEND-TODO.md](backend/BACKEND-TODO.md) | Implementation checklist, Phase 2 tasks, production quality bar |
 | [DEFERRED_WORK.md](DEFERRED_WORK.md) | **Deferred backlog register** — INV-1/INV-2, effort, touchpoints, how to maintain |
+| [GTM_NEPAL.md](GTM_NEPAL.md) | Nepal market: ICP, positioning, NPR SaaS tiers, USP, AI roadmap, open questions |
 | [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md) | Client pain points + pain-first roadmap |
 | [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) | Phase 2-E export design (deferred) |
 | [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | Product name & rebrand brief (deferred) |
