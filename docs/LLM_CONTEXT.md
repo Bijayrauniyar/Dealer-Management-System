@@ -382,6 +382,9 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2 featu
 
 ## Changelog (newest first)
 
+- **2026-05-26** — Product markup %: empty field stays empty (Settings default only in hint); explicit `0` shows `0`; refresh button applies Settings default.
+- **2026-05-26** — Decimal inputs: `numericMoneyProps` / `numericPercentProps` / `numericQtyProps` on prices, %, and qty fields; integers kept for days, min-stock, scheme counts, pieces-per-pack.
+- **2026-05-26** — Markup % accepts decimals (e.g. 4.5) on Product form + Settings; migration `0018_default_markup_decimal.sql`.
 - **2026-05-26** — NPR amounts: decimal input (paisa) on prices/payments via `NumericInput` + `numericMoneyProps`; `npr`/`nprNum` show up to 2 dp; `roundMoney` in tax/sale/purchase math (`money.ts`).
 - **2026-05-26** — Bill letterhead: `sellerContactLine` dedupes repeated place names (e.g. Nepal in address + province + country); Settings hints on address fields.
 - **2026-05-26** — `GTM_NEPAL.md` §5: Nepal VAT/IRD bill field audit, compliance levels A/B, product compliance pack (export P0, Tax Invoice title P1).

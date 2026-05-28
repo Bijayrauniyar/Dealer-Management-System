@@ -22,3 +22,20 @@ export const numericMoneyProps = {
   allowDecimal: true,
   decimalPlaces: MONEY_DECIMAL_PLACES,
 } as const;
+
+/** Spread on &lt;NumericInput&gt; for percentage fields (markup, discount %, VAT %). */
+export const numericPercentProps = {
+  allowDecimal: true,
+  decimalPlaces: 2,
+} as const;
+
+/** Spread on &lt;NumericInput&gt; for quantities (invoice/received/sale qty — DB numeric(12,2)). */
+export const numericQtyProps = {
+  allowDecimal: true,
+  decimalPlaces: 2,
+} as const;
+
+/** Round a percentage value for display/storage (e.g. 4.5% markup). */
+export function roundPercent(value: number): number {
+  return roundMoney(value, 2);
+}

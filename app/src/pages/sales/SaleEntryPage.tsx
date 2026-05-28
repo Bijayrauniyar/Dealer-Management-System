@@ -28,7 +28,7 @@ import {
   useSchemes,
 } from "@/store/domain";
 import { getVatPct, tenantChargesVat } from "@/lib/billDisplay";
-import { numericMoneyProps, roundMoney } from "@/lib/money";
+import { numericMoneyProps, numericPercentProps, numericQtyProps, roundMoney } from "@/lib/money";
 import { addVatToExcl } from "@/lib/tax";
 import { buildSaleProductPickerOptions } from "@/lib/stockAlert";
 import { stripFocSuffixFromName } from "@/lib/billFoc";
@@ -523,8 +523,12 @@ export const SaleEntryPage = () => {
                       </Select>
                     </FormField>
                     <FormField label="Qty">
-                      <NumericInput min={1} value={line.qty}
-                        onChange={(v) => updateLine(line.id, { qty: Math.max(1, v) })} />
+                      <NumericInput
+                        {...numericQtyProps}
+                        min={0}
+                        value={line.qty}
+                        onChange={(v) => updateLine(line.id, { qty: v > 0 ? v : 0 })}
+                      />
                     </FormField>
                     <FormField
                       label={`MRP (NPR)`}
@@ -592,7 +596,7 @@ export const SaleEntryPage = () => {
               </FormField>
               <FormField label={discountType === "percent" ? "Discount %" : "Discount (NPR)"}>
                 <NumericInput
-                  {...numericMoneyProps}
+                  {...(discountType === "percent" ? numericPercentProps : numericMoneyProps)}
                   min={0}
                   max={discountType === "percent" ? 100 : subtotal}
                   value={Number(discountValue) || 0}

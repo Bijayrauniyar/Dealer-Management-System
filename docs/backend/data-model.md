@@ -56,7 +56,7 @@ One row per tenant — stores the full business profile that appears on invoices
 | bill_footer | text | Footer text printed on every invoice |
 | overdue_days | integer DEFAULT 7 | Bills past due by this many days are flagged as Overdue |
 | due_soon_days | integer DEFAULT 3 | Bills due within this many days get a reminder |
-| default_markup_pct | integer DEFAULT 15 | Default % markup over buy price used to auto-calculate sell price on new products. Overridable per product. |
+| default_markup_pct | numeric(5,2) DEFAULT 15 (`0018`) | Default % markup over buy price (decimals OK, e.g. 4.5). Auto-calculates sell on new products; overridable per product. |
 | default_vat_pct | numeric DEFAULT 13 | Default VAT % for purchase bills and sales when tenant is VAT registered (`0017`). |
 | default_min_qty | integer DEFAULT 20 | Default low-stock threshold applied when creating a new product. Overridable per product. |
 | updated_at | timestamptz | |

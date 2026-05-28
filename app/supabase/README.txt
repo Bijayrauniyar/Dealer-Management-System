@@ -91,6 +91,9 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
 
 18. Migration 0017 (purchase VAT — default_vat_pct, rate_excl, bill-style totals)
    - Open: app/supabase/migrations/0017_purchase_vat.sql
+
+19. Migration 0018 (decimal default markup % — e.g. 4.5 in Settings)
+   - Open: app/supabase/migrations/0018_default_markup_decimal.sql
    - Copy entire file → Paste → Run → Success.
    - Adds Settings → Default VAT %; purchase lines store excl + VAT split.
    - UI details: docs/PURCHASE_REFERENCE_NUMBERS.md

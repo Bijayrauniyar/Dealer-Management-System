@@ -246,6 +246,17 @@ function runSourceChecks() {
     r.fail("ProductFormPage pricing", "buy excl / optional sell regression");
   }
 
+  if (
+    productForm?.includes("numericPercentProps") &&
+    productForm.includes("Markup (%)") &&
+    productForm.includes("nullable") &&
+    productForm.includes("showZero")
+  ) {
+    r.pass("ProductFormPage decimal markup % (nullable, showZero)");
+  } else if (productForm) {
+    r.fail("ProductFormPage markup", "numericPercentProps / nullable / showZero missing");
+  }
+
   if (domainLive && domainLive.includes("rate_excl")) {
     r.pass("domainLive purchase lines use rate_excl");
   } else if (domainLive) {

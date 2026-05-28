@@ -7,6 +7,7 @@ import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericPercentProps } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
@@ -271,7 +272,13 @@ export function SettingsPage() {
               label="Default VAT (%)"
               hint="Used on purchase bills (always) and sales bills when VAT registered"
             >
-              <NumericInput min={0} max={100} value={defaultVatPct} onChange={setDefaultVatPct} />
+              <NumericInput
+                {...numericPercentProps}
+                min={0}
+                max={100}
+                value={defaultVatPct}
+                onChange={setDefaultVatPct}
+              />
             </FormField>
             <FormField label="Invoice prefix">
               <Input value={prefix} onChange={(e) => setPrefix(e.target.value)} maxLength={6} />
@@ -299,8 +306,14 @@ export function SettingsPage() {
                 <NumericInput min={0} max={30} value={dueSoonDays} onChange={setDueSoonDays} />
               </FormField>
             </div>
-            <FormField label="Default sell markup (%)">
-              <NumericInput min={0} max={500} value={defaultMarkupPct} onChange={setDefaultMarkupPct} />
+            <FormField label="Default sell markup (%)" hint="e.g. 15 or 4.5 — used when adding new products">
+              <NumericInput
+                {...numericPercentProps}
+                min={0}
+                max={500}
+                value={defaultMarkupPct}
+                onChange={setDefaultMarkupPct}
+              />
             </FormField>
 
             <div className="rounded-lg border border-border-subtle bg-slate-50 p-3">

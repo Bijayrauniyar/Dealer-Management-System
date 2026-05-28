@@ -21,7 +21,7 @@ import {
   commitPurchaseUpdate,
 } from "@/store/domain";
 import { getVatPct, addVatToExcl, vatAmountFromExcl, purchasePriceExclFromProduct } from "@/lib/tax";
-import { numericMoneyProps, roundMoney } from "@/lib/money";
+import { numericMoneyProps, numericQtyProps, roundMoney } from "@/lib/money";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
 import type { Product } from "@/domain/types";
 import {
@@ -434,6 +434,7 @@ export const PurchasePage = () => {
                       </CompactField>
                       <CompactField label="Inv. qty">
                         <NumericInput
+                          {...numericQtyProps}
                           className={inputCompact}
                           min={0}
                           value={line.invoiceQty}
@@ -449,6 +450,7 @@ export const PurchasePage = () => {
                       </CompactField>
                       <CompactField label="Rcvd">
                         <NumericInput
+                          {...numericQtyProps}
                           className={inputCompact}
                           min={0}
                           max={line.invoiceQty}

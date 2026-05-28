@@ -8,6 +8,7 @@ import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
+import { numericQtyProps } from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DAMAGE_REASONS } from "@/domain/catalogs";
@@ -56,7 +57,12 @@ export const DamagePage = () => {
             value={productId} onChange={(id) => setProductId(id)} onClear={() => setProductId("")} entityLabel="product" />
         </FormField>
         <FormField label="Qty" required>
-          <NumericInput min={1} value={qty} onChange={(v) => setQty(Math.max(1, v))} />
+          <NumericInput
+            {...numericQtyProps}
+            min={0}
+            value={qty}
+            onChange={(v) => setQty(v > 0 ? v : 0)}
+          />
         </FormField>
         <FormField label="Reason" required>
           <Select value={reason} onChange={(e) => setReason(e.target.value)}>

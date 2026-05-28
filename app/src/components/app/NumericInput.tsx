@@ -3,20 +3,34 @@ import { Input } from "@/components/ui/input";
 import type { InputHTMLAttributes } from "react";
 import { formatAmountForInput, roundMoney } from "@/lib/money";
 
-type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
-  value: number;
-  onChange: (value: number) => void;
+type NumericInputBase = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
   min?: number;
   max?: number;
   allowDecimal?: boolean;
   /** Decimal places when allowDecimal (default 2 for money). */
   decimalPlaces?: number;
+  /** When true, show "0" instead of blank (default: blank for 0, Karobar-style). */
+  showZero?: boolean;
   error?: string;
 };
 
+type NumericInputProps = NumericInputBase & {
+  nullable?: false;
+  value: number;
+  onChange: (value: number) => void;
+};
+
+type NullableNumericInputProps = NumericInputBase & {
+  nullable: true;
+  value: number | null;
+  onChange: (value: number | null) => void;
+};
+
+type Props = NumericInputProps | NullableNumericInputProps;
+
 /**
  * Number input that shows empty instead of 0 while editing (Karobar-style).
- * Use allowDecimal + decimalPlaces for NPR amounts (paisa).
+ * Use nullable + showZero for markup % (empty = unset, 0 = explicit zero).
  */
 export const NumericInput = ({
   value,
@@ -25,6 +39,8 @@ export const NumericInput = ({
   max,
   allowDecimal = false,
   decimalPlaces = 2,
+  showZero = false,
+  nullable = false,
   error,
   onBlur,
   onFocus,
@@ -34,12 +50,13 @@ export const NumericInput = ({
   const [text, setText] = useState("");
 
   const displayFromValue = useCallback(
-    (v: number) => {
-      if (v === 0) return "";
+    (v: number | null) => {
+      if (v === null) return "";
+      if (v === 0) return showZero ? "0" : "";
       if (allowDecimal) return formatAmountForInput(v, decimalPlaces);
       return String(v);
     },
-    [allowDecimal, decimalPlaces],
+    [allowDecimal, decimalPlaces, showZero],
   );
 
   useEffect(() => {
@@ -49,7 +66,11 @@ export const NumericInput = ({
   const commit = (raw: string) => {
     const trimmed = raw.trim();
     if (trimmed === "" || trimmed === "-") {
-      onChange(0);
+      if (nullable) {
+        (onChange as (v: number | null) => void)(null);
+      } else {
+        (onChange as (v: number) => void)(0);
+      }
       return;
     }
     let n = allowDecimal ? parseFloat(trimmed) : parseInt(trimmed, 10);
@@ -58,7 +79,11 @@ export const NumericInput = ({
     let v = n;
     if (min != null) v = Math.max(min, v);
     if (max != null) v = Math.min(max, v);
-    onChange(v);
+    if (nullable) {
+      (onChange as (v: number | null) => void)(v);
+    } else {
+      (onChange as (v: number) => void)(v);
+    }
   };
 
   const decimalPattern =

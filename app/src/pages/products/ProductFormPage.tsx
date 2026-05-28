@@ -12,7 +12,7 @@
  *              Manually typing sell price updates markup % to match.
  *
  * Defaults (from Settings):
- *   - markup %     → BUSINESS.defaultMarkupPct
+ *   - markup %     → optional; empty = unset (hint shows Settings default); refresh applies default
  *   - low stock    → BUSINESS.defaultMinQty
  */
 import { useState } from "react";
@@ -25,7 +25,7 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
-import { numericMoneyProps, roundMoney } from "@/lib/money";
+import { numericMoneyProps, numericPercentProps, roundMoney, roundPercent } from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { useBusinessSettings, useProducts, upsertProductLive } from "@/store/domain";
 import { supabase } from "@/lib/supabase";
@@ -75,21 +75,16 @@ export const ProductFormPage = () => {
       : 0;
   const [buyPrice, setBuyPrice] = useState(initialBuyExcl);
 
-  // Markup % — defaults from Settings, overridable per product
+  // Markup % — empty = unset (hint shows Settings default); 0 = no markup; not prefilled from Settings
+  const [markupPct, setMarkupPct] = useState<number | null>(() => {
+    if (!existing || initialBuyExcl <= 0) return null;
+    return roundPercent(((existing.sellingPrice - initialBuyExcl) / initialBuyExcl) * 100);
+  });
 
-  const [markupPct, setMarkupPct] = useState(
-    existing
-      ? initialBuyExcl > 0
-        ? Math.round(((existing.sellingPrice - initialBuyExcl) / initialBuyExcl) * 100)
-        : defaultMarkup
-      : defaultMarkup,
-  );
+  const markupForCalc = (m: number | null) => m ?? 0;
 
   // Sell price is derived from buy × (1 + markup/100), but can be overridden
-  const [sellPrice, setSellPrice] = useState(
-    existing?.sellingPrice ??
-      (initialBuyExcl > 0 ? roundMoney(initialBuyExcl * (1 + defaultMarkup / 100)) : 0),
-  );
+  const [sellPrice, setSellPrice] = useState(existing?.sellingPrice ?? 0);
 
   const [discountPct,   setDiscountPct]   = useState(existing?.discountPct   ?? 0);
 
@@ -125,8 +120,8 @@ export const ProductFormPage = () => {
   const [saving, setSaving] = useState(false);
 
   // ── Linked price calculations ─────────────────────────────────────────────
-  const recalcSellFromMarkup = (buy: number, markup: number) => {
-    if (buy > 0) setSellPrice(roundMoney(buy * (1 + markup / 100)));
+  const recalcSellFromMarkup = (buy: number, markup: number | null) => {
+    if (buy > 0) setSellPrice(roundMoney(buy * (1 + markupForCalc(markup) / 100)));
   };
 
   const handleBuyChange = (v: number) => {
@@ -134,7 +129,7 @@ export const ProductFormPage = () => {
     recalcSellFromMarkup(v, markupPct);
   };
 
-  const handleMarkupChange = (v: number) => {
+  const handleMarkupChange = (v: number | null) => {
     setMarkupPct(v);
     recalcSellFromMarkup(buyPrice, v);
   };
@@ -143,13 +138,16 @@ export const ProductFormPage = () => {
   const handleSellChange = (v: number) => {
     setSellPrice(v);
     if (buyPrice > 0 && v > 0) {
-      setMarkupPct(Math.round(((v - buyPrice) / buyPrice) * 100));
+      setMarkupPct(roundPercent(((v - buyPrice) / buyPrice) * 100));
     }
   };
 
   // Reset sell price from current buy + markup
   const resetSellFromMarkup = () => {
-    if (buyPrice > 0) setSellPrice(roundMoney(buyPrice * (1 + markupPct / 100)));
+    if (buyPrice <= 0) return;
+    const m = markupPct ?? defaultMarkup;
+    if (markupPct === null) setMarkupPct(defaultMarkup);
+    setSellPrice(roundMoney(buyPrice * (1 + m / 100)));
   };
 
   // ── Derived preview ───────────────────────────────────────────────────────
@@ -342,8 +340,13 @@ export const ProductFormPage = () => {
           <div className="text-xs text-teal-700 space-y-1">
             <p><strong>MRP</strong> — printed on product. Shown on bill as reference only.</p>
             <p><strong>Buy price</strong> — what you pay Havmor, before VAT. With-VAT amount is calculated from Settings.</p>
-            <p><strong>Markup %</strong> — auto-calculates sell price. Default from Settings ({defaultMarkup}%). Override per product.</p>
-            <p><strong>Sell price</strong> — optional; charged to your customer <em>excl. VAT</em>. Leave blank or set later; markup can fill it from buy price.</p>
+            <p>
+              <strong>Markup %</strong> — leave blank for no markup, or use ↻ on sell price to apply Settings default (
+              {defaultMarkup}%).
+            </p>
+            <p>
+              <strong>Sell price</strong> — updates from buy × markup; type to override (<em>excl. VAT</em>).
+            </p>
           </div>
         </div>
 
@@ -375,23 +378,20 @@ export const ProductFormPage = () => {
 
           {/* Markup + sell price — linked row */}
           <div className="grid grid-cols-2 gap-3">
-            <FormField
-              label="Markup (%)"
-              hint={`Default: ${defaultMarkup}% (from Settings)`}
-            >
+            <FormField label="Markup (%)">
               <NumericInput
+                {...numericPercentProps}
+                nullable
+                showZero
                 min={0}
                 max={500}
                 value={markupPct}
-                placeholder={String(defaultMarkup)}
+                placeholder=""
                 onChange={handleMarkupChange}
               />
             </FormField>
 
-            <FormField
-              label="Sell price excl. VAT (NPR)"
-              hint="Optional. Auto-calculated from buy × markup — type to override."
-            >
+            <FormField label="Sell price excl. VAT (NPR)">
               <div className="relative">
                 <NumericInput
                   {...numericMoneyProps}
@@ -405,7 +405,11 @@ export const ProductFormPage = () => {
                   <button
                     type="button"
                     onClick={resetSellFromMarkup}
-                    title="Recalculate from buy price × markup"
+                    title={
+                      markupPct === null
+                        ? `Apply Settings markup (${defaultMarkup}%) and recalculate sell`
+                        : "Recalculate sell from buy × markup %"
+                    }
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-teal-600"
                   >
                     <RefreshCw size={13} />
@@ -417,6 +421,7 @@ export const ProductFormPage = () => {
 
           <FormField label="Standard discount (%)" hint="Auto-filled on new bills — 0 if none">
             <NumericInput
+              {...numericPercentProps}
               min={0}
               max={100}
               value={discountPct}
@@ -513,7 +518,9 @@ export const ProductFormPage = () => {
             <span className="text-gray-300"> · </span>
             <span className="text-muted">Buy {npr(buyPrice)}</span>
             <span className="text-gray-300"> · </span>
-            <span>Markup {markupPct}%</span>
+            <span>
+              Markup {markupPct === null ? "—" : `${markupPct}%`}
+            </span>
             <span className="text-gray-300"> · </span>
             <span className="font-semibold text-teal-800">Sell {npr(sellPrice)}</span>
             {discountPct > 0 && (
