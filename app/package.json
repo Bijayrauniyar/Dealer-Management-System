@@ -1,5 +1,5 @@
 {
-  "name": "havmor-dms",
+  "name": "bikrikhata",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -24,6 +24,7 @@
     "e2e:stock": "node scripts/e2e-stock-dates.mjs",
     "e2e:stock:live": "node scripts/e2e-stock-dates.mjs --live",
     "e2e:stock-bill": "npm run e2e:bill && npm run e2e:stock:live",
+    "e2e:export": "node scripts/e2e-export.mjs",
     "e2e:suppliers": "node scripts/e2e-supplier-invoices.mjs",
     "e2e:suppliers:live": "node scripts/e2e-supplier-invoices.mjs --live",
     "e2e:bill:ui": "node --experimental-strip-types scripts/e2e-bill-print.mjs --ui",
@@ -50,6 +51,7 @@
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.8.0",
     "papaparse": "^5.5.3",
     "react": "^19.2.5",

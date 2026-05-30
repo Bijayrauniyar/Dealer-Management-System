@@ -1,0 +1,27 @@
+---
+description: Delegate low-token manual work to the user; agent keeps multi-file implementation
+alwaysApply: true
+---
+
+# Delegate to user (save tokens)
+
+When planning or finishing a task, **split work explicitly**:
+
+## User does (prefer delegating — do not run long command batches unless asked)
+
+- Apply Supabase migrations in SQL Editor (`app/supabase/README.txt` steps)
+- Run `npm run` / `e2e:*` / `deploy:check` locally and paste failures only
+- Manual UI QA (Settings, print bill, Excel CSV open, stock adjustment smoke)
+- Product/branding decisions (lock name in `app/src/config/productBrand.ts`)
+- Git commit, push, Netlify deploy, Supabase dashboard config
+- Accountant / CA review of sample exports
+
+## Agent does
+
+- Multi-file features, `domainLive`, hooks, migrations **files**, export lib, Settings refactors
+- Fixing build/type errors from user-pasted logs
+- Docs updates per `docs-on-change.mdc` when shipping behavior
+
+## Response format
+
+End implementation summaries with a **Your turn** section: numbered steps, exact commands, expected pass criteria. Keep agent runs to code + short `e2e:export`-style source checks only when user did not ask to run full matrix/live.

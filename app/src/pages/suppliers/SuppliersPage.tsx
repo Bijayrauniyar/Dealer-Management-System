@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Phone, Mail, MapPin, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ArrowLeft, Plus, Phone, Mail, MapPin, ChevronDown, ChevronUp, Search, Pencil, Wallet, FileText } from "lucide-react";
+import { DetailActions } from "@/components/app/DetailActions";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,16 +9,19 @@ import { Button } from "@/components/ui/button";
 import { useDomainBundleErrorMessage, useDomainBundleLoadState, useSuppliers } from "@/store/domain";
 import type { Supplier } from "@/domain/types";
 import { npr } from "@/lib/utils";
+import { ListPagination } from "@/components/app/ListPagination";
 import { usePagination } from "@/lib/usePagination";
 
 const SupplierCard = ({
   s,
   onRecordPayment,
-  onViewInvoices,
+  onViewPurchases,
+  onEdit,
 }: {
   s: Supplier;
   onRecordPayment: (supplierId: string) => void;
-  onViewInvoices: (supplierId: string) => void;
+  onViewPurchases: (supplierId: string) => void;
+  onEdit: (supplierId: string) => void;
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -113,30 +117,38 @@ const SupplierCard = ({
             <p className="pt-1 text-muted italic border-t border-border-subtle">{s.notes}</p>
           )}
 
-          <div className="flex gap-2 pt-2">
-            <Button
-              size="sm"
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRecordPayment(s.id);
-              }}
-              className="flex-1 text-xs"
-            >
-              Record payment
-            </Button>
-            <Button
-              size="sm"
-              type="button"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewInvoices(s.id);
-              }}
-              className="flex-1 text-xs"
-            >
-              View invoices
-            </Button>
+          <div
+            className="pt-2"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            <DetailActions
+              actions={[
+                ...(s.outstanding > 0
+                  ? [
+                      {
+                        label: "Record supplier payment",
+                        icon: Wallet,
+                        variant: "primary" as const,
+                        onClick: () => onRecordPayment(s.id),
+                      },
+                    ]
+                  : []),
+                {
+                  label: "Edit supplier",
+                  icon: Pencil,
+                  variant: s.outstanding > 0 ? "outline" : "primary",
+                  onClick: () => onEdit(s.id),
+                },
+                {
+                  label: "View purchase invoices",
+                  icon: FileText,
+                  variant: "outline",
+                  onClick: () => onViewPurchases(s.id),
+                },
+              ]}
+            />
           </div>
         </div>
       )}
@@ -157,7 +169,7 @@ export const SuppliersPage = () => {
     s.contactPerson.toLowerCase().includes(query.toLowerCase()),
   );
 
-  const { visible, hasMore, loadMore, total } = usePagination(filtered);
+  const page = usePagination(filtered, undefined, query);
 
   return (
     <PageShell>
@@ -202,26 +214,31 @@ export const SuppliersPage = () => {
               {query ? "No suppliers match your search." : "No suppliers yet. Tap Add supplier above."}
             </p>
           )}
-          {visible.map((s) => (
+          {page.visible.map((s) => (
             <SupplierCard
               key={s.id}
               s={s}
               onRecordPayment={(id) =>
                 navigate("/app/supplier-payments/new", { state: { supplierId: id } })
               }
-              onViewInvoices={(id) => navigate(`/app/suppliers/${id}/invoices`)}
+              onViewPurchases={(id) => navigate(`/app/suppliers/${id}/invoices`)}
+              onEdit={(id) => navigate(`/app/suppliers/edit/${id}`)}
             />
           ))}
         </CardContent>
       </Card>
 
-      {hasMore && (
-        <button
-          onClick={loadMore}
-          className="mt-3 w-full rounded-xl border border-border-subtle bg-white py-2.5 text-sm font-medium text-teal-600 hover:bg-teal-50 active:bg-teal-100 transition-colors"
-        >
-          Show more · {total - visible.length} remaining
-        </button>
+      {loadState === "ready" && filtered.length > 0 && (
+        <ListPagination
+          page={page.page}
+          totalPages={page.totalPages}
+          total={page.total}
+          hasPrev={page.hasPrev}
+          hasNext={page.hasNext}
+          onPrev={page.goPrev}
+          onNext={page.goNext}
+          showingLabel={page.showingLabel}
+        />
       )}
 
       <p className="mt-4 text-xs text-center text-muted">

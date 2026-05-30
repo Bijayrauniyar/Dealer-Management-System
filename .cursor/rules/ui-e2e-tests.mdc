@@ -1,5 +1,5 @@
 ---
-description: Havmor Playwright/UI E2E scripts — env and credentials via shared helpers
+description: BikriKhata Playwright/UI E2E scripts — env and credentials via shared helpers
 globs: app/scripts/**/*e2e*.mjs
 alwaysApply: false
 ---

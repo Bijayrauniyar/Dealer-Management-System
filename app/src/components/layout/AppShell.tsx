@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Bell, Home, Menu, Plus, X } from "lucide-react";
+import { Bell, Home, Menu, Plus, Settings, X } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { NotificationPanel, buildNotifications } from "@/components/app/NotificationPanel";
@@ -12,10 +12,10 @@ const NAV_TABS = [
 
 /** Quick-action sheet opened by the centre + button */
 const QUICK_ACTIONS = [
-  { label: "New bill",              to: "/app/sales/new" },
+  { label: "Sales invoice",         to: "/app/sales/new" },
   { label: "Payment received",      to: "/app/payments/new" },
   { label: "Expense",               to: "/app/expenses/new" },
-  { label: "Purchase",              to: "/app/purchases/new" },
+  { label: "Purchase invoice",      to: "/app/purchases/new" },
   { label: "Supplier pay",          to: "/app/supplier-payments/new" },
   { label: "Daily cash",           to: "/app/daily-cash" },
 ];
@@ -55,10 +55,13 @@ export const AppShell = () => {
             </p>
           </Link>
           <div className="flex shrink-0 items-center gap-2 self-start pt-px">
-            <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
-              Online
-            </span>
-            {/* Bell icon with badge */}
+            <Link
+              to="/app/settings"
+              className="rounded-full p-1.5 hover:bg-slate-100 transition-colors"
+              aria-label="Settings"
+            >
+              <Settings size={20} className="text-slate-500" />
+            </Link>
             <button
               onClick={() => setNotifs(true)}
               className="relative rounded-full p-1.5 hover:bg-slate-100 transition-colors"

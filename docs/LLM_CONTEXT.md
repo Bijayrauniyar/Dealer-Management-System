@@ -1,8 +1,8 @@
-# Havmor DMS — context for local AI (Gemma, Codex, Claude, etc.)
+# BikriKhata — context for local AI (Gemma, Codex, Claude, etc.)
 
 **Navigate:** [Docs hub](README.md) · [Gemma 4 system prompt](GEMMA_SYSTEM_PROMPT.md) · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
 
-**Last updated:** 2026-05-26
+**Last updated:** 2026-05-26 (Phase 0 Tier A)
 
 **Gemma 4 26B:** paste **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** into System instructions, then attach this file each session.
 
@@ -12,7 +12,7 @@ Use this file as the **full handbook** when working offline. It is a snapshot of
 
 ## 1. What this project is
 
-**Havmor DMS** — dealer/distributor web app (Nepal): sales bills, stock, purchases, customer payments, returns, expenses, company reporting.
+**BikriKhata** ([bikrikhata.com](https://bikrikhata.com)) — dealer/distributor web app (Nepal): sales bills, stock, purchases, customer payments, returns, expenses, company reporting.
 
 | Layer | Stack |
 |-------|--------|
@@ -29,8 +29,8 @@ Use this file as the **full handbook** when working offline. It is a snapshot of
 ## 2. Repository layout
 
 ```
-havmor/
-├── app/                         # npm package: havmor-dms (all app code here)
+bikrikhata/                      # repo root (local clone path may differ)
+├── app/                         # npm package: bikrikhata (all app code here)
 │   ├── src/
 │   │   ├── pages/               # Route screens (sales, bills, products, …)
 │   │   ├── components/          # Shared UI (layout, forms, BillPrintView)
@@ -65,7 +65,7 @@ havmor/
 | `/app/home/overdue` | OverduePage | Overdue bills |
 | `/app/home/outstanding` | OutstandingBillsPage | Open bills list |
 | `/app/home/period/:type` | PeriodListPage | Period sales list |
-| `/app/sales/new` | SaleEntryPage | New bill |
+| `/app/sales/new` | SaleEntryPage | Sales invoice (new) |
 | `/app/sales/edit/:billNo` | SaleEntryPage | Edit bill (`update_sales_bill`) |
 | `/app/bills/:billNo` | BillDetailPage | View, print, PDF, share |
 | `/app/payments/new` | PaymentPage | Customer payment FIFO |
@@ -140,7 +140,7 @@ havmor/
 3. **Forms** → mostly `useState` on pages (not react-hook-form in practice).
 4. **Styling** → Tailwind; run `npm run lint:tailwind` — invalid semantic classes fail CI.
 5. **Scope** → smallest correct diff; match naming and style of surrounding code.
-6. **Secrets** → never commit `.env.local`, service role keys, or `Havmor Management.xlsx`.
+6. **Secrets** → never commit `.env.local`, service role keys, or client Excel workbooks with real business data.
 7. **Git** → commit only when the user asks; focus commit message on **why**.
 
 ---
@@ -264,7 +264,7 @@ Full schema: `docs/backend/data-model.md`
 
 ### Setup (once)
 
-1. Clone repo: `/path/to/havmor`
+1. Clone repo: `/path/to/bikrikhata` (or your local folder name)
 2. **Gemma 4 26B:** copy system text from **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** (the fenced block).
 3. Attach **`docs/LLM_CONTEXT.md`** every session (this handbook).
 4. Other models (Codex, Claude): use GEMMA prompt + this file, or GEMMA prompt alone for small tasks.
@@ -323,7 +323,7 @@ Skip updates for typos or one-line fixes.
 Paste this **maintenance prompt** (fill in brackets):
 
 ```text
-Maintain docs/LLM_CONTEXT.md for Havmor DMS.
+Maintain docs/LLM_CONTEXT.md for BikriKhata.
 
 1. Read the current docs/LLM_CONTEXT.md.
 2. Read these changed files (or git diff):
@@ -378,12 +378,36 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ feat
 
 **Data export (Phase 2-E)** — spec only, not built: [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) · checklist [BACKEND-TODO § 2-E](backend/BACKEND-TODO.md). Reporting CSV, migration ZIP, backup; `papaparse` unused. Do not implement until prioritized.
 
-**Product name & branding** — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) · [BACKEND-TODO § Deferred — branding](backend/BACKEND-TODO.md). Replace DealerOS / Havmor panel subtitle with generic Nepal distributor brand; Havmor remains pilot **tenant** name in settings only.
+**Product branding** — **BikriKhata** in `app/src/config/productBrand.ts` ([bikrikhata.com](https://bikrikhata.com)). Shop legal name on bills = **Settings** (`tenant_settings`), not product brand.
 
 ---
 
 ## Changelog (newest first)
 
+- **2026-05-26** — App header: removed unused **Online** status pill (`AppShell.tsx`).
+- **2026-05-26** — **Docs/README/npm** safe rebrand sweep: BikriKhata, package `bikrikhata`; removed legacy product names from docs (domain [bikrikhata.com](https://bikrikhata.com) deploy steps in `deployment.md` — Auth URLs not changed in repo).
+- **2026-05-26** — Login/register `AuthBrandHeader`: logo, BikriKhata, tagline “Manage Stock, Sales, Credit & Customers…”, distributor description in `productBrand.ts`.
+- **2026-05-26** — Interim product name **BikriKhata** in `app/src/config/productBrand.ts` (full rebrand review post–Phase 0). [BRAND_NAME_OPTIONS.md](BRAND_NAME_OPTIONS.md).
+- **2026-05-26** — Product branding single source: `app/src/config/productBrand.ts` + Vite inject (`index.html`, PWA); name options in [BRAND_NAME_OPTIONS.md](BRAND_NAME_OPTIONS.md) (confirm before rename).
+- **2026-05-26** — **IMP-0/1/2** (Phase 2): full backup ZIP, per-entity CSV import, restore/runbook — [DEFERRED_WORK.md](DEFERRED_WORK.md), [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md). Tier A export partial today.
+- **2026-05-26** — **CAT-1** (Phase 1) parent/child categories + **CAT-2** (Phase 2) tree UI deferred — [DEFERRED_WORK.md](DEFERRED_WORK.md), [PHASE_ROADMAP.md](PHASE_ROADMAP.md) §4–5.
+- **2026-05-26** — **Short bill address:** printed bills use Settings **Address on printed bills (line 1)** (+ optional line 2); district/province only if toggle on (`show_district_province_on_bill`, migration **0023**). [IRD_BILL_LETTERHEAD.md](IRD_BILL_LETTERHEAD.md).
+- **2026-05-26** — Bill letterhead per **IRD Schedule 5**: VAT/PAN + **Ph** right; print **TAX INVOICE** when VAT registered; app **Sales invoice** / **Purchase invoice** labels unchanged.
+- **2026-05-26** — **Fix:** Product list “% markup” now matches form (buy excl. vs sell excl.; was ~2% when form showed 15% because list used VAT-inclusive cost).
+- **2026-05-26** — Categories: dropdown + **Add category** bottom sheet on product form; **Settings → Business → Product categories** to list/remove. Minimal copy (no long hints).
+- **2026-05-26** — Settings **Rows per page** (10/20/50/100, migration `0022`); **Export all (N)** exports every filtered row, not only the current page.
+- **2026-05-26** — Sale entry sticky bar: **Save invoice** / **Update invoice** with save icon; StickyBar supports `actionIcon` + `actionCompactLabel`.
+- **2026-05-26** — Suppliers: **Edit supplier** (`/app/suppliers/edit/:id`); StickyBar no longer truncates to vague single words (e.g. “bill”).
+- **2026-05-26** — Detail screens: `DetailActions` stacked CTAs; labels **Sales invoice** / **Purchase invoice** (not “New bill”); customer detail actions below KPIs.
+- **2026-05-26** — **Fix:** Bill detail showed totals but no line items — `useSaleByBill` no longer uses PERF-0 header (`lines: []`) as cached `initialData`; always fetches `sales_items` via `fetchSaleByBillNoLive`.
+- **2026-05-26** — List **Export CSV** exports all rows matching current filters (not just page); customer detail **Edit** button; Stock page: compact low-stock banner (no name wall), browse panel aligned with Products.
+- **2026-05-26** — Browse panel: **Status + Area/Category + Sort** (row 1: two filters, row 2: sort); customers filter by **area**; stock/products split **category** from status filter.
+- **2026-05-26** — List UX: **10 rows/page** with Previous/Next (`LIST_PAGE_SIZE`, `ListPagination`); browse panels use **Filter/Sort dropdowns** (not chip sliders); pagination on Home, Products, Customers, Stock, Suppliers, period/overdue/aging lists, capital, supplier invoices, customer detail bills/payments.
+- **2026-05-26** — `ListBrowsePanel`: search + filter + sort in one card (Home Customers/Stock, Products); stock alerts folded into filter chips (Low stock / On scheme).
+- **2026-05-26** — Home/Products sort: pill `FilterSortBar` (not full-width select); customer copy **Credit** / **On credit**; opening qty only editable on **new** product (read-only summary on edit); PWA tagline “credit”.
+- **2026-05-26** — Home + Products lists: pagination (20/page), sort dropdowns, category chips with counts that respect search; empty-state explains active filters; sell price shows incl. VAT hint like buy price (`listFilters.ts`).
+- **2026-05-26** — `0020_stock_adjustments.sql`: `drop view v_stock` before recreate (fixes Postgres 42P16 when adding `adjusted` column).
+- **2026-05-26** — **Phase 0 Tier A shipped in app:** `lib/export/*` + Settings **Export** tab + backup ZIP; migrations **0019** (product categories), **0020** (stock_adjustments + `v_stock.adjusted`), **0021** (allow_stock_adjustment); opening qty on products; Stock columns; stock adjustment page; **PERF-0** sales headers in bundle + `fetchSaleByBillNoLive`; rebrand **BikriKhata** (`productBrand.ts`); Tax Invoice title when VAT registered; Sales/Purchase invoice labels; Settings icon in header; tabbed Settings; `npm run e2e:export`. See `docs/PHASE0_TIER_A_RESEARCH.md`, `DATA_EXPORT_SPEC.md`.
 - **2026-05-26** — `PHASE_ROADMAP.md` §4.1: Phase **1.0** (SF-0 salesman-on-invoice or ORD+full convert) vs **1.1** (partial, login, PO); van/visit → Phase 3.
 - **2026-05-26** — `PHASE_ROADMAP.md` §4.1: Phase 1 Tier D — Sigma-style orders, salesman, IRD sales/purchase reports.
 - **2026-05-26** — `PHASE_ROADMAP.md`: **Tier A/B/C** for Phase 0 (must / should / nice); **Tier D** → Phase 1–3 map (§7).

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, AlertTriangle, Clock, CheckCircle2, ChevronRight, FilePlus } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Clock, CheckCircle2, ChevronRight, CreditCard, FilePlus, Pencil } from "lucide-react";
+import { DetailActions } from "@/components/app/DetailActions";
 import { PageShell } from "@/components/app/PageShell";
+import { SALES_INVOICE_LABEL } from "@/lib/actionLabels";
 import { KpiCard } from "@/components/app/KpiCard";
 import { SectionHeader } from "@/components/app/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import type { BillStatus, OutstandingBill } from "@/domain/types";
 import { useCustomers, useOutstandingBills, usePayments } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
+import { ListPagination } from "@/components/app/ListPagination";
 import { usePagination } from "@/lib/usePagination";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -130,9 +133,9 @@ export const CustomerDetailPage = () => {
   const openBills    = allBills.filter((b) => b.balance > 0);
   const overdueBills = allBills.filter((b) => b.status === "overdue");
 
-  const { visible: billsPage, hasMore: billsHasMore, loadMore: billsLoadMore, total: billsTotal } =
-    usePagination(allBills, 10);
-  const payments   = PAYMENTS.filter((p) => p.customerId === id);
+  const billsPage = usePagination(allBills, undefined, id);
+  const payments = PAYMENTS.filter((p) => p.customerId === id);
+  const paymentsPage = usePagination(payments, undefined, `${id}|payments`);
 
   const totalOverdue = overdueBills.reduce((s, b) => s + b.balance, 0);
 
@@ -145,32 +148,21 @@ export const CustomerDetailPage = () => {
         <ArrowLeft size={16} /> Back
       </button>
 
-      {/* ── Customer header ── */}
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-foreground leading-tight">{customer.name}</h1>
-          <p className="text-xs text-muted leading-snug">
-            {[customer.area, customer.address, customer.phone ? `Ph ${customer.phone}` : null]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-          {customer.phone && (
-            <a href={`tel:${customer.phone}`} className="sr-only">
-              {customer.phone}
-            </a>
-          )}
-        </div>
-        {/* Primary quick action — New bill */}
-        <button
-          onClick={goToNewBill}
-          className="shrink-0 flex items-center gap-1.5 rounded-xl bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 active:bg-teal-800 transition-colors"
-        >
-          <FilePlus size={15} /> New bill
-        </button>
+      <div className="mb-3 min-w-0">
+        <h1 className="text-lg font-bold text-foreground leading-tight">{customer.name}</h1>
+        <p className="mt-1 text-xs text-muted leading-snug">
+          {[customer.area, customer.address, customer.phone ? `Ph ${customer.phone}` : null]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+        {customer.phone && (
+          <a href={`tel:${customer.phone}`} className="sr-only">
+            {customer.phone}
+          </a>
+        )}
       </div>
 
-      {/* ── KPI row — 3 equal columns, fits narrow screens ── */}
-      <div className="mb-3 grid grid-cols-3 gap-2">
+      <div className="mb-4 grid grid-cols-3 gap-2">
         <KpiCard
           size="compact"
           label="Outstanding"
@@ -237,9 +229,27 @@ export const CustomerDetailPage = () => {
         );
       })()}
 
-      {/* ── Collect payment CTA ── */}
+      <DetailActions
+        className="mb-4"
+        actions={[
+          {
+            label: SALES_INVOICE_LABEL,
+            icon: FilePlus,
+            variant: "primary",
+            onClick: goToNewBill,
+          },
+          {
+            label: "Edit customer",
+            icon: Pencil,
+            variant: "outline",
+            onClick: () => navigate(`/app/customers/edit/${customer.id}`),
+          },
+        ]}
+      />
+
       {customer.outstanding > 0 && (
-        <Button size="full" className="mb-4" onClick={goToPayment}>
+        <Button size="full" className="mb-4 gap-2" onClick={goToPayment}>
+          <CreditCard size={16} />
           Collect · {npr(customer.outstanding)}
         </Button>
       )}
@@ -272,7 +282,7 @@ export const CustomerDetailPage = () => {
             <>
               <Card>
                 <CardContent className="p-0 px-4">
-                  {billsPage.map((bill) => (
+                  {billsPage.visible.map((bill) => (
                     <BillCard
                       key={bill.id}
                       bill={bill}
@@ -282,14 +292,17 @@ export const CustomerDetailPage = () => {
                   ))}
                 </CardContent>
               </Card>
-              {billsHasMore && (
-                <button
-                  onClick={billsLoadMore}
-                  className="mt-2 w-full rounded-xl border border-border-subtle bg-white py-2.5 text-sm font-medium text-teal-600 hover:bg-teal-50 transition-colors"
-                >
-                  Show more · {billsTotal - billsPage.length} remaining
-                </button>
-              )}
+              <ListPagination
+                page={billsPage.page}
+                totalPages={billsPage.totalPages}
+                total={billsPage.total}
+                hasPrev={billsPage.hasPrev}
+                hasNext={billsPage.hasNext}
+                onPrev={billsPage.goPrev}
+                onNext={billsPage.goNext}
+                showingLabel={billsPage.showingLabel}
+                className="mx-0 border-0 shadow-none px-0"
+              />
             </>
           )}
 
@@ -323,7 +336,7 @@ export const CustomerDetailPage = () => {
           ) : (
             <Card>
               <CardContent className="p-0 px-4">
-                {payments.map((p) => (
+                {paymentsPage.visible.map((p) => (
                   <div key={p.id} className="border-b border-border-subtle last:border-0 py-3">
                     <div className="flex items-center justify-between">
                       <div>
@@ -348,6 +361,18 @@ export const CustomerDetailPage = () => {
                 ))}
               </CardContent>
             </Card>
+          )}
+          {payments.length > 0 && (
+            <ListPagination
+              page={paymentsPage.page}
+              totalPages={paymentsPage.totalPages}
+              total={paymentsPage.total}
+              hasPrev={paymentsPage.hasPrev}
+              hasNext={paymentsPage.hasNext}
+              onPrev={paymentsPage.goPrev}
+              onNext={paymentsPage.goNext}
+              showingLabel={paymentsPage.showingLabel}
+            />
           )}
 
           <Button size="full" variant="outline" className="mt-4" onClick={goToPayment}>

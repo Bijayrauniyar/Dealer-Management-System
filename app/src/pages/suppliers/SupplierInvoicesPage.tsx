@@ -1,5 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight, FilePlus, Wallet } from "lucide-react";
+import { ArrowLeft, ChevronRight, FilePlus, Wallet, Pencil } from "lucide-react";
+import { DetailActions } from "@/components/app/DetailActions";
+import { PURCHASE_INVOICE_LABEL } from "@/lib/actionLabels";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { usePurchasesList, useSuppliers } from "@/store/domain";
 import type { PurchaseListItem } from "@/domain/types";
 import { purchaseDisplayTitle, purchaseDisplaySubtitle } from "@/lib/purchaseDisplay";
+import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr, fmtDate } from "@/lib/utils";
 
 const PAYMENT_BADGE: Record<
@@ -54,19 +57,29 @@ export const SupplierInvoicesPage = () => {
         >
           <ArrowLeft size={16} /> Suppliers
         </button>
-        <Button
-          size="sm"
-          type="button"
-          onClick={() =>
-            navigate("/app/purchases/new", { state: { supplierId: supplier.id } })
-          }
-        >
-          <FilePlus size={14} /> New purchase
-        </Button>
       </div>
 
       <h1 className="text-lg font-bold text-foreground">{supplier.name}</h1>
-      <p className="mb-4 text-sm text-muted">Purchase invoices · {supplier.paymentTermsDays}d terms</p>
+      <p className="mb-3 text-sm text-muted">Purchase invoices · {supplier.paymentTermsDays}d terms</p>
+
+      <DetailActions
+        className="mb-4"
+        actions={[
+          {
+            label: PURCHASE_INVOICE_LABEL,
+            icon: FilePlus,
+            variant: "primary",
+            onClick: () =>
+              navigate("/app/purchases/new", { state: { supplierId: supplier.id } }),
+          },
+          {
+            label: "Edit supplier",
+            icon: Pencil,
+            variant: "outline",
+            onClick: () => navigate(`/app/suppliers/edit/${supplier.id}`),
+          },
+        ]}
+      />
 
       {supplier.outstanding > 0 && (
         <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
@@ -95,39 +108,43 @@ export const SupplierInvoicesPage = () => {
               No purchases recorded for this supplier yet.
             </p>
           ) : (
-            invoices.map((inv) => {
-              const cfg = PAYMENT_BADGE[inv.paymentStatus];
-              const balance = Math.max(0, inv.total - inv.paid);
-              return (
-                <button
-                  key={inv.id}
-                  type="button"
-                  className="flex w-full items-center justify-between gap-2 border-b border-border-subtle py-3.5 text-left last:border-0"
-                  onClick={() => navigate(`/app/purchases/${inv.id}`)}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-teal-600">
-                        {purchaseDisplayTitle(inv)}
-                      </span>
-                      <Badge variant={cfg.variant} className="text-[10px]">
-                        {cfg.label}
-                      </Badge>
+            <PaginatedListSection
+              items={invoices}
+              resetKey={supplierId}
+              renderItem={(inv) => {
+                const cfg = PAYMENT_BADGE[inv.paymentStatus];
+                const balance = Math.max(0, inv.total - inv.paid);
+                return (
+                  <button
+                    key={inv.id}
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 border-b border-border-subtle py-3.5 text-left last:border-0"
+                    onClick={() => navigate(`/app/purchases/${inv.id}`)}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-teal-600">
+                          {purchaseDisplayTitle(inv)}
+                        </span>
+                        <Badge variant={cfg.variant} className="text-[10px]">
+                          {cfg.label}
+                        </Badge>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted">{purchaseDisplaySubtitle(inv)}</p>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted">{purchaseDisplaySubtitle(inv)}</p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-foreground">{npr(inv.total)}</p>
-                      {balance > 0 && inv.paymentStatus !== "paid" && (
-                        <p className="text-[10px] text-danger">Due {npr(balance)}</p>
-                      )}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-foreground">{npr(inv.total)}</p>
+                        {balance > 0 && inv.paymentStatus !== "paid" && (
+                          <p className="text-[10px] text-danger">Due {npr(balance)}</p>
+                        )}
+                      </div>
+                      <ChevronRight size={14} className="text-muted" />
                     </div>
-                    <ChevronRight size={14} className="text-muted" />
-                  </div>
-                </button>
-              );
-            })
+                  </button>
+                );
+              }}
+            />
           )}
         </CardContent>
       </Card>

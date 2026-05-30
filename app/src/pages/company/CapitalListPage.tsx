@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
 import { summarizeCapital } from "@/lib/capitalSummary";
 import { useCapitalEntries } from "@/store/domain";
+import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr, fmtDate } from "@/lib/utils";
 
 const categoryLabel = (cat: string) =>
@@ -79,28 +80,31 @@ export const CapitalListPage = () => {
       ) : (
         <Card>
           <CardContent className="p-0 px-4">
-            {sorted.map((entry) => (
-              <ListRow
-                key={entry.id}
-                left={entry.name}
-                right={
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-sm font-semibold">{npr(entry.amount)}</span>
-                    {entry.currentValue !== entry.amount && (
-                      <span className="text-xs text-muted">now {npr(entry.currentValue)}</span>
-                    )}
-                  </div>
-                }
-                sub={
-                  <span className="flex items-center gap-1.5">
-                    <Badge variant={categoryBadge(entry.category)} className="text-[10px] px-1.5 py-0">
-                      {categoryLabel(entry.category)}
-                    </Badge>
-                    <span>{fmtDate(entry.date)}</span>
-                  </span>
-                }
-              />
-            ))}
+            <PaginatedListSection
+              items={sorted}
+              renderItem={(entry) => (
+                <ListRow
+                  key={entry.id}
+                  left={entry.name}
+                  right={
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-sm font-semibold">{npr(entry.amount)}</span>
+                      {entry.currentValue !== entry.amount && (
+                        <span className="text-xs text-muted">now {npr(entry.currentValue)}</span>
+                      )}
+                    </div>
+                  }
+                  sub={
+                    <span className="flex items-center gap-1.5">
+                      <Badge variant={categoryBadge(entry.category)} className="text-[10px] px-1.5 py-0">
+                        {categoryLabel(entry.category)}
+                      </Badge>
+                      <span>{fmtDate(entry.date)}</span>
+                    </span>
+                  }
+                />
+              )}
+            />
           </CardContent>
         </Card>
       )}

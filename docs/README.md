@@ -18,6 +18,9 @@ Update docs in the **same change** as code — do not leave README/schema/UI doc
 | Settings fields | `data-model.md` (§ `tenant_settings`), manual checklist § Settings |
 | User-facing flow | [`LLM_CONTEXT.md`](LLM_CONTEXT.md) changelog + manual checklist row |
 | GTM / pricing / ICP / VAT·IRD | [`GTM_NEPAL.md`](GTM_NEPAL.md) — §5 compliance checklist + revision log |
+| Full backup + import + restore | [`DEFERRED_WORK.md`](DEFERRED_WORK.md) (**IMP-0/1/2** Phase 2), [`DATA_EXPORT_SPEC.md`](DATA_EXPORT_SPEC.md) |
+| Product name (pick one) | [`BRAND_NAME_OPTIONS.md`](BRAND_NAME_OPTIONS.md) → then `app/src/config/productBrand.ts` |
+| Bill print letterhead (IRD layout) | [`IRD_BILL_LETTERHEAD.md`](IRD_BILL_LETTERHEAD.md) |
 | Launch phases 0–3 | [`PHASE_ROADMAP.md`](PHASE_ROADMAP.md) — **next target: Phase 0** (UI shell, export, rebrand) |
 | E2E script | `phase1-use-cases-and-tests.md` command table |
 
@@ -40,7 +43,9 @@ Follow this path the first time you touch the repo:
 | 5b | [Nepal GTM & pricing (working)](GTM_NEPAL.md) | ICP, pricing, **§5 VAT/IRD bill checklist**, stock model, Nepal E-Billing — **strategy** |
 | 5c | [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) | What to build next and **why** — client pains, not feature count |
 | 5d | [Deferred work register](DEFERRED_WORK.md) | **Plan later:** INV-1/INV-2, export, supplier scheme — effort, files, acceptance |
-| 5e | [Data export spec](DATA_EXPORT_SPEC.md) | Phase 2-E: reporting, migration ZIP, backup (**deferred** — backlog only) |
+| 5e | [Data export spec](DATA_EXPORT_SPEC.md) | Tier A CSV + ZIP (Settings → Export); full IRD filing still Phase 2 |
+| 5f | [Phase 0 Tier A research](PHASE0_TIER_A_RESEARCH.md) | CA columns, VAT summary, interim product name |
+| 5g | [**Your turn — Tier A QA**](YOUR_TURN_PHASE0_TIER_A.md) | Migrations, commands, manual checks (human) |
 | 6 | [Data model](backend/data-model.md) | Tables, views, Phase 2 design (capital policy, bill amendments) |
 | 7 | [Phase 1 — automated tests](backend/phase1-use-cases-and-tests.md) | `npm run e2e:*` matrix and RPC expectations |
 | 8 | [Phase 1 — manual E2E](backend/phase1-manual-e2e-checklist.md) | What scripts skip; full human QA |

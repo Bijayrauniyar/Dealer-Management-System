@@ -30,7 +30,7 @@ export const CAPITAL_CATEGORIES: {
 }[] = [
   { value: "fixed_asset", label: "Fixed asset", hint: "Freezer, vehicle, generator, godown" },
   { value: "inventory", label: "Inventory", hint: "Initial or bulk stock purchase" },
-  { value: "deposit", label: "Security deposit", hint: "Havmor deposit, godown advance etc." },
+  { value: "deposit", label: "Security deposit", hint: "Supplier deposit, godown advance etc." },
   { value: "owner_capital", label: "Owner capital", hint: "Personal money put into business" },
   { value: "loan", label: "Loan / borrowing", hint: "Bank loan, family loan etc." },
 ];

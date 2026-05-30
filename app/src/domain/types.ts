@@ -29,6 +29,14 @@ export type BusinessSettings = {
   defaultMinQty: number;
   /** Low-stock default in pack unit (Box, etc.) when product has conversion. */
   defaultMinPackQty: number;
+  /** Product form categories (Settings). */
+  productCategories: string[];
+  /** When true, Stock adjustment entry is available. */
+  allowStockAdjustment: boolean;
+  /** Rows per page on browse lists (customers, products, stock, …). */
+  listPageSize: number;
+  /** When true, bill letterhead adds district · province · country after address lines. */
+  showDistrictProvinceOnBill: boolean;
 };
 
 export type Customer = {
@@ -70,6 +78,8 @@ export type Product = {
   discountPct: number;
   vatApplicable: boolean;
   onHand: number;
+  openingStock?: number;
+  purchased?: number;
   minQty: number;
   /** Optional alert threshold in pack UOM (e.g. Box); 0 = use base minQty only. */
   minQtyPack?: number;

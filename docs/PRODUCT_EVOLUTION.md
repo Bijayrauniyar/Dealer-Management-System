@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](README.md) · [**Launch roadmap Phase 0–3**](PHASE_ROADMAP.md) · [Nepal GTM & pricing](GTM_NEPAL.md) · [VAT / IRD checklist](GTM_NEPAL.md#5-nepal-vat--ird-compliance-checklist) · [Backend checklist](backend/BACKEND-TODO.md) · [Data export spec](DATA_EXPORT_SPEC.md) · [LLM context](LLM_CONTEXT.md)
 
-**Purpose:** Evolve from the Havmor ice-cream pilot into a **generic Nepal distributor platform** — without a long “feature count” roadmap. Every item below ties to a **real user pain** or a **broken/half-built screen** today.
+**Purpose:** Evolve from the first FMCG pilot tenant into a **multi-tenant Nepal distributor platform** (**BikriKhata**) — without a long “feature count” roadmap. Every item below ties to a **real user pain** or a **broken/half-built screen** today.
 
 **Rule for prioritization:** If it does not fix daily ops, trust, or go-live for the **current or next dealer**, it waits.
 
@@ -52,7 +52,7 @@ Verticals later (grocery, hardware, pharma-lite) share the **same core loop**; o
 | Pain | What happens today | Priority | Action |
 |------|-------------------|----------|--------|
 | **Product categories = ice cream** | Hardcoded `Ice Cream`, `Bar`, `Party`… in product form | **P0** for 2nd tenant | Tenant-configurable categories |
-| **Login says Havmor / DealerOS** | Not credible for non-Havmor dealer | **P0** for 2nd tenant | [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) rebrand |
+| **Login branding** | **Done** — BikriKhata + taglines | — | `productBrand.ts` |
 | **No bulk import** | Every SKU/customer typed | **P1** | Import templates (after export column spec) |
 | **Opening stock / opening udhar** | Manual product + purchase + bills | **P1** | Import: products + opening balances doc |
 | **Supplier add clunky** | Form exists but called “incremental” in checklist | **P1** | Finish supplier CRUD polish if dealers ask |
@@ -69,7 +69,7 @@ Verticals later (grocery, hardware, pharma-lite) share the **same core loop**; o
 
 ### E. Not pain points for current pilot (do not prioritize yet)
 
-These are **valid research topics** but **not** blocking Havmor-style daily use:
+These are **valid research topics** but **not** blocking wholesaler daily use:
 
 - Van stock, beat plans, route optimization (`beat_plans` in DB, no UI)
 - Freezer asset registry as core module
@@ -104,8 +104,8 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 |---|------|-------------------|
 | ~~1~~ | ~~Scheme page + sales apply~~ | **Done** — save + auto free qty on bill |
 | 1 | **Export P0** — products, sales/purchase registers, outstanding, backup ZIP | Accountant + owner backup |
-| 2 | **Configurable product categories** + generic copy sweep (remove “Havmor” in forms) | Second tenant onboarding |
-| 3 | **Product rebrand** (login, PWA) | Sell to non-Havmor dealers |
+| 2 | **Configurable product categories** + generic copy sweep | Second tenant onboarding |
+| 3 | **Product rebrand** (login, PWA) | **Done** — BikriKhata |
 | 4 | **Bill list / home data: paginated fetch** | App slows as bills grow |
 | 5 | **Credit limit: enforce or hide** | Misleading UI |
 
@@ -131,6 +131,11 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | 17 | Notifications (2-A) | Owner wants SMS for overdue |
 | 18 | Multi-warehouse / expiry | Pharma or multi-godown client |
 | 19 | **Stock adjustment** (opening / count correction, no supplier) + Settings toggle | **Phase 0** — [PHASE_ROADMAP.md](PHASE_ROADMAP.md) STK-0d–0f (~3–7 days); see [GTM stock model](GTM_NEPAL.md#stock-model-purchase-vs-stock-entry) |
+| 20 | **Parent/child product categories** (**CAT-1**, 2-level) | **Phase 1** — tenant has 30+ groups or wants sales/stock by main category — [DEFERRED_WORK.md](DEFERRED_WORK.md) |
+| 21 | **Category tree UI** (**CAT-2**, ERP-style sidebar) | **Phase 2** — after CAT-1 if power users need deep hierarchy |
+| 22 | **Full tenant backup** (**IMP-0**) — settings, suppliers, payments, all invoices, udhar in ZIP | **Phase 2** — trust + disaster recovery |
+| 23 | **CSV import hub** (**IMP-1**) — products, customers, suppliers, categories, settings, stock | **Phase 2** — onboarding without retyping |
+| 24 | **Restore from backup** (**IMP-2**) — resume business from export | **Phase 2** — after IMP-0/1; Tier A masters first |
 
 ---
 

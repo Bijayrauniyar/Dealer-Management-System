@@ -2,7 +2,7 @@ import type { BusinessSettings, Sale, SaleLine } from "@/domain/types";
 import { roundMoney } from "@/lib/money";
 import { DEFAULT_VAT_PCT, getVatPct } from "@/lib/tax";
 import { fmtDate } from "@/lib/utils";
-import { buildSellerContactLine, formatSellerAddressSegments } from "./sellerAddressLine";
+import { formatSellerAddressLines } from "./sellerAddressLine";
 
 /** @deprecated Use getVatPct(settings) */
 export const BILL_VAT_RATE = DEFAULT_VAT_PCT;
@@ -16,14 +16,23 @@ export function tenantChargesVat(
   return Boolean(b.vatRegistered && b.vatNumber.trim());
 }
 
-/** Center title on printed bill (same for PAN and VAT shops; tax id is shown top-right). */
-export function billDocumentTitle(): string {
-  return "Sales details";
+/**
+ * Center title on printed bill (IRD Schedule 5: document must be identifiable as a tax invoice).
+ * VAT-registered tenant with VAT number → **Tax Invoice**; otherwise **Invoice**.
+ * App menus still say “Sales invoice” — see docs/IRD_BILL_LETTERHEAD.md.
+ */
+export function billDocumentTitle(
+  settings?: Pick<BusinessSettings, "vatRegistered" | "vatNumber">,
+): string {
+  if (settings && tenantChargesVat(settings)) return "Tax Invoice";
+  return "Invoice";
 }
 
 /** Uppercase title for bill header (screen + PDF). */
-export function billDocumentTitleDisplay(): string {
-  return billDocumentTitle().toUpperCase();
+export function billDocumentTitleDisplay(
+  settings?: Pick<BusinessSettings, "vatRegistered" | "vatNumber">,
+): string {
+  return billDocumentTitle(settings).toUpperCase();
 }
 
 /**
@@ -113,24 +122,26 @@ export function sellerBillName(b: Pick<BusinessSettings, "legalName" | "name">):
   return legal || trading || "—";
 }
 
-/** Address + phone under shop name (left column of letterhead). Dedupes repeated place names from Settings. */
+/** @deprecated Prefer sellerLetterheadFromBusiness — address lines joined for legacy callers. */
 export function sellerContactLine(
   b: Pick<
     BusinessSettings,
-    "addressLine1" | "addressLine2" | "district" | "province" | "country" | "mobile" | "phone"
+    "addressLine1" | "addressLine2" | "district" | "province" | "country"
   >,
 ): string {
-  const segments = formatSellerAddressSegments({
+  return formatSellerAddressLines({
     addressLine1: b.addressLine1,
     addressLine2: b.addressLine2,
     district: b.district,
     province: b.province,
     country: b.country,
-  });
-  return buildSellerContactLine(segments, { mobile: b.mobile, phone: b.phone });
+  }).join(" · ");
 }
 
-/** Seller tax line on bill: VAT if registered + number set, else PAN if set — never both. */
+export { sellerLetterheadFromBusiness } from "./sellerLetterhead";
+export type { SellerLetterhead } from "./sellerLetterhead";
+
+/** Seller tax id on letterhead (Schedule 5): VAT when registered; else PAN — never both. */
 export function sellerTaxId(
   b: Pick<BusinessSettings, "vatRegistered" | "vatNumber" | "panNumber">,
 ): { label: "VAT" | "PAN"; number: string } | null {

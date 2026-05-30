@@ -17,6 +17,7 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `0007` applied | Matrix exercises **`update_sales_bill`**; UI **Edit bill** uses the same RPC. |
 | `0013` applied | **`update_purchase`**; UI **Edit purchase** on supplier invoice detail. |
 | `0014`–`0017` applied | **`supplier_invoice_no`**, purchase VAT (`rate_excl`, `subtotal_excl`, `vat_amount`), Settings **Default VAT %**. See [Purchase reference numbers](../PURCHASE_REFERENCE_NUMBERS.md). |
+| `0019`–`0021` applied (Tier A) | **Product categories**, `stock_adjustments`, `allow_stock_adjustment`, `v_stock.adjusted`. README steps 20–22. |
 | `0008`–`0010` applied | Matrix **`uom.*`** cases: pack sale (2 Box → 20 PCS stock), `sales_items.unit`, `update_sales_bill` with `unit`. |
 
 ---
@@ -32,6 +33,7 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `npm run e2e:bill:live` | Same + verify recent bills: Σ line amount = subtotal |
 | `npm run e2e:bill:ui` | Same + browser bill DOM + `app/test-output/bill-print-ui.png` (needs `npm run dev`) |
 | `npm run e2e:bill:full` | `e2e:bill` + `--live` + `--ui` |
+| `npm run e2e:export` | **Phase 0 export** — `lib/export`, Settings Export tab, product brand (no login) |
 | `npm run e2e:suppliers` | **Supplier invoices** — routes, button wiring, types (no login) |
 | `npm run e2e:suppliers:live` | Same + DB: `supplier_invoice_no`, purchase lines, `update_purchase`, `payment_status` |
 | `npm run e2e:bill:visual` | **Screenshots** (mobile + desktop) + **PDF download** text check (`test-output/`) |

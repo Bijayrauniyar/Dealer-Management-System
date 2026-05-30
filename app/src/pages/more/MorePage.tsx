@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { useAuth } from "@/lib/auth";
+import { useBusinessSettings } from "@/store/domain";
 
 type NavItem = {
   label: string;
@@ -33,11 +35,11 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "New entry",
     items: [
-      { label: "New bill", icon: ShoppingCart, to: "/app/sales/new", color: "bg-teal-100 text-teal-700" },
+      { label: "Sales invoice", icon: ShoppingCart, to: "/app/sales/new", color: "bg-teal-100 text-teal-700" },
       { label: "Payment in", icon: CreditCard, to: "/app/payments/new", color: "bg-green-100 text-green-700" },
       { label: "Return", icon: RotateCcw, to: "/app/returns/new", color: "bg-amber-100 text-amber-700" },
       { label: "Damage", icon: AlertTriangle, to: "/app/damages/new", color: "bg-red-100 text-red-600" },
-      { label: "Purchase", icon: Package, to: "/app/purchases/new", color: "bg-blue-100 text-blue-700" },
+      { label: "Purchase invoice", icon: Package, to: "/app/purchases/new", color: "bg-blue-100 text-blue-700" },
       { label: "Supplier pay", icon: Truck, to: "/app/supplier-payments/new", color: "bg-purple-100 text-purple-700" },
       { label: "Expense", icon: DollarSign, to: "/app/expenses/new", color: "bg-orange-100 text-orange-700" },
       { label: "Daily cash", icon: Calculator, to: "/app/daily-cash", color: "bg-slate-100 text-slate-600" },
@@ -109,6 +111,23 @@ function MoreGrid({ onItemClick }: { onItemClick: (item: NavItem) => void }) {
 export const MorePage = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const business = useBusinessSettings();
+
+  const groups = useMemo(() => {
+    const copy = GROUPS.map((g) => ({ ...g, items: [...g.items] }));
+    if (business.allowStockAdjustment) {
+      const masters = copy.find((g) => g.title === "Masters");
+      if (masters) {
+        masters.items.push({
+          label: "Stock adjustment",
+          icon: Box,
+          to: "/app/stock-adjustment/new",
+          color: "bg-amber-100 text-amber-800",
+        });
+      }
+    }
+    return copy;
+  }, [business.allowStockAdjustment]);
 
   const onItemClick = (item: NavItem) => {
     if (item.label === "Sign out") {
@@ -121,7 +140,31 @@ export const MorePage = () => {
   return (
     <PageShell>
       <h1 className="mb-5 text-lg font-bold text-foreground">More</h1>
-      <MoreGrid onItemClick={onItemClick} />
+      <div className="space-y-6">
+        {groups.map((group) => (
+          <div key={group.title}>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted">{group.title}</p>
+            <div className="grid grid-cols-3 gap-3">
+              {group.items.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => onItemClick(item)}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-border-subtle bg-white p-3 shadow-card active:scale-[0.98] transition-transform"
+                >
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full ${item.color ?? "bg-slate-100"}`}>
+                    <item.icon size={18} />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-semibold leading-tight text-foreground">{item.label}</span>
+                    {item.badge === "🔒" && <Lock size={10} className="shrink-0 text-muted" />}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
       <div className="h-8" />
     </PageShell>
   );

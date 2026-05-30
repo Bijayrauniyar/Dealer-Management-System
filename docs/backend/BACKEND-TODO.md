@@ -17,7 +17,9 @@
 - [x] **Scheme on sales** — active scheme per product + bill date → auto free line (`schemeApply.ts`, `SaleEntryPage`); Home stock filter **On scheme**. Test: `npm run seed:schemes`.
 - [ ] **Supplier scheme + pass-through to customer** — supplier promo on purchase (stock in); link/copy to customer `scheme_tracker`; purchase FOC lines (mirror sales).
 - [ ] **Export P0** — accountant registers + owner backup ZIP ([`../DATA_EXPORT_SPEC.md`](../DATA_EXPORT_SPEC.md)).
-- [ ] **Product categories** — tenant-configurable; remove ice-cream-only defaults in product form.
+- [x] **Product categories (flat)** — tenant `product_categories` jsonb + product form dropdown (`0019`, CAT-0).
+- [ ] **CAT-1** — Parent/child categories (2-level) — **Phase 1** — [DEFERRED_WORK.md](../DEFERRED_WORK.md).
+- [ ] **CAT-2** — Category tree UI — **Phase 2** — [DEFERRED_WORK.md](../DEFERRED_WORK.md).
 - [ ] **Performance** — paginate/filter sales; avoid loading full `fetchDomainBundle` history on every session.
 - [ ] **Credit limit** — enforce on bill save or hide field until enforced.
 - [ ] **Rebrand** — generic product name ([`../PRODUCT_NAMING_BRIEF.md`](../PRODUCT_NAMING_BRIEF.md)) before second dealer.
@@ -93,6 +95,26 @@ Wire the UI to Supabase **RPCs and/or constrained updates** via `domainLive.ts` 
 
 ---
 
+## Deferred — backup, import & restore (Phase 2)
+
+> **Details:** [`../DEFERRED_WORK.md`](../DEFERRED_WORK.md) (**IMP-0**, **IMP-1**, **IMP-2**) · spec [`../DATA_EXPORT_SPEC.md`](../DATA_EXPORT_SPEC.md).
+
+- [x] **Export Tier A (partial)** — Settings → Export; products, customers, stock, sales/purchase registers, backup ZIP.
+- [ ] **IMP-0** — Complete full tenant backup (all entities, all-history) — **Phase 2**.
+- [ ] **IMP-1** — CSV import hub per entity (products, customers, suppliers, categories, settings, stock) — **Phase 2**.
+- [ ] **IMP-2** — Restore / migration import (resume from same point) — **Phase 2**.
+
+---
+
+## Deferred — product categories (hierarchy)
+
+> **Details:** [`../DEFERRED_WORK.md`](../DEFERRED_WORK.md) (**CAT-1**, **CAT-2**). Flat list shipped in Phase 0.
+
+- [ ] **CAT-1** — Parent/child (2-level); grouped picker; filter/export roll-up — **Phase 1**.
+- [ ] **CAT-2** — ERP-style tree manager — **Phase 2**.
+
+---
+
 ## Deferred — inventory & backdating
 
 > **Details, effort, touchpoints, acceptance criteria:** [`../DEFERRED_WORK.md`](../DEFERRED_WORK.md) (**INV-1**, **INV-2**). Not scheme/deploy blockers.
@@ -104,7 +126,7 @@ Wire the UI to Supabase **RPCs and/or constrained updates** via `domainLive.ts` 
 
 ## Deferred — product name & branding (address later)
 
-> **Context:** UI still shows **DealerOS** / **Havmor Distributor Panel** on login; npm package `havmor-dms`; repo folder `havmor`. Pilot tenant is Havmor — that stays in **tenant_settings**, not product brand. Brief for ChatGPT: [`../PRODUCT_NAMING_BRIEF.md`](../PRODUCT_NAMING_BRIEF.md).
+> **Context:** Product brand **BikriKhata** (`productBrand.ts`, [bikrikhata.com](https://bikrikhata.com)); npm `bikrikhata`. Each shop’s legal name on bills = **tenant_settings**, not product brand. Brief: [`../PRODUCT_NAMING_BRIEF.md`](../PRODUCT_NAMING_BRIEF.md).
 
 - [ ] **Decide product name** — English + optional Nepali subtitle; runner-up documented.
 - [ ] **Rebrand app shell** — `LoginPage.tsx`, `RegisterPage.tsx`, `index.html`, PWA manifest in `vite.config.ts`, document title.

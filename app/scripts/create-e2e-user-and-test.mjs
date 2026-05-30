@@ -25,8 +25,8 @@ if (!url || !anon) {
 }
 
 const stamp = Date.now();
-const email = `havmor.e2e.${stamp}@gmail.com`;
-const password = `HavmorE2E!${String(stamp).slice(-6)}`;
+const email = `bikrikhata.e2e.${stamp}@gmail.com`;
+const password = `BikriKhataE2E!${String(stamp).slice(-6)}`;
 
 const supabase = createClient(url, anon);
 const admin = serviceKey ? createClient(url, serviceKey, { auth: { persistSession: false } }) : null;

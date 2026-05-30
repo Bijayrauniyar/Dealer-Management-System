@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Download, Plus, Trash2, Eye, X } from "lucide-react";
+import { ArrowLeft, Download, Plus, Trash2, Eye, X, Save } from "lucide-react";
 import { downloadBillPdf } from "@/lib/billExport";
 import { printBill } from "@/lib/printBill";
 import { toast } from "sonner";
@@ -32,6 +32,13 @@ import { numericMoneyProps, numericPercentProps, numericQtyProps, roundMoney } f
 import { addVatToExcl } from "@/lib/tax";
 import { buildSaleProductPickerOptions } from "@/lib/stockAlert";
 import { stripFocSuffixFromName } from "@/lib/billFoc";
+import {
+  SAVE_INVOICE_ACTION,
+  UPDATE_INVOICE_ACTION,
+  SAVE_INVOICE_PRINT_ACTION,
+  UPDATE_INVOICE_PRINT_ACTION,
+  SALES_INVOICE_LABEL,
+} from "@/lib/actionLabels";
 import { syncSchemeFreeLines, schemeHintForLine, type SaleDraftLine } from "@/lib/schemeApply";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
 
@@ -52,7 +59,7 @@ export const SaleEntryPage = () => {
   const existing  = useSaleByBill(editBillNo ?? "");
   const isEdit    = Boolean(existing);
 
-  // Pre-selected customer from query param (e.g. from CustomerDetailPage → "New bill")
+  // Pre-selected customer from query param (e.g. CustomerDetailPage → Sales invoice)
   const prefilledCustomerId = searchParams.get("customerId") ?? "";
 
   // Bill header — bill number is auto-generated for new bills
@@ -406,7 +413,7 @@ export const SaleEntryPage = () => {
         <ArrowLeft size={16} /> Back
       </button>
       <h1 className="mb-5 text-lg font-semibold">
-        {isEdit ? `Edit bill ${editBillNo}` : "New sale"}
+        {isEdit ? `Edit sales invoice ${editBillNo}` : "New sales invoice"}
       </h1>
 
       <div className="space-y-4">
@@ -749,13 +756,13 @@ export const SaleEntryPage = () => {
         )}
 
         <FormField label="Notes (optional)">
-          <Input placeholder="Any note for this bill" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Input placeholder="Any note for this invoice" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </FormField>
       </div>
 
       <StickyBar
         compact
-        previewLabel={customerId && lines.some((l) => l.productId) ? "Preview bill" : undefined}
+        previewLabel={customerId && lines.some((l) => l.productId) ? "Preview invoice" : undefined}
         onPreview={
           customerId && lines.some((l) => l.productId) ? () => setPrev(true) : undefined
         }
@@ -772,9 +779,13 @@ export const SaleEntryPage = () => {
           ...(balanceDue > 0 ? [["Balance due", npr(balanceDue)] as [string, string]] : []),
           ["Grand total", npr(grandTotal)],
         ]}
-        action={isEdit ? "Update bill" : "Save bill"}
+        action={isEdit ? UPDATE_INVOICE_ACTION : SAVE_INVOICE_ACTION}
+        actionIcon={Save}
+        actionAriaLabel={
+          isEdit ? `Update ${SALES_INVOICE_LABEL.toLowerCase()}` : `Save ${SALES_INVOICE_LABEL.toLowerCase()}`
+        }
         onAction={handleSave}
-        secondaryAction={isEdit ? "Update & Print" : "Save & Print"}
+        secondaryAction={isEdit ? UPDATE_INVOICE_PRINT_ACTION : SAVE_INVOICE_PRINT_ACTION}
         onSecondaryAction={handleSaveAndPrint}
         loading={saving}
         disabled={!customerId || lines.every((l) => !l.productId)}

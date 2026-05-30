@@ -27,6 +27,7 @@ import { SuppliersPage } from "@/pages/suppliers/SuppliersPage";
 import { SupplierFormPage } from "@/pages/suppliers/SupplierFormPage";
 import { SupplierInvoicesPage } from "@/pages/suppliers/SupplierInvoicesPage";
 import { StockPage } from "@/pages/stock/StockPage";
+import { StockAdjustmentPage } from "@/pages/stock/StockAdjustmentPage";
 import { MorePage } from "@/pages/more/MorePage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
 import { CompanyOverviewPage } from "@/pages/company/CompanyOverviewPage";
@@ -83,8 +84,10 @@ const AppRoutesInner = () => (
       <Route path="customers/:id" element={<CustomerDetailPage />} />
       <Route path="suppliers" element={<SuppliersPage />} />
       <Route path="suppliers/new" element={<SupplierFormPage />} />
+      <Route path="suppliers/edit/:supplierId" element={<SupplierFormPage />} />
       <Route path="suppliers/:supplierId/invoices" element={<SupplierInvoicesPage />} />
       <Route path="stock" element={<StockPage />} />
+      <Route path="stock-adjustment/new" element={<StockAdjustmentPage />} />
       <Route path="company" element={<CompanyOverviewPage />} />
       <Route path="capital" element={<CapitalListPage />} />
       <Route path="capital/new" element={<CapitalEntryPage />} />

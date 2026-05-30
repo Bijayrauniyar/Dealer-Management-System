@@ -42,7 +42,7 @@
 
 ### Closest competitors (Nepal context)
 
-| Style | Examples | Havmor vs them |
+| Style | Examples | BikriKhata vs them |
 |-------|----------|----------------|
 | **Local Nepal DMS/ERP** | MrSolution, Swastik, CrossOver, BISage | Same buyer; we win on **simpler UX + cloud + modern purchase/VAT bill**; they win on **offline/van/mature IRD depth** until we ship |
 | **India desktop (via partners)** | BUSY, Marg, Tally | Tally = CA habit; BUSY/Marg = FMCG depth; we are **lighter + Nepal-first story** |
@@ -90,7 +90,7 @@ See also competitor landscape notes from strategy sessions (India/Nepal desktop 
 
 ---
 
-## 4. Fit: what Havmor has today
+## 4. Fit: what BikriKhata has today
 
 **Core loop (shipped):**
 
@@ -115,9 +115,9 @@ Supplier purchase (+ invoice no., VAT excl) → stock ↑
 | Stock view | Yes | `v_stock` |
 | Settings (VAT %, markup, footer) | Yes | |
 | Returns, damage, expense, capital | Yes | |
-| **CSV export / backup** | **Not shipped** | P0 — [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) |
+| **CSV export / backup** | **Partial** (Tier A — Settings → Export) | **IMP-0/1/2** full backup + import + restore → **Phase 2** — [DEFERRED_WORK.md](DEFERRED_WORK.md) |
 | **White-label / non–ice-cream brand** | **Partial** | [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) |
-| **Configurable categories** | **No** (ice-cream list) | Blocks 2nd vertical |
+| **Configurable categories** | **Yes** (flat list, `0019`) | **CAT-1** parent/child → Phase 1; tree UI → Phase 2 |
 | **Paginated bills / fast home** | **Weak** | Medium dealer churn risk |
 | **DB oversell guard** | **No** | [DEFERRED_WORK.md](DEFERRED_WORK.md) INV-1 |
 | Van / route / offline | **No** | DB stubs only |
@@ -126,7 +126,7 @@ Supplier purchase (+ invoice no., VAT excl) → stock ↑
 
 ### Stock model (purchase vs stock entry)
 
-Many ERPs show **Purchase entry** and **Stock entry** as separate menus. They are different ideas; Havmor intentionally keeps **purchase as the main stock-IN path** for normal buying.
+Many ERPs show **Purchase entry** and **Stock entry** as separate menus. They are different ideas; BikriKhata intentionally keeps **purchase as the main stock-IN path** for normal buying.
 
 | | **Purchase entry** | **Stock entry / adjustment** (others) |
 |---|-------------------|--------------------------------------|
@@ -134,7 +134,7 @@ Many ERPs show **Purchase entry** and **Stock entry** as separate menus. They ar
 | **Money** | **Supplier payable**, VAT purchase book | Usually no supplier ledger |
 | **Stock** | **Increases** by **received** qty on purchase lines | +/- qty without a purchase document |
 
-**How Havmor calculates on-hand stock** (`v_stock`):
+**How BikriKhata calculates on-hand stock** (`v_stock`):
 
 ```text
 closing = opening_stock
@@ -164,7 +164,7 @@ closing = opening_stock
 
 [Nepal E-Billing](https://nepalebilling.com/) is **IRD/NFRS accounting**, not wholesaler DMS. Borrow **accountant expectations**, not the whole product.
 
-| Adopt (align Havmor) | Defer |
+| Adopt (align BikriKhata) | Defer |
 |----------------------|-------|
 | **Sales + purchase VAT registers** (CSV export) | IRD certified e-submit |
 | Period **VAT summary** (output vs input) | NFRS chart of accounts / GL |
@@ -182,23 +182,23 @@ Details: [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) §8 (registers, not IRD XML)
 
 ### Two compliance levels
 
-| Level | Meaning | Havmor |
+| Level | Meaning | BikriKhata |
 |-------|---------|--------|
 | **A — Good business invoice** | Printed/PDF bill with correct parties, serial no., dates, line totals, VAT math | **Mostly met** (`BillPrintView`, Settings, purchase bill) |
 | **B — Full IRD / e-billing** | IRD-certified system, statutory books, often **submission** to IRD, NFRS accounts | **Not met** — complement [Nepal E-Billing](https://nepalebilling.com/) or CA workflow |
 
 **Positioning (do not over-promise):**
 
-> Havmor issues VAT-style sales and purchase documents and keeps stock and udhar in sync. Export **sales and purchase registers** for your accountant. It is **not** a replacement for IRD-certified e-billing until integrated.
+> BikriKhata issues VAT-style sales and purchase documents and keeps stock and udhar in sync. Export **sales and purchase registers** for your accountant. It is **not** a replacement for IRD-certified e-billing until integrated.
 
 ### Sales tax invoice — field audit
 
 Implemented in `app/src/components/app/BillPrintView.tsx`, `app/src/lib/billDisplay.ts`, Settings (`tenant_settings`).
 
-| Field (typical Nepal VAT invoice) | Havmor | Notes |
+| Field (typical Nepal VAT invoice) | BikriKhata | Notes |
 |-----------------------------------|--------|-------|
 | Seller legal / trading name | Yes | `sellerBillName` |
-| Seller address, phone | Yes | `sellerContactLine` — complete in Settings |
+| Seller address, phone | Yes | Letterhead: **bill address lines 1–2** (short default); optional district line — [IRD_BILL_LETTERHEAD.md](IRD_BILL_LETTERHEAD.md) |
 | Seller **VAT** or **PAN** | Yes | VAT if `vatRegistered` + number; else PAN (`sellerTaxId`) |
 | **Serial bill / invoice no.** | Yes | `billNo` + tenant `invoice_prefix` |
 | Invoice **date** (AD) | Yes | `sale.date` |
@@ -215,12 +215,12 @@ Implemented in `app/src/components/app/BillPrintView.tsx`, `app/src/lib/billDisp
 | **Grand total** | Yes | |
 | **Amount in words** | Yes | `amountInWords` |
 | Custom footer | Yes | Settings `bill_footer` |
-| Document title **“Tax Invoice”** | **Partial** | Today: **“Sales details”** (`billDocumentTitle`) — P1 rename when VAT registered |
+| Document title **“Tax Invoice”** | Yes | `billDocumentTitle` when VAT registered |
 | IRD **QR / IRN / realtime submit** | No | Nepal E-Billing / IRD API — defer |
 
 ### Purchase side (input VAT)
 
-| Field | Havmor | Notes |
+| Field | BikriKhata | Notes |
 |-------|--------|-------|
 | Supplier invoice no. | Yes | `supplier_invoice_no` |
 | Supplier name, address, VAT/PAN | Yes | `PurchaseBillView` |
@@ -263,7 +263,7 @@ Implemented in `app/src/components/app/BillPrintView.tsx`, `app/src/lib/billDisp
 |---------|----------|
 | [Nepal E-Billing](https://nepalebilling.com/) | IRD verified, NFRS, VAT/purchase books |
 | Swastik / MrSolution | Long local IRD-certified positioning |
-| **Havmor** | Wholesaler **ops** + purchase VAT split; **export + bill fields** to close gap |
+| **BikriKhata** | Wholesaler **ops** + purchase VAT split; **export + bill fields** to close gap |
 
 ---
 
@@ -271,7 +271,7 @@ Implemented in `app/src/components/app/BillPrintView.tsx`, `app/src/lib/billDisp
 
 Dealers will **not pay monthly** without these:
 
-| # | Feature | Havmor | Priority |
+| # | Feature | BikriKhata | Priority |
 |---|---------|--------|----------|
 | 1 | VAT sales invoice + print/PDF | Yes | Maintain |
 | 2 | Customer ledger + payment allocation | Yes | Daily hook |
@@ -280,7 +280,7 @@ Dealers will **not pay monthly** without these:
 | 5 | Stock movement on sale/purchase/return/damage | Yes | + INV-1 trust |
 | 6 | Outstanding / overdue visibility | Yes | Home screen |
 | 7 | **Excel export** (sales, purchase, outstanding, products) | No | **P0** |
-| 8 | **Generic branding** (not Havmor-only) | Partial | **P0** |
+| 8 | **Generic branding** (not BikriKhata-only) | Partial | **P0** |
 | 9 | **Configurable product categories** | No | **P0** |
 | 10 | Works on mobile browser | PWA | Market it |
 | 11 | Performance with many bills | Weak | **P0** pagination |
@@ -396,9 +396,11 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 Before heavy AI or van modules:
 
 - [ ] **Phase 0 UI shell** — side menu (Masters / Entry / Reports / Support), sticky tabs (Home, Customers, Inventory, Reports), header Settings + notifications — [PHASE_ROADMAP.md §3.1](PHASE_ROADMAP.md#31-app-shell--navigation-new--phase-0)
-- [ ] Export P0 — [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md), [DEFERRED_WORK.md](DEFERRED_WORK.md) EXP-1
+- [x] Export Tier A (partial) — Settings → Export; registers + backup ZIP
+- [ ] **IMP-0/1/2 (Phase 2)** — full backup, CSV import per entity, restore — [DEFERRED_WORK.md](DEFERRED_WORK.md)
 - [ ] Rebrand — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md), BRAND-1
-- [ ] Tenant-configurable categories (remove hardcoded ice-cream only)
+- [x] Tenant-configurable categories (flat list — `0019`)
+- [ ] Parent/child categories (**CAT-1**, Phase 1) · tree UI (**CAT-2**, Phase 2) — [DEFERRED_WORK.md](DEFERRED_WORK.md)
 - [ ] Paginate `sales_bills` / stop full bundle on home
 - [ ] Credit limit enforce or hide
 - [ ] INV-1 oversell in RPC
@@ -417,7 +419,7 @@ Record answers here as you decide:
 
 | # | Question | Answer |
 |---|----------|--------|
-| 1 | Product name for market (not Havmor)? | TBD — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) |
+| 1 | Product name for market (not BikriKhata)? | TBD — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) |
 | 2 | Nepali (BS) date on printed bills required for v1? | TBD |
 | 3 | IRD e-billing / certified invoice scope? | **Complement** — export VAT/purchase books; IRD submit deferred ([DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md)) |
 | 4 | TDS / PAN workflows mandatory? | TBD |

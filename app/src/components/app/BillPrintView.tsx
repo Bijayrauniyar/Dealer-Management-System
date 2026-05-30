@@ -3,8 +3,9 @@
  * Compact letterhead + "Billed to" customer block + line table + totals.
  */
 import React from "react";
-import type { Sale, Customer, BusinessSettings } from "@/domain/types";
+import type { Sale, Customer } from "@/domain/types";
 import { useBusinessSettings } from "@/store/domain";
+import { BillLetterhead } from "@/components/app/BillLetterhead";
 import {
   billDocumentTitleDisplay,
   billBalanceDueLabel,
@@ -14,8 +15,7 @@ import {
   billShowsFooterDiscount,
   billShowsLineDiscColumn,
   billSubtotalForDisplay,
-  sellerContactLine,
-  sellerTaxId,
+  sellerLetterheadFromBusiness,
 } from "@/lib/billDisplay";
 import { nprNum, fmtDate, toMiti, amountInWords } from "@/lib/utils";
 import {
@@ -39,13 +39,6 @@ const joinParts = (...parts: (string | undefined | null)[]) =>
     .filter(Boolean)
     .join(", ");
 
-/** One name on bill: legal/registered if set, else trading name. */
-function sellerBillName(b: BusinessSettings): string {
-  const legal = b.legalName.trim();
-  const trading = b.name.trim();
-  return legal || trading || "—";
-}
-
 const rs = (n: number) => `Rs. ${nprNum(n)}`;
 
 /** Implied line discount when amount < qty × MRP (e.g. sell rate below MRP). */
@@ -58,27 +51,6 @@ function lineDiscPct(line: { qty: number; mrp?: number; rate: number; discountPc
   const amt = billLineAmount(line);
   if (amt >= gross) return 0;
   return Math.round((1 - amt / gross) * 100);
-}
-
-/** Standard Nepali bill phone label (same on screen, preview, print, PDF). */
-function PhLine({ number }: { number: string }) {
-  const n = number.trim();
-  if (!n) return null;
-  return (
-    <span className="text-gray-600">
-      <span className="text-gray-500">Ph</span>{" "}
-      <span className="tabular-nums text-gray-800">{n}</span>
-    </span>
-  );
-}
-
-function TaxIdLine({ label, number }: { label: "PAN" | "VAT"; number: string }) {
-  return (
-    <span className="whitespace-nowrap text-[10px] text-gray-700">
-      <span className="text-gray-500">{label}</span>{" "}
-      <span className="font-semibold tabular-nums text-gray-900">{number}</span>
-    </span>
-  );
 }
 
 /** Flex wrapper — vertical center in table/totals (screen, print, PDF capture). */
@@ -113,10 +85,9 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
   const payMode = billPaymentModeDisplay(sale);
   const paymentStatus = billPaymentStatusLabel(sale);
 
-  const sellerTax = sellerTaxId(business);
   const buyerPan = customer?.panNumber?.trim() ?? "";
 
-  const sellerContact = sellerContactLine(business);
+  const letterhead = sellerLetterheadFromBusiness(business);
 
   const customerAddress = customer?.address?.trim() ?? "";
   const customerPhone = customer?.phone?.trim() ?? "";
@@ -138,27 +109,10 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
     >
       <div className="px-3 py-2 print:px-6 print:pb-3 print:pt-5">
 
-        {/* ── Letterhead: shop + address (left), VAT/PAN (right), title centered ── */}
-        <div className="border-b border-gray-200 pb-1.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold leading-tight text-gray-900" title={sellerBillName(business)}>
-                {sellerBillName(business)}
-              </p>
-              {sellerContact ? (
-                <p className="mt-0.5 text-[9px] leading-snug text-gray-600">{sellerContact}</p>
-              ) : null}
-            </div>
-            {sellerTax ? (
-              <div className="shrink-0 pt-0.5">
-                <TaxIdLine label={sellerTax.label} number={sellerTax.number} />
-              </div>
-            ) : null}
-          </div>
-          <p className="mt-1.5 text-center text-[9px] font-bold uppercase tracking-wide text-gray-800">
-            {billDocumentTitleDisplay()}
-          </p>
-        </div>
+        <BillLetterhead
+          head={letterhead}
+          documentTitle={billDocumentTitleDisplay(business)}
+        />
 
         {/* ── Bill meta + customer (2 lines) ── */}
         <div className="mt-1 border-b border-dashed border-gray-300 py-1.5 text-[9px] leading-snug text-gray-800">

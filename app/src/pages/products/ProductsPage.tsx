@@ -1,50 +1,99 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Plus, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, ChevronRight } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useProducts } from "@/store/domain";
-import { isLowStock, minStockLabel } from "@/lib/stockAlert";
+import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
+import { ListPagination } from "@/components/app/ListPagination";
+import { useBusinessSettings, useProducts } from "@/store/domain";
+import { getVatPct } from "@/lib/tax";
+import { productMarkupOnCostPct } from "@/lib/productMarkup";
+import { minStockLabel } from "@/lib/stockAlert";
+import {
+  filterHint,
+  isLowStock,
+  matchesProductSearch,
+  normalizeCategory,
+  productCategories,
+  sortProducts,
+  type ProductSort,
+} from "@/lib/listFilters";
 import { npr } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { downloadFilteredProducts, exportFilterSlug } from "@/lib/export/listExport";
 import { usePagination } from "@/lib/usePagination";
+import { browseListSummary } from "@/lib/listBrowseSummary";
+import { toast } from "sonner";
 
-type Filter = "all" | "low_stock" | string; // string = category name
+type StatusFilter = "all" | "low_stock";
 
 export const ProductsPage = () => {
-  const navigate  = useNavigate();
-  const PRODUCTS  = useProducts();
-  const [query,  setQuery]  = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const navigate = useNavigate();
+  const business = useBusinessSettings();
+  const vatPct = getVatPct(business);
+  const PRODUCTS = useProducts();
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [sort, setSort] = useState<ProductSort>("name_asc");
 
-  // All unique categories
-  const categories = Array.from(new Set(PRODUCTS.map((p) => p.category))).sort();
+  const categories = useMemo(() => productCategories(PRODUCTS), [PRODUCTS]);
 
-  const chips: { id: Filter; label: string; count: number }[] = [
-    { id: "all",       label: "All",       count: PRODUCTS.length },
-    { id: "low_stock", label: "Low stock", count: PRODUCTS.filter(isLowStock).length },
-    ...categories.map((c) => ({ id: c, label: c, count: PRODUCTS.filter((p) => p.category === c).length })),
-  ];
+  const searchMatched = useMemo(
+    () => PRODUCTS.filter((p) => matchesProductSearch(p, query)),
+    [PRODUCTS, query],
+  );
 
-  const filtered = PRODUCTS.filter((p) => {
-    const matchSearch = !query ||
-      p.name.toLowerCase().includes(query.toLowerCase()) ||
-      p.category.toLowerCase().includes(query.toLowerCase());
-    const matchFilter =
-      filter === "all"       ? true :
-      filter === "low_stock" ? isLowStock(p) :
-      p.category === filter;
-    return matchSearch && matchFilter;
-  });
+  const statusOptions = useMemo((): BrowseFilterOption[] => {
+    return [
+      { value: "all", label: `All (${searchMatched.length})` },
+      {
+        value: "low_stock",
+        label: `Low stock (${searchMatched.filter(isLowStock).length})`,
+      },
+    ];
+  }, [searchMatched]);
 
-  const { visible, hasMore, loadMore, total } = usePagination(filtered);
+  const categoryOptions = useMemo((): BrowseFilterOption[] => {
+    const opts: BrowseFilterOption[] = [
+      { value: "all", label: `All categories (${searchMatched.length})` },
+    ];
+    for (const c of categories) {
+      const n = searchMatched.filter((p) => normalizeCategory(p.category) === c).length;
+      opts.push({ value: c, label: `${c} (${n})` });
+    }
+    return opts;
+  }, [searchMatched, categories]);
+
+  const filtered = useMemo(() => {
+    let list = searchMatched;
+    if (statusFilter === "low_stock") list = list.filter(isLowStock);
+    if (categoryFilter !== "all") {
+      list = list.filter((p) => normalizeCategory(p.category) === categoryFilter);
+    }
+    return sortProducts(list, sort);
+  }, [searchMatched, statusFilter, categoryFilter, sort]);
+
+  const emptyHint = useMemo(() => {
+    if (filtered.length > 0 || PRODUCTS.length === 0) return null;
+    return filterHint([
+      query.trim() ? `search “${query.trim()}”` : "",
+      statusFilter === "low_stock" ? "low stock only" : "",
+      categoryFilter !== "all" ? `category “${categoryFilter}”` : "",
+    ]);
+  }, [filtered.length, PRODUCTS.length, query, statusFilter, categoryFilter]);
+
+  const resetKey = `${query}|${statusFilter}|${categoryFilter}|${sort}`;
+  const page = usePagination(filtered, undefined, resetKey);
 
   return (
     <PageShell>
-      {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-sm font-medium text-teal-600"
+        >
           <ArrowLeft size={16} /> Back
         </button>
         <Button size="sm" onClick={() => navigate("/app/products/new")}>
@@ -53,105 +102,128 @@ export const ProductsPage = () => {
       </div>
       <h1 className="mb-4 text-lg font-bold">Products</h1>
 
-      {/* Search */}
-      <div className="mb-3 flex items-center gap-2 rounded-xl border border-border-subtle bg-white px-3 py-2.5 shadow-sm focus-within:ring-2 focus-within:ring-teal-500">
-        <Search size={14} className="shrink-0 text-muted" />
-        <input
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted/60"
-          placeholder="Search product or category…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
+      <ListBrowsePanel
+        search={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Search name, category, or unit…"
+        filterValue={statusFilter}
+        filterOptions={statusOptions}
+        filterLabel="Status"
+        onFilterChange={(v) => setStatusFilter(v as StatusFilter)}
+        extraFilter={{
+          label: "Category",
+          value: categoryFilter,
+          options: categoryOptions,
+          onChange: setCategoryFilter,
+        }}
+        sortValue={sort}
+        sortOptions={[
+          { value: "name_asc", label: "Name A–Z" },
+          { value: "name_desc", label: "Name Z–A" },
+          { value: "stock_asc", label: "Stock low → high" },
+          { value: "stock_desc", label: "Stock high → low" },
+          { value: "sell_asc", label: "Price low → high" },
+          { value: "sell_desc", label: "Price high → low" },
+        ]}
+        onSortChange={(v) => setSort(v as ProductSort)}
+        summary={
+          filtered.length > 0 ? browseListSummary(filtered.length, page.showingLabel) : undefined
+        }
+        exportCount={filtered.length}
+        onExport={() => {
+          if (filtered.length === 0) {
+            toast.error("Nothing to export — adjust filters.");
+            return;
+          }
+          downloadFilteredProducts(
+            filtered,
+            exportFilterSlug([
+              query.trim() || undefined,
+              statusFilter !== "all" ? statusFilter : undefined,
+              categoryFilter !== "all" ? categoryFilter : undefined,
+            ]),
+          );
+          toast.success(`Exported ${filtered.length} products`);
+        }}
+        exportDisabled={filtered.length === 0}
+      />
 
-      {/* Filter chips */}
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {chips.map((chip) => (
-          <button
-            key={chip.id}
-            onClick={() => setFilter(chip.id)}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-              filter === chip.id
-                ? "border-teal-600 bg-teal-600 text-white"
-                : "border-border-subtle bg-white text-muted hover:border-teal-300 hover:text-teal-600",
-            )}
-          >
-            {chip.label}
-            <span className={cn(
-              "rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
-              filter === chip.id ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500",
-            )}>
-              {chip.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Product list */}
       {filtered.length === 0 ? (
-        <div className="py-16 text-center">
-          <p className="text-sm text-muted">No products match.</p>
+        <div className="py-16 text-center px-4">
+          <p className="text-sm font-medium text-foreground">No products match.</p>
+          {emptyHint && <p className="mt-2 text-xs text-muted">{emptyHint}</p>}
+          {searchMatched.length > 0 && categoryFilter !== "all" && (
+            <p className="mt-2 text-xs text-muted">
+              Tip: counts include your search — {searchMatched.length} match search, 0 in this
+              category with that search.
+            </p>
+          )}
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {visible.map((p) => {
-            const isLow  = isLowStock(p);
-            const margin = p.costPrice > 0
-              ? Math.round(((p.sellingPrice - p.costPrice) / p.costPrice) * 100)
-              : 0;
+        <>
+          <div className="flex flex-col gap-2.5">
+            {page.visible.map((p) => {
+              const isLow = isLowStock(p);
+              const markupPct = productMarkupOnCostPct(p, vatPct);
 
-            return (
-              <button
-                key={p.id}
-                onClick={() => navigate(`/app/products/${p.id}`)}
-                className="flex items-center gap-3 rounded-2xl border border-border-subtle bg-white p-3.5 text-left shadow-sm hover:shadow-md active:scale-[0.99] transition-all"
-              >
-                {/* Stock indicator bar */}
-                <div className={cn(
-                  "flex h-12 w-1.5 shrink-0 rounded-full",
-                  isLow ? "bg-red-400" : "bg-teal-400",
-                )} />
-
-                <div className="flex-1 min-w-0">
-                  {/* Name + badges */}
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
-                    {isLow    && <Badge variant="danger" className="text-[9px] px-1 py-0 shrink-0">Low</Badge>}
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => navigate(`/app/products/${p.id}`)}
+                  className="flex items-center gap-3 rounded-2xl border border-border-subtle bg-white p-3.5 text-left shadow-sm hover:shadow-md active:scale-[0.99] transition-all"
+                >
+                  <div
+                    className={cn(
+                      "flex h-12 w-1.5 shrink-0 rounded-full",
+                      isLow ? "bg-red-400" : "bg-teal-400",
+                    )}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
+                      {isLow && (
+                        <Badge variant="danger" className="text-[9px] px-1 py-0 shrink-0">
+                          Low
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted">
+                      {p.category} · Stock{" "}
+                      <strong className={isLow ? "text-red-600" : ""}>{p.onHand}</strong> {p.uom} ·
+                      min {minStockLabel(p)}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2 text-[11px] flex-wrap">
+                      <span className="text-gray-400">MRP {npr(p.mrp)}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="font-semibold text-teal-700">Sell {npr(p.sellingPrice)}</span>
+                      <span className="text-gray-300">·</span>
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          markupPct < 10 ? "text-red-500" : markupPct < 20 ? "text-amber-600" : "text-green-600",
+                        )}
+                      >
+                        {markupPct}% markup
+                      </span>
+                    </div>
                   </div>
-                  {/* Sub-line: category + stock */}
-                  <p className="text-[11px] text-muted">
-                    {p.category} · Stock <strong className={isLow ? "text-red-600" : ""}>{p.onHand}</strong> {p.uom} · min {minStockLabel(p)}
-                  </p>
-                  {/* Pricing row */}
-                  <div className="mt-1 flex items-center gap-2 text-[11px]">
-                    <span className="text-gray-400">MRP {npr(p.mrp)}</span>
-                    <span className="text-gray-300">·</span>
-                    <span className="font-semibold text-teal-700">Sell {npr(p.sellingPrice)}</span>
-                    <span className="text-gray-300">·</span>
-                    <span className={cn(
-                      "font-semibold",
-                      margin < 10 ? "text-red-500" : margin < 20 ? "text-amber-600" : "text-green-600",
-                    )}>
-                      {margin}% margin
-                    </span>
-                  </div>
-                </div>
-
-                <ChevronRight size={14} className="shrink-0 text-gray-300" />
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {hasMore && (
-        <button
-          onClick={loadMore}
-          className="mt-3 w-full rounded-xl border border-border-subtle bg-white py-2.5 text-sm font-medium text-teal-600 hover:bg-teal-50 active:bg-teal-100 transition-colors"
-        >
-          Show more · {total - visible.length} remaining
-        </button>
+                  <ChevronRight size={14} className="shrink-0 text-gray-300" />
+                </button>
+              );
+            })}
+          </div>
+          <ListPagination
+            page={page.page}
+            totalPages={page.totalPages}
+            total={page.total}
+            hasPrev={page.hasPrev}
+            hasNext={page.hasNext}
+            onPrev={page.goPrev}
+            onNext={page.goNext}
+            showingLabel={page.showingLabel}
+          />
+        </>
       )}
 
       <div className="h-6" />

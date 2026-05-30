@@ -33,15 +33,19 @@ import {
   commitSupplierPaymentLive,
   deriveOutstandingBills,
   fetchDomainBundle,
+  fetchSaleByBillNoLive,
   peekNextBillNoLive,
   recordDamageLive,
+  recordStockAdjustmentLive,
   insertSchemeLive,
   recordExpenseLive,
   upsertCustomerLive,
   fetchDashboardPeriodTotalsLive,
   fetchDailyCashBreakdownLive,
   upsertDailyCashLive,
-  insertSupplierLive,
+  upsertSupplierLive,
+  appendProductCategoryLive,
+  removeProductCategoryLive,
 } from "@/lib/live/domainLive";
 import type {
   CommitPaymentOpts,
@@ -175,9 +179,23 @@ export function useOutstandingBills(): OutstandingBill[] {
   return useMemo(() => deriveOutstandingBills(sales), [sales]);
 }
 
+export function useSaleByBillQuery(billNo: string) {
+  return useQuery({
+    queryKey: ["sale-bill", billNo],
+    queryFn: () => fetchSaleByBillNoLive(billNo),
+    enabled: isSupabaseConfigured && Boolean(billNo),
+    staleTime: 0,
+  });
+}
+
 export function useSaleByBill(billNo: string): Sale | undefined {
-  const sales = useSales();
-  return useMemo(() => sales.find((s) => s.billNo === billNo), [sales, billNo]);
+  const q = useSaleByBillQuery(billNo);
+  const data = q.data;
+  // PERF-0 bundle stores headers with lines: [] — do not surface until line fetch finishes.
+  if (data && data.lines.length === 0 && (q.isLoading || q.isFetching)) {
+    return undefined;
+  }
+  return data;
 }
 
 export function getNextBillNo(): string {
@@ -236,13 +254,32 @@ export async function commitSupplierPayment(opts: CommitSupplierPaymentOpts): Pr
   await commitSupplierPaymentLive(opts);
 }
 
+export async function commitSupplier(input: {
+  id?: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  payable_opening?: number;
+}): Promise<string> {
+  return upsertSupplierLive(input);
+}
+
+/** @deprecated Use commitSupplier */
 export async function commitNewSupplier(input: {
   name: string;
   phone?: string;
   address?: string;
   payable_opening?: number;
 }): Promise<string> {
-  return insertSupplierLive(input);
+  return commitSupplier(input);
+}
+
+export async function commitAppendProductCategory(name: string): Promise<string[]> {
+  return appendProductCategoryLive(name);
+}
+
+export async function commitRemoveProductCategory(name: string): Promise<string[]> {
+  return removeProductCategoryLive(name);
 }
 
 export async function commitDailyCashClose(input: {
@@ -252,6 +289,16 @@ export async function commitDailyCashClose(input: {
   notes?: string | null;
 }): Promise<void> {
   await upsertDailyCashLive(input);
+}
+
+export async function commitStockAdjustment(input: {
+  productId: string;
+  qtyDelta: number;
+  reason: string;
+  notes?: string;
+  adjustmentDate?: string;
+}): Promise<void> {
+  await recordStockAdjustmentLive(input);
 }
 
 export async function commitDamageEntry(input: {

@@ -22,9 +22,14 @@
 | **INV-1** | Block oversell in DB | Backlog | **1–2 dev days** | UI disables OOS on new lines; RPC still allows oversell |
 | **INV-2** | Picker stock vs bill date | Backlog · **product decision** | **0–5 days** (see options) | Today’s `onHand` only; backdating is edge case for pilot |
 | **SUP-1** | Supplier scheme → pass-through to customer | Backlog | **3–5 days** | Scheme on sales shipped; purchase-side not built |
-| **EXP-1** | Export P0 (registers + backup ZIP) | Backlog | **1–2 weeks** | Highest client pain; spec in DATA_EXPORT_SPEC |
+| **EXP-1** | Export P0 (registers + backup ZIP) | **Partial** · Tier A shipped | **~1 week** left | Settings → Export tab; ZIP missing suppliers, settings, payments, all-time — see **IMP-0** |
+| **IMP-0** | Complete full tenant backup ZIP | Backlog · **Phase 2** | **~1 week** | Export everything: settings, suppliers, payments, returns, expenses, damages, purchase lines, outstanding, all-history option |
+| **IMP-1** | CSV import hub (per entity) | Backlog · **Phase 2** | **~2–3 weeks** | Upload templates: products, customers, suppliers, categories, settings, opening stock/balance |
+| **IMP-2** | Restore / migration import (resume same point) | Backlog · **Phase 2** | **~3–5 weeks** | Import backup ZIP or ordered CSVs; recreate masters + optional history; after IMP-0/1 |
 | **BRAND-1** | Product rebrand | Backlog | **2–4 days** | Second dealer; see PRODUCT_NAMING_BRIEF |
 | **MIG-0012** | Scheme Box→PCS columns | Optional | **~10 min** SQL | Only if using cross-UOM schemes |
+| **CAT-1** | Parent/child product categories (2-level) | Backlog · **Phase 1** | **~3–5 days** | Phase 0 ships **flat** list (`0019`); build when tenant has 30+ groups or wants roll-up reports |
+| **CAT-2** | Category tree UI (ERP-style) | Backlog · **Phase 2** | **~1–2 weeks** | Full sidebar tree + deep hierarchy; after CAT-1 if still needed |
 
 ---
 
@@ -90,15 +95,161 @@
 
 ---
 
-## EXP-1 — Export P0
+## EXP-1 — Export P0 (partial — Tier A)
 
-**Spec:** [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) · BACKEND-TODO Phase 2-E.
+**Status:** **Partially shipped** — `app/src/lib/export/*`, Settings → **Export** tab, quick CSVs + date-range registers + backup ZIP ([`ExportSection.tsx`](../app/src/pages/settings/ExportSection.tsx)).
+
+**Still missing for “accountant + trust” (→ IMP-0):** suppliers, `tenant_settings`, payments register, returns/expenses/damages, purchase line items, supplier payments, capital; ZIP tied to date range only; outstanding not in ZIP.
+
+**Spec:** [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) · BACKEND-TODO.
+
+---
+
+## IMP-0 — Complete full tenant backup (Phase 2)
+
+**Problem:** Owners want **one download** of all business data (settings, masters, every invoice, payments, stock, udhar) for disaster recovery and leaving the platform.
+
+**Phase:** **2** (extend Tier A export; do not block Phase 0 launch).
+
+**In ZIP / registers (target):**
+
+| File | Contents |
+|------|----------|
+| `tenant_settings.csv` | Business profile, VAT, address, categories, footer, list page size (no secrets) |
+| `products.csv` | Full product master + `product_id` |
+| `customers.csv` | + outstanding / credit limit |
+| `suppliers.csv` | Master |
+| `sales_bills.csv` / `sales_items.csv` | **All history** option + date range |
+| `purchases.csv` / `purchase_items.csv` | Headers + lines |
+| `payments.csv` | Per-bill allocations |
+| `returns.csv`, `expenses.csv`, `damages.csv` | Period or all-time |
+| `stock_snapshot.csv` | `v_stock` at export time |
+| `supplier_payments.csv` | If table exists |
+| `manifest.json` + `README.txt` | Row counts, app version, export_version |
+
+**Touchpoints:** `lib/export/buildRegisters.ts`, `backupZip.ts`, optional Edge Function for large tenants; [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) §5.
+
+**Acceptance:**
+
+- [ ] Owner downloads ZIP with all tables above.
+- [ ] “All business data” mode exports full bill/payment history (paginated, row cap + warning).
+- [ ] Outstanding and per-bill `balance` included.
+- [ ] E2E `e2e-export.mjs` asserts file list in ZIP.
+
+---
+
+## IMP-1 — CSV import hub — per entity (Phase 2)
+
+**Problem:** New tenant or recovery: import **customers, suppliers, products, categories, settings, stock** from Excel without retyping.
+
+**Phase:** **2** (Phase 1 may ship **light** product/customer templates only if a tenant blocks go-live — optional).
+
+**UX:** Settings → **Import data** (mirror Export): pick entity → download template → fill → upload → preview errors → commit.
+
+| Importer | v1 columns (examples) | Notes |
+|----------|----------------------|--------|
+| Products | code, name, category, unit, buy excl, sell, MRP, opening_qty | Uses RPC/create rules |
+| Customers | name, phone, area, address, PAN, opening_balance | Opening balance → opening bill or flag |
+| Suppliers | name, phone, address, PAN/VAT | |
+| Categories | name (flat); parent+child when CAT-1 exists | |
+| Settings | Single-row template or JSON | Careful merge, not blind overwrite |
+| Stock | product code, qty adjustment or opening only | Pair with products import |
+
+**Touchpoints:** `app/src/pages/settings/ImportSection.tsx` (new), `lib/import/*`, validation against domain types; no service-role in browser.
+
+**Acceptance:**
+
+- [ ] Template CSV per entity with header row + 1 example row.
+- [ ] Upload shows row-level errors before save.
+- [ ] Import 50 products + 20 customers in &lt; 5 minutes in manual test.
+- [ ] Docs: onboarding section in manual checklist.
+
+**Not in IMP-1:** Full bill/payment history import (→ IMP-2).
+
+---
+
+## IMP-2 — Restore / migration import — resume from same point (Phase 2)
+
+**Problem:** After **IMP-0** backup, tenant wants to **import ZIP** (or ordered CSV set) and continue with same stock, udhar, and masters — “start from that point.”
+
+**Phase:** **2** — after **IMP-0** + **IMP-1**; hardest item.
+
+**Scope tiers:**
+
+| Tier | Restore | Effort |
+|------|---------|--------|
+| **A — Go-live** | Masters + opening stock + customer opening balances | IMP-1 covers most |
+| **B — Operational** | Tier A + open bills + payment allocations | Needs bill/payment import RPCs |
+| **C — Full history** | Tier B + all past bills, purchases, returns | Migration project; `returns.bill_id` etc. |
+
+**Rules:**
+
+- Import order: settings → categories → products → customers → suppliers → stock → (optional) purchases → sales → payments.
+- Preserve or map UUIDs from backup for Tier B/C.
+- Stock closing from snapshot must match `v_stock` formula or document adjustment step.
+- **Never** import secrets; tenant-bound RLS on all writes.
+
+**Acceptance (Tier A minimum for IMP-2 done):**
+
+- [ ] Documented restore runbook in DATA_EXPORT_SPEC §9.
+- [ ] Tier B: one test tenant round-trip (export ZIP → new tenant import) with matching outstanding ± documented tolerance.
+
+**Defer:** Tally bridge, automated nightly backup to owner email.
 
 ---
 
 ## BRAND-1 — Rebrand
 
 **Brief:** [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) · BACKEND-TODO § Deferred branding.
+
+---
+
+## CAT-1 — Parent/child product categories (Phase 1)
+
+**Problem:** Today `tenant_settings.product_categories` is a **flat** JSON string array; each product has one `category` text. Dealers with large catalogs (or CA reports by main group) want **parent → child** (e.g. Beverages → Juice), not a long flat dropdown.
+
+**Phase:** **1** (optional — only after 1–2 paying tenants ask or category list routinely exceeds ~30).
+
+**Scope (v1 — keep simple):**
+
+| In scope | Out of scope (→ CAT-2 / Phase 2) |
+|----------|----------------------------------|
+| **2 levels max:** parent + child | 3+ level deep tree |
+| Product stores **child** name or id; reports roll up to parent | ERP sidebar tree view |
+| Settings: add parent, add child under parent | Move product between branches in bulk |
+| Filters: parent expands to all children | HS code / brand dimension |
+
+**Touchpoints:**
+
+| Layer | Files / tables |
+|-------|----------------|
+| DB | New `product_category_nodes` (or extend jsonb with `{ id, parent_id, name }`); migration; products.category → child id or keep text + FK |
+| App | `ProductCategoryField`, `ProductCategoriesSection`, `ProductsPage` / `Stock` filters, export CSV category column |
+| Docs | `data-model.md`, manual checklist § Products |
+
+**Acceptance:**
+
+- [ ] Create parent “Beverages” and child “Juice”; assign product to Juice.
+- [ ] Product form picker shows grouped or indented list (mobile-friendly).
+- [ ] Stock/Products filter by parent includes all children.
+- [ ] Export register still has category column (child + optional parent column).
+- [ ] Flat categories from `0019` migrate without data loss.
+
+**Staff rule until done:** Use flat names with a prefix (e.g. `Beverages - Juice`) if grouping is urgent.
+
+---
+
+## CAT-2 — Category tree UI (Phase 2)
+
+**Problem:** Power users want **flexible hierarchy** like desktop ERP (sidebar tree, many levels, item list by branch).
+
+**Phase:** **2** — after **CAT-1** and only if tenants outgrow 2-level.
+
+**Scope:** Tree manager in Settings; collapse/expand; optional 3+ levels; search across tree.
+
+**Effort:** **~1–2 weeks** solo (UI + CRUD + filter/export roll-ups).
+
+**Defer reason:** Wrong complexity for Phase 0 ICP (1 godown, &lt;30 categories). See [PHASE_ROADMAP.md §4–5](PHASE_ROADMAP.md).
 
 ---
 
@@ -134,4 +285,4 @@ Scheme code is no-op when `scheme_tracker` is empty ([`schemeApply.ts`](../app/s
 
 ---
 
-*Last updated: 2026-05-20 — add changelog line in LLM_CONTEXT when you change this register.*
+*Last updated: 2026-05-26 — **IMP-0/1/2** (Phase 2 full backup + import + restore); **CAT-1/2**; EXP-1 marked partial.*

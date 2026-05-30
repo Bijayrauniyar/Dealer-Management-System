@@ -23,6 +23,7 @@ import type {
   BillStatus,
 } from "@/domain/types";
 import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
+import { parseListPageSize } from "@/lib/listPageSize";
 import { roundMoney } from "@/lib/money";
 import { normalizeInvoiceNoSpoken } from "@/lib/voiceInvoiceNo";
 import type { DashboardPeriodTotals } from "@/domain/defaults";
@@ -132,10 +133,31 @@ export async function fetchProductsLive(): Promise<Product[]> {
 
   if (error) throw error;
 
-  const { data: stockRows, error: se } = await supabase.from("v_stock").select("product_id, closing_stock");
+  let stockRows: Record<string, unknown>[] | null = null;
+  let se: { message?: string } | null = null;
+  const stockFull = await supabase
+    .from("v_stock")
+    .select("product_id, closing_stock, opening_stock, purchased, adjusted");
+  stockRows = stockFull.data;
+  se = stockFull.error;
+  if (se && isMissingColumnError(se, "adjusted")) {
+    const stockLegacy = await supabase.from("v_stock").select("product_id, closing_stock, opening_stock, purchased");
+    stockRows = stockLegacy.data;
+    se = stockLegacy.error;
+  }
   if (se) throw se;
-  const stockMap = new Map<string, number>();
-  for (const s of stockRows ?? []) stockMap.set(s.product_id as string, Number(s.closing_stock));
+  const stockMap = new Map<
+    string,
+    { closing: number; opening: number; purchased: number; adjusted: number }
+  >();
+  for (const s of stockRows ?? []) {
+    stockMap.set(s.product_id as string, {
+      closing: Number(s.closing_stock),
+      opening: Number(s.opening_stock ?? 0),
+      purchased: Number(s.purchased ?? 0),
+      adjusted: Number((s as { adjusted?: number }).adjusted ?? 0),
+    });
+  }
 
   return (rows ?? []).map((r) => {
     const uom = (r.unit as string) ?? "PCS";
@@ -161,7 +183,9 @@ export async function fetchProductsLive(): Promise<Product[]> {
       ),
       discountPct: Number(r.discount_pct ?? 0),
       vatApplicable: Boolean(r.vat_applicable),
-      onHand: stockMap.get(r.id as string) ?? Number(r.opening_stock),
+      onHand: stockMap.get(r.id as string)?.closing ?? Number(r.opening_stock),
+      openingStock: stockMap.get(r.id as string)?.opening ?? Number(r.opening_stock ?? 0),
+      purchased: stockMap.get(r.id as string)?.purchased ?? 0,
       minQty: Number(r.min_qty ?? 20),
       minQtyPack: "min_qty_pack" in r && r.min_qty_pack != null ? Number(r.min_qty_pack) : undefined,
       description: undefined,
@@ -420,6 +444,98 @@ export async function fetchSalesLive(): Promise<Sale[]> {
     };
     return sale;
   });
+}
+
+const SALES_HEADERS_LIMIT = 500;
+
+function mapBillRowToSaleHeader(b: BillRow): Sale {
+  const cust = embedOne(b.customers);
+  const sub = Number(b.subtotal);
+  const disc = Number(b.discount);
+  const vatAmt = Number(b.vat_amount ?? 0);
+  const extra = Number(b.extra_charges ?? 0);
+  const afterDisc = sub - disc;
+  const total = Number(b.total);
+  const paidNow = Number(b.paid);
+  return {
+    id: b.id,
+    billNo: b.bill_no,
+    date: b.bill_date,
+    customerId: b.customer_id,
+    customerName: cust?.name ?? "",
+    lines: [],
+    subtotal: sub,
+    discountType: disc > 0 ? "flat" : "none",
+    discountValue: disc,
+    discountAmount: disc,
+    afterDiscount: afterDisc,
+    billTerms: extra > 0 ? "Charges" : "",
+    billTermsAmount: extra,
+    vatRate: vatAmt > 0 ? 13 : 0,
+    vatAmount: vatAmt,
+    grandTotal: total,
+    paidNow,
+    paymentMode: b.payment_mode ?? "",
+    balance: Math.max(0, total - paidNow),
+    dueDate: b.bill_date,
+    notes: b.notes ?? "",
+    total,
+  };
+}
+
+/** Recent sales bills without line items (PERF-0 bundle). */
+export async function fetchSalesHeadersLive(): Promise<Sale[]> {
+  const { data: bills, error } = await supabase
+    .from("sales_bills")
+    .select(
+      "id, bill_no, bill_date, customer_id, payment_mode, subtotal, discount, total, paid, notes, vat_amount, extra_charges, customers(name)",
+    )
+    .order("bill_date", { ascending: false })
+    .limit(SALES_HEADERS_LIMIT);
+  if (error) throw error;
+  return (bills ?? []).map((raw) => mapBillRowToSaleHeader(raw as unknown as BillRow));
+}
+
+/** Full bill + lines for detail, edit, return. */
+export async function fetchSaleByBillNoLive(billNo: string): Promise<Sale | undefined> {
+  const { data: raw, error } = await supabase
+    .from("sales_bills")
+    .select(
+      "id, bill_no, bill_date, customer_id, payment_mode, subtotal, discount, total, paid, notes, vat_amount, extra_charges, customers(name)",
+    )
+    .eq("bill_no", billNo)
+    .maybeSingle();
+  if (error) throw error;
+  if (!raw) return undefined;
+  const b = raw as unknown as BillRow;
+  const { data: items, error: ie } = await supabase
+    .from("sales_items")
+    .select("bill_id, product_id, qty, rate, unit, products(name, unit, mrp, sale_price, discount_pct)")
+    .eq("bill_id", b.id);
+  if (ie) throw ie;
+  const header = mapBillRowToSaleHeader(b);
+  const lines: SaleLine[] = (items ?? []).map((it) => {
+    const row = it as unknown as ItemRow;
+    const prod = embedOne(row.products);
+    const qty = Number(row.qty);
+    const rate = Number(row.rate);
+    const uom = ((row.unit as string)?.trim() || prod?.unit) ?? "PCS";
+    const discountPct = Number(prod?.discount_pct ?? 0);
+    const amount = billLineAmount({ qty, rate, discountPct });
+    return {
+      productId: row.product_id,
+      productName: prod?.name ?? "",
+      uom,
+      qty,
+      mrp: Number(prod?.mrp ?? rate),
+      rate,
+      discountPct,
+      amount,
+      isFoc: isFocSaleLine({ rate, qty, amount }),
+      focNote: isFocSaleLine({ rate, qty, amount }) ? "FOC" : undefined,
+    };
+  });
+  return { ...header, lines };
 }
 
 export function deriveOutstandingBills(sales: Sale[]): OutstandingBill[] {
@@ -725,20 +841,32 @@ export async function commitSupplierPaymentLive(opts: {
   void queryClient.invalidateQueries({ queryKey: ["daily-cash-breakdown"] });
 }
 
-export async function insertSupplierLive(p: {
+export async function upsertSupplierLive(p: {
+  id?: string;
   name: string;
   phone?: string;
   address?: string;
   payable_opening?: number;
 }): Promise<string> {
   const tenantId = await tenantIdForCurrentUser();
+  const row = {
+    name: p.name.trim(),
+    phone: p.phone?.trim() || null,
+    address: p.address?.trim() || null,
+  };
+
+  if (p.id) {
+    const { error } = await supabase.from("suppliers").update(row).eq("id", p.id);
+    if (error) throw error;
+    void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+    return p.id;
+  }
+
   const { data, error } = await supabase
     .from("suppliers")
     .insert({
       tenant_id: tenantId,
-      name: p.name.trim(),
-      phone: p.phone?.trim() || null,
-      address: p.address?.trim() || null,
+      ...row,
       payable_opening: p.payable_opening ?? 0,
       is_active: true,
     })
@@ -747,6 +875,16 @@ export async function insertSupplierLive(p: {
   if (error) throw error;
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
   return data.id as string;
+}
+
+/** @deprecated Use upsertSupplierLive */
+export async function insertSupplierLive(p: {
+  name: string;
+  phone?: string;
+  address?: string;
+  payable_opening?: number;
+}): Promise<string> {
+  return upsertSupplierLive(p);
 }
 
 export async function upsertCustomerLive(p: {
@@ -814,6 +952,7 @@ export async function upsertProductLive(p: {
   vat_applicable: boolean;
   min_qty: number;
   min_qty_pack?: number | null;
+  opening_stock?: number;
 }): Promise<void> {
   const {
     data: { user },
@@ -844,6 +983,7 @@ export async function upsertProductLive(p: {
     vat_applicable: p.vat_applicable,
     min_qty: p.min_qty,
     min_qty_pack: p.min_qty_pack ?? null,
+    opening_stock: p.opening_stock ?? 0,
     is_active: true,
   };
   if (p.id) {
@@ -890,6 +1030,24 @@ export async function recordDamageLive(input: {
     p_qty: input.qty,
     p_reason: input.reason,
     p_cost: input.cost ?? 0,
+    p_notes: input.notes ?? null,
+  });
+  if (error) throw error;
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+}
+
+export async function recordStockAdjustmentLive(input: {
+  productId: string;
+  qtyDelta: number;
+  reason: string;
+  notes?: string;
+  adjustmentDate?: string;
+}): Promise<void> {
+  const { error } = await supabase.rpc("record_stock_adjustment", {
+    p_adjustment_date: input.adjustmentDate ?? new Date().toISOString().slice(0, 10),
+    p_product_id: input.productId,
+    p_qty_delta: input.qtyDelta,
+    p_reason: input.reason,
     p_notes: input.notes ?? null,
   });
   if (error) throw error;
@@ -996,7 +1154,17 @@ type TenantSettingsRow = {
   default_markup_pct: number | null;
   default_min_qty: number | null;
   default_min_pack_qty: number | null;
+  product_categories?: unknown;
+  allow_stock_adjustment?: boolean | null;
+  list_page_size?: number | null;
+  show_district_province_on_bill?: boolean | null;
 };
+
+function parseProductCategories(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return DEFAULT_BUSINESS_SETTINGS.productCategories;
+  const list = raw.map((x) => String(x).trim()).filter(Boolean);
+  return list.length ? list : DEFAULT_BUSINESS_SETTINGS.productCategories;
+}
 
 export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
   const D = DEFAULT_BUSINESS_SETTINGS;
@@ -1024,6 +1192,11 @@ export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
     defaultMarkupPct: row.default_markup_pct ?? D.defaultMarkupPct,
     defaultMinQty: row.default_min_qty ?? D.defaultMinQty,
     defaultMinPackQty: row.default_min_pack_qty ?? D.defaultMinPackQty,
+    productCategories: parseProductCategories(row.product_categories),
+    allowStockAdjustment: row.allow_stock_adjustment ?? D.allowStockAdjustment,
+    listPageSize: parseListPageSize(row.list_page_size ?? D.listPageSize),
+    showDistrictProvinceOnBill:
+      row.show_district_province_on_bill ?? D.showDistrictProvinceOnBill,
   };
 }
 
@@ -1032,6 +1205,43 @@ export async function fetchTenantSettingsLive(): Promise<BusinessSettings> {
   if (error) throw error;
   if (!data) return { ...DEFAULT_BUSINESS_SETTINGS };
   return mapTenantSettingsRow(data as TenantSettingsRow);
+}
+
+/** Append a product category to tenant_settings (product form — not Settings). */
+export async function appendProductCategoryLive(name: string): Promise<string[]> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Category name is required.");
+
+  const current = await fetchTenantSettingsLive();
+  const list = [...current.productCategories];
+  if (!list.includes(trimmed)) list.push(trimmed);
+
+  const tenantId = await tenantIdForCurrentUser();
+  const { error } = await supabase
+    .from("tenant_settings")
+    .update({ product_categories: list })
+    .eq("tenant_id", tenantId);
+  if (error) throw error;
+
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  return list;
+}
+
+export async function removeProductCategoryLive(name: string): Promise<string[]> {
+  const trimmed = name.trim();
+  const current = await fetchTenantSettingsLive();
+  const list = current.productCategories.filter((c) => c !== trimmed);
+  if (list.length === 0) throw new Error("Keep at least one category.");
+
+  const tenantId = await tenantIdForCurrentUser();
+  const { error } = await supabase
+    .from("tenant_settings")
+    .update({ product_categories: list })
+    .eq("tenant_id", tenantId);
+  if (error) throw error;
+
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  return list;
 }
 
 export async function fetchPnlTotalsLive(): Promise<PnlTotals> {
@@ -1330,6 +1540,45 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
   };
 }
 
+/** Top products by qty sold in period (PERF-0: not loaded in domain bundle). */
+export async function fetchTopProductsInPeriodLive(
+  from: string,
+  to: string,
+): Promise<{ productId: string; name: string; qty: number; revenue: number }[]> {
+  const { data: bills, error: be } = await supabase
+    .from("sales_bills")
+    .select("id")
+    .gte("bill_date", from)
+    .lte("bill_date", to);
+  if (be) throw be;
+  const billIds = (bills ?? []).map((b) => (b as { id: string }).id);
+  if (!billIds.length) return [];
+  const m = new Map<string, { name: string; qty: number; revenue: number }>();
+  const chunk = 200;
+  for (let i = 0; i < billIds.length; i += chunk) {
+    const slice = billIds.slice(i, i + chunk);
+    const { data, error } = await supabase
+      .from("sales_items")
+      .select("product_id, qty, rate, products(name)")
+      .in("bill_id", slice);
+    if (error) throw error;
+    for (const it of data ?? []) {
+      const pid = it.product_id as string;
+      const prod = embedOne(it.products as { name?: string } | { name?: string }[] | null);
+      const qty = Number(it.qty);
+      const rate = Number(it.rate);
+      const cur = m.get(pid) ?? { name: prod?.name ?? "", qty: 0, revenue: 0 };
+      cur.qty += qty;
+      cur.revenue += qty * rate;
+      m.set(pid, cur);
+    }
+  }
+  return [...m.entries()]
+    .sort((a, b) => b[1].qty - a[1].qty)
+    .slice(0, 5)
+    .map(([productId, v]) => ({ productId, ...v }));
+}
+
 /** KPIs for dashboard selected period (exclusive end semantics: use inclusive dates in SQL). */
 export async function fetchDashboardPeriodTotalsLive(from: string, to: string): Promise<DashboardPeriodTotals> {
   const [pex, eex, rex, dmx] = await Promise.all([
@@ -1370,7 +1619,7 @@ export async function fetchDomainBundle(): Promise<DomainBundle> {
     fetchProductsLive(),
     fetchCustomersLive(),
     fetchSuppliersLive(),
-    fetchSalesLive(),
+    fetchSalesHeadersLive(),
     fetchPaymentsLive(),
     fetchSchemesLive(),
     fetchTenantSettingsLive(),

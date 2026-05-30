@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, Plus } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { ListRow } from "@/components/app/ListRow";
 import { EmptyState } from "@/components/app/EmptyState";
@@ -9,7 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCustomers } from "@/store/domain";
 import { npr } from "@/lib/utils";
+import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
+import { ListPagination } from "@/components/app/ListPagination";
+import { customerAreas } from "@/lib/listFilters";
+import { downloadFilteredCustomers, exportFilterSlug } from "@/lib/export/listExport";
 import { usePagination } from "@/lib/usePagination";
+import { browseListSummary } from "@/lib/listBrowseSummary";
+import { toast } from "sonner";
 
 export const CustomersPage = () => {
   const navigate  = useNavigate();
@@ -17,13 +23,60 @@ export const CustomersPage = () => {
   const [query, setQuery] = useState("");
   const CUSTOMERS = useCustomers();
 
-  const filtered = CUSTOMERS.filter((c) => {
-    const matchesQuery = c.name.toLowerCase().includes(query.toLowerCase()) || c.area.toLowerCase().includes(query.toLowerCase());
-    if (params.get("filter") === "outstanding") return matchesQuery && c.outstanding > 0;
-    return matchesQuery;
-  });
+  const outstandingOnly = params.get("filter") === "outstanding";
+  const [listFilter, setListFilter] = useState<"all" | "credit">(outstandingOnly ? "credit" : "all");
+  const [areaFilter, setAreaFilter] = useState("all");
+  const areaList = useMemo(() => customerAreas(CUSTOMERS), [CUSTOMERS]);
 
-  const { visible, hasMore, loadMore, total } = usePagination(filtered);
+  const [sort, setSort] = useState<"name_asc" | "name_desc">("name_asc");
+
+  const filtered = useMemo(() => {
+    const list = CUSTOMERS.filter((c) => {
+      const matchesQuery =
+        c.name.toLowerCase().includes(query.toLowerCase()) ||
+        c.area.toLowerCase().includes(query.toLowerCase());
+      if (!matchesQuery) return false;
+      if (listFilter === "credit") return c.outstanding > 0;
+      if (areaFilter !== "all" && (c.area ?? "").trim() !== areaFilter) return false;
+      return true;
+    });
+    list.sort((a, b) =>
+      sort === "name_asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+    );
+    return list;
+  }, [CUSTOMERS, query, listFilter, areaFilter, sort]);
+
+  const searchMatched = useMemo(
+    () =>
+      CUSTOMERS.filter(
+        (c) =>
+          c.name.toLowerCase().includes(query.toLowerCase()) ||
+          c.area.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [CUSTOMERS, query],
+  );
+
+  const filterOptions = useMemo((): BrowseFilterOption[] => {
+    const creditCount = searchMatched.filter((c) => c.outstanding > 0).length;
+    return [
+      { value: "all", label: `All (${searchMatched.length})` },
+      { value: "credit", label: `On credit (${creditCount})` },
+    ];
+  }, [searchMatched]);
+
+  const areaOptions = useMemo((): BrowseFilterOption[] => {
+    const opts: BrowseFilterOption[] = [
+      { value: "all", label: `All areas (${searchMatched.length})` },
+    ];
+    for (const area of areaList) {
+      const n = searchMatched.filter((c) => (c.area ?? "").trim() === area).length;
+      opts.push({ value: area, label: `${area} (${n})` });
+    }
+    return opts;
+  }, [searchMatched, areaList]);
+
+  const resetKey = `${query}|${listFilter}|${areaFilter}|${sort}`;
+  const page = usePagination(filtered, undefined, resetKey);
 
   return (
     <PageShell>
@@ -37,19 +90,50 @@ export const CustomersPage = () => {
       </div>
       <h1 className="mb-4 text-lg font-semibold">
         Customers
-        {params.get("filter") === "outstanding" && <span className="ml-2 text-sm font-normal text-muted">(with balance)</span>}
+        {outstandingOnly && <span className="ml-2 text-sm font-normal text-muted">(with balance)</span>}
       </h1>
 
-      {/* Search */}
-      <div className="mb-4 flex items-center gap-2 rounded-lg border border-border-subtle bg-white px-3 py-2 shadow-card focus-within:ring-2 focus-within:ring-teal-500">
-        <Search size={14} className="text-muted" />
-        <input
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          placeholder="Search by name or area"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
+      <ListBrowsePanel
+        search={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Search by name or area…"
+        filterValue={listFilter}
+        filterOptions={filterOptions}
+        filterLabel="Status"
+        onFilterChange={(v) => setListFilter(v as "all" | "credit")}
+        extraFilter={{
+          label: "Area",
+          value: areaFilter,
+          options: areaOptions,
+          onChange: setAreaFilter,
+        }}
+        sortValue={sort}
+        sortOptions={[
+          { value: "name_asc", label: "Name A–Z" },
+          { value: "name_desc", label: "Name Z–A" },
+        ]}
+        onSortChange={(v) => setSort(v as "name_asc" | "name_desc")}
+        summary={
+          filtered.length > 0 ? browseListSummary(filtered.length, page.showingLabel) : undefined
+        }
+        exportCount={filtered.length}
+        onExport={() => {
+          if (filtered.length === 0) {
+            toast.error("Nothing to export — adjust filters.");
+            return;
+          }
+          downloadFilteredCustomers(
+            filtered,
+            exportFilterSlug([
+              query.trim() || undefined,
+              listFilter !== "all" ? listFilter : undefined,
+              areaFilter !== "all" ? areaFilter : undefined,
+            ]),
+          );
+          toast.success(`Exported ${filtered.length} customers`);
+        }}
+        exportDisabled={filtered.length === 0}
+      />
 
       {filtered.length === 0 ? (
         <EmptyState title="No customers found" />
@@ -57,7 +141,7 @@ export const CustomersPage = () => {
         <>
           <Card>
             <CardContent className="p-0 px-4">
-              {visible.map((c) => (
+              {page.visible.map((c) => (
                 <ListRow
                   key={c.id}
                   left={c.name}
@@ -68,14 +152,16 @@ export const CustomersPage = () => {
               ))}
             </CardContent>
           </Card>
-          {hasMore && (
-            <button
-              onClick={loadMore}
-              className="mt-3 w-full rounded-xl border border-border-subtle bg-white py-2.5 text-sm font-medium text-teal-600 hover:bg-teal-50 active:bg-teal-100 transition-colors"
-            >
-              Show more · {total - visible.length} remaining
-            </button>
-          )}
+          <ListPagination
+            page={page.page}
+            totalPages={page.totalPages}
+            total={page.total}
+            hasPrev={page.hasPrev}
+            hasNext={page.hasNext}
+            onPrev={page.goPrev}
+            onNext={page.goNext}
+            showingLabel={page.showingLabel}
+          />
         </>
       )}
     </PageShell>

@@ -317,7 +317,7 @@ export const PurchasePage = () => {
       >
         <ArrowLeft size={16} /> Back
       </button>
-      <h1 className="mb-1 text-lg font-semibold">{isEdit ? "Edit purchase" : "New purchase"}</h1>
+      <h1 className="mb-1 text-lg font-semibold">{isEdit ? "Edit purchase invoice" : "New purchase invoice"}</h1>
       {isEdit && paidOnPurchase > 0 && (
         <p className="mb-3 text-sm text-muted">Paid {npr(paidOnPurchase)} on this purchase</p>
       )}

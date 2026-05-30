@@ -42,8 +42,8 @@ Use this list in sales demos; do not re-build unless fixing gaps in Phase 0.
 | Nav today                                                                       | Bottom **Home / + / More**; header business name + bell — **no Settings icon**, no side drawer |
 | Bill title                                                                      | **“Sales details”** (not “Tax Invoice” when VAT registered)                                    |
 | Categories                                                                      | Hardcoded ice-cream list on product form                                                       |
-| Branding                                                                        | Login: **DealerOS** / Havmor Distributor Panel                                                 |
-| Export / backup                                                                 | **Not built**                                                                                  |
+| Branding                                                                        | Login: **BikriKhata** + taglines ([bikrikhata.com](https://bikrikhata.com))                    |
+| Export / backup                                                                 | **Partial** — Settings → Export; **IMP-0/1/2** full backup + import → Phase 2                    |
 | `opening_stock`                                                                 | In DB + `v_stock` — **no product form field**                                                  |
 | DB oversell                                                                     | **Allowed** in RPC (INV-1 deferred)                                                            |
 | Performance                                                                     | `fetchDomainBundle` loads full sales history for shell                                         |
@@ -76,7 +76,7 @@ Do **not** charge strangers or run Meta ads until these ship (pilot #1 can use t
 |----|------|
 | **EXP-0** | Export hub + backup ZIP |
 | **EXP-0a–d** | Sales register, lines, purchase register, outstanding, products, stock snapshot, **VAT period summary** |
-| **BRAND-0** | Generic rebrand (login, PWA) — not Havmor/DealerOS-only |
+| **BRAND-0** | BikriKhata rebrand (login, PWA) — **done** |
 | **CAT-0** | Tenant-configurable product categories |
 | **STK-0** | Opening qty on product form |
 | **STK-0b** | Stock page: on hand · opening · from purchases; category filter |
@@ -85,7 +85,7 @@ Do **not** charge strangers or run Meta ads until these ship (pilot #1 can use t
 | **PERF-0** | Paginate/filter sales; lighter session load |
 | **VAT-0** | Print title **Tax Invoice** when VAT registered |
 | **NAME-0** | Labels: **Sales invoice** / **Purchase invoice** |
-| **F4** | Copy sweep (remove Havmor placeholders in generic forms) |
+| **F4** | Copy sweep (remove client-specific placeholders in generic forms) |
 
 **Tier A minimum UI:** header **Settings** icon + **tabbed Settings** with **Export** and **Stock** tabs (UI-0.8, UI-0.11) — full side menu not required for Tier A.
 
@@ -252,9 +252,10 @@ Settings (stock mode) → Product (+ opening) → Purchase invoice → Sales inv
 | ------------------- | ------------------------------------------------------------------------------------------------ |
 | **Stock**           | Adjustment history UI; export register for adjustments; optional bulk opening import           |
 | **Orders / field**  | [§4.1](#41-tier-d--field-sales-orders--ird-books-phase-1) — **1.0** SF-0 or orders; **1.1** partial convert, salesman login, PO; **van → Phase 3** |
-| **Onboarding**      | CSV import (products, customers, opening stock/balance)                                          |
+| **Onboarding**      | Light CSV import optional in Phase 1; **full import/restore → Phase 2** (**IMP-1**, **IMP-2**)     |
 | **UX**              | Inline `+` create related data on key forms (category, customer, supplier while on product/sale) |
 | **Master data**     | Brands; optional units catalog; stock filters by brand/supplier                                  |
+| **Categories**      | **CAT-1** parent/child (2-level) when needed — [DEFERRED_WORK.md](DEFERRED_WORK.md)              |
 | **Documents**       | Attach image/PDF to sales & purchase invoices                                                    |
 | **Trust**           | Bill edit history UI; `returns.bill_id`; live **notifications** table (2-A in data-model)        |
 | **Commercial**      | Customer price tier; simple roles (owner vs billing staff)                                       |
@@ -334,6 +335,8 @@ Beat plan, visit checklist, van stock, GPS (optional), offline sync, load sheet 
 
 | Theme                | Items                                                          |
 | -------------------- | -------------------------------------------------------------- |
+| **Backup & import**  | **IMP-0** full tenant ZIP · **IMP-1** CSV import per entity · **IMP-2** restore / resume — [DEFERRED_WORK.md](DEFERRED_WORK.md), [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) |
+| **Categories**       | **CAT-2** ERP-style category tree (3+ levels) — after CAT-1    |
 | **AI (rules-first)** | Daily owner brief, udhar risk list                             |
 | **Supplier**         | SUP-1 supplier scheme → customer scheme pass-through           |
 | **Comms**            | SMS/WhatsApp overdue reminders                                 |
@@ -369,6 +372,11 @@ Quick map of **Tier D** (not Phase 0) to when to build.
 | Partial convert, salesman login, PO, stock reserve (ORD-2b, 3b, 5, 6) | **1.1** — §4.1 |
 | Van, beat, visit, offline field force | **3** — not 1.1 |
 | CSV import; inline `+` on forms; brands; units; invoice photos | **1** |
+| Parent/child categories (**CAT-1**, 2-level) | **1** — [DEFERRED_WORK.md](DEFERRED_WORK.md) |
+| Category tree UI (**CAT-2**) | **2** |
+| Full tenant backup (**IMP-0**) | **2** |
+| CSV import hub — products, customers, suppliers, settings, stock (**IMP-1**) | **2** |
+| Restore from backup / resume same point (**IMP-2**) | **2** |
 | Bill history; `returns.bill_id`; live notifications + SMS; INV-2; customer price tier; roles | **1** |
 | `.xlsx` accountant pack; adjustment export register; delivery note | **1** |
 | AI brief, udhar risk; SUP-1; richer reporting; BS date on bills | **2** |
@@ -396,6 +404,8 @@ Quick map of **Tier D** (not Phase 0) to when to build.
 
 | Date       | Change                                                                                                                  |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-26 | **IMP-0/1/2** (Phase 2): complete backup ZIP, per-entity import, restore/runbook — [DEFERRED_WORK.md](DEFERRED_WORK.md) |
+| 2026-05-26 | **CAT-1** / **CAT-2** deferred: flat categories in Phase 0; parent/child Phase 1; tree UI Phase 2 |
 | 2026-05-26 | Phase 1 split **1.0** (SF-0 or ORD full convert + salesman master) vs **1.1** (partial convert, salesman login, PO, reserve); van → Phase 3 |
 | 2026-05-26 | Phase 1 §4.1: Sigma-style sales order, salesman, reports (Tier D) |
 | 2026-05-26 | Phase 0 priority **Tier A / B / C** + **Tier D** map (§3.0, §3.6, §7); build order by tier |
