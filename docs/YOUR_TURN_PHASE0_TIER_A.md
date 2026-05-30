@@ -1,6 +1,8 @@
 # Your turn — Phase 0 Tier A (manual + commands)
 
-Code for Tier A is in the repo. **You** run migrations, tests, and UI checks. Paste errors back to Cursor if something fails.
+**Status:** **Tier A sign-off complete** (migrations 0019–0023, `deploy:check`, `e2e:export`, manual UI). Next: merge **dev → main**, deploy, optional accountant export sample (§5).
+
+Code for Tier A is in the repo. Paste errors back to Cursor if a regression appears.
 
 **Navigate:** [phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.md) · [supabase README](../app/supabase/README.txt) · [PHASE0_TIER_A_RESEARCH.md](PHASE0_TIER_A_RESEARCH.md)
 
@@ -15,20 +17,27 @@ In [Supabase SQL Editor](https://supabase.com/dashboard), run **in order** (copy
 | 20 | `app/supabase/migrations/0019_tenant_product_categories.sql` |
 | 21 | `app/supabase/migrations/0020_stock_adjustments.sql` (drops `v_stock` then recreates — safe on re-run if view step failed mid-file) |
 | 22 | `app/supabase/migrations/0021_tenant_allow_stock_adjustment.sql` |
+| 23 | `app/supabase/migrations/0022_tenant_list_page_size.sql` |
+| 24 | `app/supabase/migrations/0023_tenant_show_district_on_bill.sql` |
 
 Quick verify:
 
 ```sql
 select column_name from information_schema.columns
 where table_name = 'tenant_settings'
-  and column_name in ('product_categories', 'allow_stock_adjustment');
+  and column_name in (
+    'product_categories',
+    'allow_stock_adjustment',
+    'list_page_size',
+    'show_district_province_on_bill'
+  );
 
 select proname from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and proname = 'record_stock_adjustment';
 ```
 
-Expect 2 columns + 1 RPC row.
+Expect 4 columns + 1 RPC row.
 
 ---
 
@@ -100,12 +109,12 @@ Netlify build uses `npm run deploy:check` from `app/`.
 
 ---
 
-## Tier A checklist (tick when done)
+## Tier A checklist
 
-- [ ] Migrations 0019–0021 applied
-- [ ] `deploy:check` + `e2e:export` green
-- [ ] Export CSV opens in Excel
-- [ ] Categories + opening stock + stock adjustment
-- [ ] Tax Invoice print (VAT tenant)
-- [ ] Sales / Purchase invoice labels in UI
-- [x] Interim product name **BikriKhata** (final review post–Phase 0)
+- [x] Migrations **0019–0023** applied
+- [x] `deploy:check` + `e2e:export` green
+- [x] Export CSV opens in Excel
+- [x] Categories + opening stock + stock adjustment
+- [x] Tax Invoice print (VAT tenant)
+- [x] Sales / Purchase invoice labels in UI
+- [x] Product name **BikriKhata** (domain bikrikhata.com)

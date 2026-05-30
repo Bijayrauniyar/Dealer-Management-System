@@ -384,6 +384,7 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ feat
 
 ## Changelog (newest first)
 
+- **2026-05-26** — **Phase 0 Tier A signed off** (migrations 0019–0023, export e2e, manual QA) — see [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md).
 - **2026-05-26** — App header: removed unused **Online** status pill (`AppShell.tsx`).
 - **2026-05-26** — **Docs/README/npm** safe rebrand sweep: BikriKhata, package `bikrikhata`; removed legacy product names from docs (domain [bikrikhata.com](https://bikrikhata.com) deploy steps in `deployment.md` — Auth URLs not changed in repo).
 - **2026-05-26** — Login/register `AuthBrandHeader`: logo, BikriKhata, tagline “Manage Stock, Sales, Credit & Customers…”, distributor description in `productBrand.ts`.
