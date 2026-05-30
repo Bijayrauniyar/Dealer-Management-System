@@ -1,6 +1,6 @@
 # Product evolution — client pain points first
 
-**Navigate:** [Docs hub](README.md) · [Nepal GTM & pricing](GTM_NEPAL.md) · [VAT / IRD checklist](GTM_NEPAL.md#5-nepal-vat--ird-compliance-checklist) · [Backend checklist](backend/BACKEND-TODO.md) · [Data export spec](DATA_EXPORT_SPEC.md) · [LLM context](LLM_CONTEXT.md)
+**Navigate:** [Docs hub](README.md) · [**Launch roadmap Phase 0–3**](PHASE_ROADMAP.md) · [Nepal GTM & pricing](GTM_NEPAL.md) · [VAT / IRD checklist](GTM_NEPAL.md#5-nepal-vat--ird-compliance-checklist) · [Backend checklist](backend/BACKEND-TODO.md) · [Data export spec](DATA_EXPORT_SPEC.md) · [LLM context](LLM_CONTEXT.md)
 
 **Purpose:** Evolve from the Havmor ice-cream pilot into a **generic Nepal distributor platform** — without a long “feature count” roadmap. Every item below ties to a **real user pain** or a **broken/half-built screen** today.
 
@@ -94,6 +94,8 @@ These are **valid research topics** but **not** blocking Havmor-style daily use:
 
 ## 4. Roadmap — pain-first (not feature count)
 
+> **Detailed phase checklists (UI shell, export, phases 1–3):** [PHASE_ROADMAP.md](PHASE_ROADMAP.md).
+
 ### Now (current pilot + next 4–8 weeks)
 
 Only items that **remove lies**, **restore trust**, or **unblock second dealer**.
@@ -128,7 +130,7 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | 16 | Simple delivery note from bill | Route sales workflow |
 | 17 | Notifications (2-A) | Owner wants SMS for overdue |
 | 18 | Multi-warehouse / expiry | Pharma or multi-godown client |
-| 19 | **Stock adjustment** (opening / count correction, no supplier) | Tenant asks “stock entry like Swastik” — see [GTM_NEPAL.md § Stock model](GTM_NEPAL.md#stock-model-purchase-vs-stock-entry) |
+| 19 | **Stock adjustment** (opening / count correction, no supplier) + Settings toggle | **Phase 0** — [PHASE_ROADMAP.md](PHASE_ROADMAP.md) STK-0d–0f (~3–7 days); see [GTM stock model](GTM_NEPAL.md#stock-model-purchase-vs-stock-entry) |
 
 ---
 
@@ -143,7 +145,7 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | Customer return | `ReturnPage` → `apply_goods_return` | `returned` |
 | Damage | `DamagePage` → `record_damage` | `damaged` |
 | Opening qty | `products.opening_stock` | Base in formula — **weak UI** today |
-| Count fix without supplier | **Missing** | P1: `record_stock_adjustment` or import |
+| Count fix without supplier | **Missing** | **Phase 0:** `record_stock_adjustment` + toggle; import bulk opening → Phase 1 |
 
 **Client messaging**
 

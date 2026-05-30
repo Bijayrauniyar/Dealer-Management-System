@@ -1,6 +1,6 @@
 # Nepal GTM — product, positioning, pricing (working doc)
 
-**Navigate:** [Docs hub](README.md) · [Product evolution (build order)](PRODUCT_EVOLUTION.md) · [Deferred work](DEFERRED_WORK.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Naming brief](PRODUCT_NAMING_BRIEF.md)
+**Navigate:** [Docs hub](README.md) · [**Launch roadmap Phase 0–3**](PHASE_ROADMAP.md) · [Product evolution (build order)](PRODUCT_EVOLUTION.md) · [Deferred work](DEFERRED_WORK.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Naming brief](PRODUCT_NAMING_BRIEF.md)
 
 **Status:** Living document for strategy discussions. Update after customer interviews, pilot feedback, or pricing decisions.
 
@@ -155,7 +155,7 @@ closing = opening_stock
 
 - **Keep** purchase-driven stock for daily ops — links cost, supplier invoice no., and payable (see [PURCHASE_REFERENCE_NUMBERS.md](PURCHASE_REFERENCE_NUMBERS.md)).
 - **Do not** copy full dual-menu ERP (purchase + stock + transfer) in v1.
-- **Add later (P1):** simple **Stock adjustment** (opening / count correction / sample) **without** supplier — when a paying tenant asks or at 2nd onboarding.
+- **Phase 0:** **Stock adjustment** (opening / count correction / sample) **without** supplier + Settings toggle (purchase-only vs adjustment) — see [PHASE_ROADMAP.md §3.4](PHASE_ROADMAP.md#34-stock--invoices-phase-0) (~3–7 days).
 - **Sales pitch:** *“Stock comes in on **Purchase**; sales, returns, and damage update automatically.”*
 
 **Stock page** (`/app/stock`): read-only view of on-hand; copy says updated on purchase and sale.
@@ -391,8 +391,11 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ## 12. Changes needed in existing product (checklist)
 
+> **Canonical launch checklist:** [PHASE_ROADMAP.md](PHASE_ROADMAP.md) (Phase 0–3, including app shell, Settings tabs, notifications). Summary below.
+
 Before heavy AI or van modules:
 
+- [ ] **Phase 0 UI shell** — side menu (Masters / Entry / Reports / Support), sticky tabs (Home, Customers, Inventory, Reports), header Settings + notifications — [PHASE_ROADMAP.md §3.1](PHASE_ROADMAP.md#31-app-shell--navigation-new--phase-0)
 - [ ] Export P0 — [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md), [DEFERRED_WORK.md](DEFERRED_WORK.md) EXP-1
 - [ ] Rebrand — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md), BRAND-1
 - [ ] Tenant-configurable categories (remove hardcoded ice-cream only)
@@ -401,7 +404,7 @@ Before heavy AI or van modules:
 - [ ] INV-1 oversell in RPC
 - [ ] Purchase PDF/print parity with sales bill (if missing)
 - [ ] Onboarding doc for tenant (10 products, 5 customers, 1 purchase, 1 sale)
-- [ ] Stock adjustment RPC + UI (opening / count correction) — only when 2nd tenant needs it
+- [ ] Stock adjustment RPC + UI + Settings toggle — [PHASE_ROADMAP.md](PHASE_ROADMAP.md) STK-0d–0f (Phase 0)
 - [ ] VAT bill: **Tax Invoice** title when VAT registered (`billDisplay.ts`)
 - [ ] Optional customer **VAT number** on bill (B2B)
 - [ ] Settings: require address + tax id when VAT registered

@@ -1,6 +1,6 @@
 # Backend implementation checklist (Supabase)
 
-**Navigate:** [Docs hub](../README.md) · [Deferred work register](../DEFERRED_WORK.md) · [Project README](../../README.md) · [Data model](./data-model.md) · [Testing live](./testing-live-supabase.md) · [Migrations](../../app/supabase/README.txt)
+**Navigate:** [Docs hub](../README.md) · [**Launch roadmap Phase 0–3**](../PHASE_ROADMAP.md) · [Deferred work register](../DEFERRED_WORK.md) · [Project README](../../README.md) · [Data model](./data-model.md) · [Testing live](./testing-live-supabase.md) · [Migrations](../../app/supabase/README.txt)
 
 > Living list for **Supabase-backed** multi-tenant Postgres. The app is **live-only** (no browser demo / `localStorage` store).  
 > Schema entrypoint: `0001` … `0003` → `0005` → `0006` → `0007` (see [`app/supabase/README.txt`](../../app/supabase/README.txt)).  
@@ -10,6 +10,7 @@
 
 ## Now — client pain points (priority over new features)
 
+> **Next target: [Phase 0](../PHASE_ROADMAP.md#3-phase-0--first-launch-sell-easily)** — export, rebrand, app shell, opening stock UI, **stock adjustment + Settings toggle** (STK-0d–0f), INV-1.  
 > **Order work from here first.** Full pain → action mapping: [`../PRODUCT_EVOLUTION.md`](../PRODUCT_EVOLUTION.md). Do not add features that do not fix a listed pain or a broken screen.
 
 - [x] **Scheme page** — persists buy-X-get-Y to `scheme_tracker` (`insertSchemeLive` / `commitSchemeEntry`).

@@ -1,6 +1,6 @@
 # Deferred work register
 
-**Navigate:** [Docs hub](README.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Pain-first roadmap](PRODUCT_EVOLUTION.md) · [Migrations](../app/supabase/README.txt)
+**Navigate:** [Docs hub](README.md) · [Launch roadmap Phase 0–3](PHASE_ROADMAP.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Pain-first roadmap](PRODUCT_EVOLUTION.md) · [Migrations](../app/supabase/README.txt)
 
 > **Purpose:** Single place to plan work we are **not** doing now. When you pick up an item, move status here, implement, then check off in [BACKEND-TODO.md](backend/BACKEND-TODO.md) and [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md).
 

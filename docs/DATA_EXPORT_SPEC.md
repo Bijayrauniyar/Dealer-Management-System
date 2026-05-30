@@ -1,8 +1,8 @@
 # Data export system — design spec (Phase 2-E)
 
-**Navigate:** [Docs hub](README.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Data model](backend/data-model.md) · [LLM context](LLM_CONTEXT.md)
+**Navigate:** [Launch roadmap Phase 0](../PHASE_ROADMAP.md) · [Docs hub](README.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Data model](backend/data-model.md) · [LLM context](LLM_CONTEXT.md)
 
-**Status:** **Deferred** — spec + backlog only; implement when prioritized (see [BACKEND-TODO § 2-E](backend/BACKEND-TODO.md)).  
+**Status:** Spec ready; **implementation is Phase 0** ([PHASE_ROADMAP.md §3.3](PHASE_ROADMAP.md#33-trust--accountant-phase-0--blockers), DEFERRED **EXP-1**).  
 **Last updated:** 2026-05-23
 
 **Target users:** Small Nepal distributors, warehouse staff, accountants — mobile-first, Excel-friendly, trust-building.

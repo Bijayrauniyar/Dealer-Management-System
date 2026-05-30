@@ -368,7 +368,9 @@ Add one line under **Changelog** yourself:
 
 ### What to build next (read first)
 
-Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2 features. Priority: export for accountant, categories/rebrand for 2nd tenant, paginate sales load — not van stock / Tally / barcode until a client asks. Schemes: save + auto-apply on sales (`schemeApply.ts`); test with `npm run seed:schemes`.
+Use **[PHASE_ROADMAP.md](PHASE_ROADMAP.md)** for launch scope (Phase 0–3). **Next implementation target: Phase 0** — app shell (side menu, tabs, Support section, header Settings + notifications), tabbed Settings, export P0, rebrand, opening stock UI, INV-1.
+
+Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ features. Priority: export for accountant, categories/rebrand for 2nd tenant, paginate sales load — not van stock / Tally / barcode until a client asks. Schemes: save + auto-apply on sales (`schemeApply.ts`); test with `npm run seed:schemes`.
 
 ### Deferred backlog (address later)
 
@@ -382,6 +384,11 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2 featu
 
 ## Changelog (newest first)
 
+- **2026-05-26** — `PHASE_ROADMAP.md` §4.1: Phase **1.0** (SF-0 salesman-on-invoice or ORD+full convert) vs **1.1** (partial, login, PO); van/visit → Phase 3.
+- **2026-05-26** — `PHASE_ROADMAP.md` §4.1: Phase 1 Tier D — Sigma-style orders, salesman, IRD sales/purchase reports.
+- **2026-05-26** — `PHASE_ROADMAP.md`: **Tier A/B/C** for Phase 0 (must / should / nice); **Tier D** → Phase 1–3 map (§7).
+- **2026-05-26** — `PHASE_ROADMAP.md`: manual stock adjustment + Settings toggle moved to **Phase 0** (STK-0d–0f, ~3–7 days); orders stay Phase 1.
+- **2026-05-26** — Added `docs/PHASE_ROADMAP.md`: Phase 0–3 launch plan; Phase 0 includes professional UI (side menu Masters/Entry/Reports/Support, sticky tabs Home/Customers/Inventory/Reports, header Settings + notifications QA, tabbed Settings). Linked from README, GTM, PRODUCT_EVOLUTION, BACKEND-TODO.
 - **2026-05-26** — Product markup %: empty field stays empty (Settings default only in hint); explicit `0` shows `0`; refresh button applies Settings default.
 - **2026-05-26** — Decimal inputs: `numericMoneyProps` / `numericPercentProps` / `numericQtyProps` on prices, %, and qty fields; integers kept for days, min-stock, scheme counts, pieces-per-pack.
 - **2026-05-26** — Markup % accepts decimals (e.g. 4.5) on Product form + Settings; migration `0018_default_markup_decimal.sql`.
