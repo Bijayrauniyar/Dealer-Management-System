@@ -165,7 +165,7 @@ export const PeriodListPage = () => {
         type,
       ) && (
         <div className="rounded-xl bg-white border border-border-subtle p-8 text-center text-sm text-muted shadow-card">
-          Detailed data will appear here when this report is wired to Supabase.
+          This report is not available yet.
         </div>
       )}
     </PageShell>

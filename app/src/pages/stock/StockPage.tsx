@@ -18,7 +18,6 @@ import {
 import { usePagination } from "@/lib/usePagination";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { toast } from "sonner";
-import { PageBackLink } from "@/components/app/PageBackLink";
 
 type StatusFilter = "all" | "low_stock";
 
@@ -77,11 +76,8 @@ export const StockPage = () => {
 
   return (
     <PageShell>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-semibold">Stock</h1>
-      <p className="mb-4 text-sm text-muted">
-        On hand = opening + purchased + adjustments − sold − damage + returns
-      </p>
+      <p className="mb-4 text-sm text-muted">Current stock by product.</p>
 
       {business.allowStockAdjustment && (
         <button
@@ -132,7 +128,7 @@ export const StockPage = () => {
         exportCount={filtered.length}
         onExport={() => {
           if (filtered.length === 0) {
-            toast.error("Nothing to export — adjust filters.");
+            toast.error("No rows to export.");
             return;
           }
           downloadFilteredProducts(

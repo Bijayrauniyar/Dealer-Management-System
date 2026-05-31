@@ -91,7 +91,7 @@ export function buildNotifications(
         id: `low-${p.id}`, type: "low_stock", tab: "stock",
         title: p.name,
         body: `${p.onHand} ${p.uom} left · min ${minStockLabel(p)}`,
-        linkTo: "/app/stock", urgent: p.onHand === 0,
+        linkTo: "/app/home?tab=stock", urgent: p.onHand === 0,
       });
     });
 

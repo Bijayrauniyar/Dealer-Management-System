@@ -47,9 +47,7 @@ function RegisterPageInner() {
           return;
         }
         if (!signUpData.session) {
-          setError(
-            "No session after sign-up. In Supabase Dashboard → Authentication → Providers → Email, disable “Confirm email” for development, or confirm your email and sign in.",
-          );
+          setError("Check your email to confirm the account, then sign in.");
           setLoading(false);
           return;
         }

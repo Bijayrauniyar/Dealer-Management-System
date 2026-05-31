@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](README.md) · [Gemma 4 system prompt](GEMMA_SYSTEM_PROMPT.md) · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
 
-**Last updated:** 2026-05-26 (Phase 0 Tier A + B complete)
+**Last updated:** 2026-05-26 (Phase 0 Tier A + B complete; Tier C in app)
 
 **Gemma 4 26B:** paste **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** into System instructions, then attach this file each session.
 
@@ -392,6 +392,13 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ feat
 - **2026-05-26** — **Phase 0 Tier B:** `PageBackLink` (UI-0.9); Settings VAT validation (VAT-0b); credit-limit warning on sale (CRED-0 warn-only); notification due-soon boundary fix; migration **0024** oversell guard + `e2e:stock` live oversell test. Apply **0024** in Supabase before live stock e2e.
 - **2026-05-26** — Docs: **Tier A complete / Tier B next** in PHASE_ROADMAP, BACKEND-TODO, PRODUCT_EVOLUTION, DEFERRED_WORK (EXP-1, BRAND-1 done).
 - **2026-05-26** — **Phase 0 Tier A signed off** (migrations 0019–0023, export e2e, manual QA) — see [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md).
+- **2026-05-26** — **Copy pass:** Removed dev/Supabase/migration wording from user-facing screens; shortened Help, Settings, Reports, Export, and form hints.
+- **2026-05-26** — **Support UX:** Help via menu only (`/app/support`, `PLATFORM_SUPPORT`); removed Settings Support tab.
+- **2026-05-26** — Bill detail: Share/Print/PDF/Return **secondary**; **Collect** only **primary** green when balance due.
+- **2026-05-26** — **UI-1 (Phase 1):** `patterns.tsx` (`ListPageHeader`, `FormPageHeader`, `SegmentedTabs`, `InfoCallout`, …); migrated Home/Products/Suppliers/Support/Customer form/Sale entry; todo in [PHASE1_TIER_D_SCOPE.md](PHASE1_TIER_D_SCOPE.md).
+- **2026-05-26** — UI consistency plan [UI_CONSISTENCY_PLAN.md](UI_CONSISTENCY_PLAN.md); `PageActionBar` + bill detail uses shared `Button` variants.
+- **2026-05-26** — Bill detail: primary action **Share** (system share sheet + PDF; not WhatsApp-only label).
+- **2026-05-26** — **Phase 0 Tier C:** App shell — bottom tabs Home · Customers · Inventory · Reports + centre **+**; **☰** drawer (`appNavigation.ts`, `AppNavDrawer.tsx`); Reports hub; `/app/support`; migrations **0026** (customer PAN/VAT); slim Home; bill **WhatsApp** primary; [ONBOARDING_FIRST_SHOP.md](ONBOARDING_FIRST_SHOP.md); Tier D scope [PHASE1_TIER_D_SCOPE.md](PHASE1_TIER_D_SCOPE.md).
 - **2026-05-26** — App header: removed unused **Online** status pill (`AppShell.tsx`).
 - **2026-05-26** — **Docs/README/npm** safe rebrand sweep: BikriKhata, package `bikrikhata`; removed legacy product names from docs (domain [bikrikhata.com](https://bikrikhata.com) deploy steps in `deployment.md` — Auth URLs not changed in repo).
 - **2026-05-26** — Login/register `AuthBrandHeader`: logo, BikriKhata, tagline “Manage Stock, Sales, Credit & Customers…”, distributor description in `productBrand.ts`.

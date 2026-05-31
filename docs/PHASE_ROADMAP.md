@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](README.md) · [GTM Nepal](GTM_NEPAL.md) · [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) · [Deferred work](DEFERRED_WORK.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Backend checklist](backend/BACKEND-TODO.md)
 
-**Status:** Living launch plan. **Phase 0 Tier A + Tier B signed off (2026-05-26)** — migrations **0019–0024**, production deploy. **Next:** Tier C or Phase 1 per §7 ([YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md)).
+**Status:** Living launch plan. **Phase 0 Tier A + B signed off (2026-05-26)**. **Tier C implemented in app (2026-05-26)** — migrations **0025–0026**, shell + support; sign-off [YOUR_TURN_PHASE0_TIER_C.md](YOUR_TURN_PHASE0_TIER_C.md). **Tier D** → Phase 1 per [PHASE1_TIER_D_SCOPE.md](PHASE1_TIER_D_SCOPE.md).
 
 **Last updated:** 2026-05-26 · [Tier A](YOUR_TURN_PHASE0_TIER_A.md) · [Tier B](YOUR_TURN_PHASE0_TIER_B.md)
 
@@ -42,7 +42,7 @@ Use this list in sales demos. **Tier A + Tier B** items below are shipped unless
 | Home KPIs, overdue; **paginated** sales load (PERF-0) | ✓ |
 | Export — registers + VAT summary + **partial** backup ZIP | ✓ |
 | Branding — **BikriKhata** ([bikrikhata.com](https://bikrikhata.com)) | ✓ |
-| Nav | Bottom **Home / + / More**; full side drawer → **Tier C** |
+| Nav | Bottom **Home · Customers · Inventory · Reports** + **+**; **☰** drawer (Masters / Entry / Reports / Support) — **Tier C** |
 | DB oversell | Blocked in RPC (**0024**) — **Tier B done** |
 | Credit limit | Warning on sale (**CRED-0**) — **Tier B done** |
 
@@ -99,21 +99,16 @@ Signed off: migrations **0019–0023**, `deploy:check`, `e2e:export`, manual QA 
 | **UI-0.9** | `PageBackLink` on inner pages | **Done** |
 | **UI-0.8 / UI-0.11** | Header Settings + tabbed Settings | **Done** (Tier A) |
 
-#### Tier C — Nice (Phase 0)
+#### Tier C — Nice (Phase 0) — **implemented (2026-05-26); sign-off pending**
 
-Can slip after first 2–3 **paid** shops if timeline is tight; improves conversion and support load.
-
-| ID | Item |
-|----|------|
-| **UI-0.1–0.7, UI-0.10** | Full professional shell: side menu (Masters / Entry / Reports / Support), sticky tabs (Home · Customers · Inventory · Reports), centre + |
-| **UI-0.3** | Masters: **Products**, Customers, Suppliers, Stock |
-| **UI-0.6** | Support section (phone, email, WhatsApp, help copy) |
-| **UI-0.13** | Optional tenant support fields in Settings |
-| **VAT-0c** | Optional customer VAT on master + print |
-| **F13** | Full app shell pass |
-| **F14** | WhatsApp share PDF prominent on sales invoice |
-| **F15** | Written onboarding doc (ONB-0) |
-| **ONB-0** | Same as F15 |
+| ID | Item | Status |
+|----|------|--------|
+| **UI-0.1–0.7, UI-0.10** | Shell: drawer + tabs (Home · Customers · Inventory · Reports) + centre +; `/app/more` → Reports | **Done** |
+| **UI-0.6** | `/app/support` Help screen | **Done** |
+| **UI-0.13** | Platform support (`PLATFORM_SUPPORT`); **Help & support** via menu only | **Done** |
+| **VAT-0c** | Customer PAN/VAT optional (`0026`) + print | **Done** |
+| **F14** | Bill detail: primary **Share** (PDF via system share sheet) | **Done** |
+| **ONB-0** | [ONBOARDING_FIRST_SHOP.md](ONBOARDING_FIRST_SHOP.md) | **Done** |
 
 #### Tier A — Already shipped (maintain only)
 
@@ -250,7 +245,7 @@ Settings (stock mode) → Product (+ opening) → Purchase invoice → Sales inv
 | **Stock**           | Adjustment history UI; export register for adjustments; optional bulk opening import           |
 | **Orders / field**  | [§4.1](#41-tier-d--field-sales-orders--ird-books-phase-1) — **1.0** SF-0 or orders; **1.1** partial convert, salesman login, PO; **van → Phase 3** |
 | **Onboarding**      | Light CSV import optional in Phase 1; **full import/restore → Phase 2** (**IMP-1**, **IMP-2**)     |
-| **UX**              | Inline `+` create related data on key forms (category, customer, supplier while on product/sale) |
+| **UX**              | **UI-1** symmetric chrome ([UI_CONSISTENCY_PLAN.md](UI_CONSISTENCY_PLAN.md) — `patterns.tsx`, lists/forms/buttons); inline `+` create related data on key forms (category, customer, supplier while on product/sale) |
 | **Master data**     | Brands; optional units catalog; stock filters by brand/supplier                                  |
 | **Categories**      | **CAT-1** parent/child (2-level) when needed — [DEFERRED_WORK.md](DEFERRED_WORK.md)              |
 | **Documents**       | Attach image/PDF to sales & purchase invoices                                                    |

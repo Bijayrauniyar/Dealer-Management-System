@@ -45,4 +45,7 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   allowStockAdjustment: false,
   listPageSize: 10,
   showDistrictProvinceOnBill: false,
+  supportPhone: "",
+  supportEmail: "",
+  supportWhatsapp: "",
 };

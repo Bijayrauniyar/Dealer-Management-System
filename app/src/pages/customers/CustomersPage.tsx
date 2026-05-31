@@ -16,7 +16,6 @@ import { downloadFilteredCustomers, exportFilterSlug } from "@/lib/export/listEx
 import { usePagination } from "@/lib/usePagination";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { toast } from "sonner";
-import { PageBackLink } from "@/components/app/PageBackLink";
 
 export const CustomersPage = () => {
   const navigate  = useNavigate();
@@ -82,7 +81,6 @@ export const CustomersPage = () => {
   return (
     <PageShell>
       <div className="mb-4 flex items-center justify-between">
-        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <Button size="sm" onClick={() => navigate("/app/customers/new")}>
           <Plus size={14} /> New
         </Button>
@@ -112,7 +110,7 @@ export const CustomersPage = () => {
         exportCount={filtered.length}
         onExport={() => {
           if (filtered.length === 0) {
-            toast.error("Nothing to export — adjust filters.");
+            toast.error("No rows to export.");
             return;
           }
           downloadFilteredCustomers(

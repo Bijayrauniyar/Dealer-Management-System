@@ -98,7 +98,7 @@ function purchaseRpcError(err: { message?: string } | null, opts?: { settingInvo
     (m.includes("Could not find the function") || m.includes("p_supplier_invoice_no"))
   ) {
     return new Error(
-      "Cannot save invoice number yet. Run migration 0016_purchase_invoice_backfill.sql in Supabase (README step 17), then try again.",
+      "Cannot save supplier invoice number yet. Contact support.",
     );
   }
   return new Error(m);
@@ -196,7 +196,7 @@ export async function fetchProductsLive(): Promise<Product[]> {
 export async function fetchCustomersLive(): Promise<Customer[]> {
   const { data: cust, error } = await supabase
     .from("customers")
-    .select("id, name, phone, area, address, credit_limit, opening_balance")
+    .select("id, name, phone, area, address, credit_limit, opening_balance, pan_number, vat_number")
     .eq("is_active", true)
     .order("name");
   if (error) throw error;
@@ -232,7 +232,8 @@ export async function fetchCustomersLive(): Promise<Customer[]> {
       phone: (c.phone as string) ?? "",
       area: (c.area as string) ?? "",
       address: (c.address as string) ?? "",
-      panNumber: "",
+      panNumber: (c.pan_number as string) ?? "",
+      vatNumber: (c.vat_number as string) ?? "",
       outstanding,
       creditLimit: Number(c.credit_limit),
       oldestBillDays: outstanding > 0 ? oldestOpen.get(c.id as string) ?? 0 : 0,
@@ -896,6 +897,8 @@ export async function upsertCustomerLive(p: {
   route?: string;
   credit_limit: number;
   opening_balance?: number;
+  pan_number?: string | null;
+  vat_number?: string | null;
 }): Promise<string> {
   const {
     data: { user },
@@ -911,7 +914,7 @@ export async function upsertCustomerLive(p: {
   const tenantId = tu?.tenant_id as string | undefined;
   if (!tenantId) throw new Error("No tenant for user");
 
-  const row = {
+  const row: Record<string, unknown> = {
     tenant_id: tenantId,
     name: p.name.trim(),
     phone: p.phone?.trim() || null,
@@ -922,6 +925,8 @@ export async function upsertCustomerLive(p: {
     opening_balance: p.opening_balance ?? 0,
     is_active: true,
   };
+  if (p.pan_number !== undefined) row.pan_number = p.pan_number?.trim() || null;
+  if (p.vat_number !== undefined) row.vat_number = p.vat_number?.trim() || null;
 
   if (p.id) {
     const { tenant_id: _t, ...updateRow } = row;
@@ -1158,6 +1163,9 @@ type TenantSettingsRow = {
   allow_stock_adjustment?: boolean | null;
   list_page_size?: number | null;
   show_district_province_on_bill?: boolean | null;
+  support_phone?: string | null;
+  support_email?: string | null;
+  support_whatsapp?: string | null;
 };
 
 function parseProductCategories(raw: unknown): string[] {
@@ -1197,6 +1205,9 @@ export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
     listPageSize: parseListPageSize(row.list_page_size ?? D.listPageSize),
     showDistrictProvinceOnBill:
       row.show_district_province_on_bill ?? D.showDistrictProvinceOnBill,
+    supportPhone: row.support_phone ?? D.supportPhone,
+    supportEmail: row.support_email ?? D.supportEmail,
+    supportWhatsapp: row.support_whatsapp ?? D.supportWhatsapp,
   };
 }
 

@@ -124,6 +124,14 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Copy entire file → Paste → Run → Success.
    - Required before live e2e oversell check: npm run e2e:stock:live
 
+26. Migration 0025 (tenant support_phone / support_email / support_whatsapp — Phase 0 Tier C UI-0.13)
+   - Open: app/supabase/migrations/0025_tenant_support_contacts.sql
+   - Copy entire file → Paste → Run → Success.
+
+27. Migration 0026 (customers pan_number / vat_number — Phase 0 Tier C VAT-0c)
+   - Open: app/supabase/migrations/0026_customer_tax_ids.sql
+   - Copy entire file → Paste → Run → Success.
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 

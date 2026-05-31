@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Building2, Phone, MapPin, FileText, Receipt, SlidersHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -62,6 +62,9 @@ type TenantSettingsRow = {
   allow_stock_adjustment?: boolean | null;
   list_page_size?: number | null;
   show_district_province_on_bill?: boolean | null;
+  support_phone?: string | null;
+  support_email?: string | null;
+  support_whatsapp?: string | null;
 };
 
 const SETTINGS_TABS = [
@@ -73,8 +76,17 @@ const SETTINGS_TABS = [
 
 type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
 
+function initialSettingsTab(location: ReturnType<typeof useLocation>): SettingsTab {
+  const raw = (location.state as { settingsTab?: string } | null)?.settingsTab;
+  if (raw === "export" || raw === "stock" || raw === "bills" || raw === "business") {
+    return raw;
+  }
+  return "business";
+}
+
 export function SettingsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { tenantId, signOut } = useAuth();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -103,7 +115,7 @@ export function SettingsPage() {
   const [allowStockAdjustment, setAllowStockAdjustment] = useState(false);
   const [listPageSize, setListPageSize] = useState(10);
   const [showDistrictOnBill, setShowDistrictOnBill] = useState(false);
-  const [tab, setTab] = useState<SettingsTab>("business");
+  const [tab, setTab] = useState<SettingsTab>(() => initialSettingsTab(location));
   const [saving, setSaving] = useState(false);
 
   const applyRow = (data: TenantSettingsRow) => {
@@ -159,7 +171,7 @@ export function SettingsPage() {
         applyRow(data as TenantSettingsRow);
         setLoaded(true);
       } else {
-        setLoadError("No tenant_settings row. Run migration 0002 and ensure signup_tenant created settings.");
+        setLoadError("Business settings are missing. Contact support.");
         setLoaded(true);
       }
     })();
@@ -240,12 +252,9 @@ export function SettingsPage() {
     }
     void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
     if (skipped.size > 0) {
-      const parts: string[] = [];
-      if (skipped.has("list_page_size")) parts.push("rows per page needs migration 0022");
-      if (skipped.has("show_district_province_on_bill")) parts.push("district on bill needs migration 0023");
       toast.success("Settings saved.", {
-        description: `${parts.join("; ")}. Run SQL in app/supabase/README.txt until then.`,
-        duration: 8000,
+        description: "Some options need a database update — contact support if they do not apply.",
+        duration: 6000,
       });
     } else {
       toast.success("Settings saved.");
@@ -314,7 +323,7 @@ export function SettingsPage() {
 
           <SectionTitle icon={Building2} label="Business identity" />
           <div className="space-y-4">
-            <FormField label="Trading name" hint="Shown on app header and invoices">
+            <FormField label="Trading name" hint="On app header and invoices">
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </FormField>
             <FormField label="Legal / registered name">
@@ -340,22 +349,16 @@ export function SettingsPage() {
 
           <SectionTitle icon={MapPin} label="Business address" />
           <div className="space-y-4">
-            <FormField
-              label="Address line 1"
-              hint="Shown on printed sales and purchase invoices. Example: Ward 5, Main Road, Kathmandu."
-            >
+            <FormField label="Address line 1" hint="Printed on invoices">
               <Input value={addr1} onChange={(e) => setAddr1(e.target.value)} />
             </FormField>
-            <FormField
-              label="Address line 2"
-              hint="Optional second line on invoices. Example: Industrial Area, Ring Road."
-            >
+            <FormField label="Address line 2" hint="Optional">
               <Input value={addr2} onChange={(e) => setAddr2(e.target.value)} />
             </FormField>
-            <FormField label="District" hint="Stored for your business profile. Not shown on invoices unless enabled below.">
+            <FormField label="District">
               <Input value={district} onChange={(e) => setDistrict(e.target.value)} />
             </FormField>
-            <FormField label="Province" hint="Stored for your business profile. Example: Bagmati, Madhesh.">
+            <FormField label="Province">
               <Input value={province} onChange={(e) => setProvince(e.target.value)} />
             </FormField>
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border-subtle bg-surface-card px-3 py-3">
@@ -367,9 +370,7 @@ export function SettingsPage() {
               />
               <span className="text-sm text-gray-800">
                 <span className="font-medium">Include district and province on invoices</span>
-                <span className="mt-0.5 block text-xs text-muted">
-                  When enabled, district and province appear below address line 1 and 2.
-                </span>
+                <span className="mt-0.5 block text-xs text-muted">Also print district and province on invoices.</span>
               </span>
             </label>
           </div>
@@ -385,10 +386,7 @@ export function SettingsPage() {
             </p>
           )}
           <div className="space-y-4">
-            <FormField
-              label="Registration type"
-              hint="Use PAN for non-VAT businesses. Use VAT if you are VAT registered. Only one number is saved and printed on bills."
-            >
+            <FormField label="Registration type">
               <div className="flex gap-3">
                 {(["pan", "vat"] as const).map((k) => (
                   <button
@@ -418,10 +416,7 @@ export function SettingsPage() {
 
           <SectionTitle icon={Receipt} label="Invoice / bill settings" />
           <div className="space-y-4">
-            <FormField
-              label="Default VAT (%)"
-              hint="Used on purchase bills (always) and sales bills when VAT registered"
-            >
+            <FormField label="Default VAT (%)">
               <NumericInput
                 {...numericPercentProps}
                 min={0}
@@ -483,7 +478,7 @@ export function SettingsPage() {
                 <NumericInput min={0} max={30} value={dueSoonDays} onChange={setDueSoonDays} />
               </FormField>
             </div>
-            <FormField label="Default sell markup (%)" hint="e.g. 15 or 4.5 — used when adding new products">
+            <FormField label="Default sell markup (%)">
               <NumericInput
                 {...numericPercentProps}
                 min={0}

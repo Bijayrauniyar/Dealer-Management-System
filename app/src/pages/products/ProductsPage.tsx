@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {Plus, ChevronRight} from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { ListPageHeader } from "@/components/app/patterns";
 import { PageShell } from "@/components/app/PageShell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
 import { ListPagination } from "@/components/app/ListPagination";
 import { useBusinessSettings, useProducts } from "@/store/domain";
@@ -25,7 +25,6 @@ import { downloadFilteredProducts, exportFilterSlug } from "@/lib/export/listExp
 import { usePagination } from "@/lib/usePagination";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { toast } from "sonner";
-import { PageBackLink } from "@/components/app/PageBackLink";
 
 type StatusFilter = "all" | "low_stock";
 
@@ -90,13 +89,12 @@ export const ProductsPage = () => {
 
   return (
     <PageShell>
-      <div className="mb-4 flex items-center justify-between">
-        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-        <Button size="sm" onClick={() => navigate("/app/products/new")}>
-          <Plus size={14} /> Add product
-        </Button>
-      </div>
-      <h1 className="mb-4 text-lg font-bold">Products</h1>
+      <ListPageHeader
+        showBack
+        title="Products"
+        addLabel="Add product"
+        onAdd={() => navigate("/app/products/new")}
+      />
 
       <ListBrowsePanel
         search={query}
@@ -118,7 +116,7 @@ export const ProductsPage = () => {
         exportCount={filtered.length}
         onExport={() => {
           if (filtered.length === 0) {
-            toast.error("Nothing to export — adjust filters.");
+            toast.error("No rows to export.");
             return;
           }
           downloadFilteredProducts(

@@ -160,7 +160,7 @@ export const DailyCashPage = () => {
         <div className="mb-3 rounded-lg border border-danger/30 bg-danger-light px-3 py-2 text-sm text-danger-foreground">
           {breakdownQ.error instanceof Error
             ? breakdownQ.error.message
-            : "Could not load cash data. If you just updated the app, apply Supabase migrations and refresh."}
+            : "Could not load cash data. Refresh the page or contact support."}
         </div>
       )}
 

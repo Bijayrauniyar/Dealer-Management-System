@@ -86,6 +86,7 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
   const paymentStatus = billPaymentStatusLabel(sale);
 
   const buyerPan = customer?.panNumber?.trim() ?? "";
+  const buyerVat = customer?.vatNumber?.trim() ?? "";
 
   const letterhead = sellerLetterheadFromBusiness(business);
 
@@ -99,6 +100,7 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
     joinParts(customerAddress || null, showArea ? customerArea : null) || null,
     customerPhone ? `Ph ${customerPhone}` : null,
     buyerPan ? `PAN ${buyerPan}` : null,
+    buyerVat ? `VAT ${buyerVat}` : null,
   ].filter(Boolean);
 
   return (

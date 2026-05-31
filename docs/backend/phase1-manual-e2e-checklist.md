@@ -53,7 +53,7 @@ Check each row after manual testing.
 | G16 | **Customer PAN** | Not in schema | Field on form if present; DB column when added |
 | G17 | **Notifications panel** | — | Bell icon list; links open correct screens (static data today) |
 | G18 | **Daily cash → Supabase** | Partial wiring | Confirm `daily_cash` row behaviour matches current implementation |
-| G19 | **Scheme → Supabase** | More → Scheme save | Row in `scheme_tracker`; sale qty 10 → free line if buy-10-get-1 |
+| G19 | **Scheme → Supabase** | Menu → Entry → Scheme save | Row in `scheme_tracker`; sale qty 10 → free line if buy-10-get-1 |
 | G20 | **Dashboard charts** | — | `/app/dashboard` loads; data matches your tenant (if wired) |
 | G21 | **Company overview maths** | Partial live capital | Net worth, assets, liabilities vs your entries + stock |
 | G22 | **Capital edit / history / soft-delete** | Insert + list | Edit entry, view history (Phase 2-C); delete behaviour |
@@ -92,13 +92,27 @@ Check each row after manual testing.
 | **Company** | Overview, capital KPIs | `/app/company` |
 | **Capital** | List, add entry | `/app/capital`, `/app/capital/new` |
 | **Dashboard** | Private reports | `/app/dashboard` |
-| **More** | Hub for all actions | `/app/more` |
+| **Menu (☰)** | Drawer: Masters, Entry, Reports, Support | Header left |
+| **Reports** | Reports hub (replaces old More) | `/app/reports` |
+| **Support** | Help & contact | `/app/support` |
 
 ---
 
 ## 3. Manual test procedures (step-by-step)
 
 Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
+
+---
+
+### 3.0 Navigation — Tier C shell (MAN-NAV)
+
+| # | Step | Pass |
+|---|------|------|
+| NAV1 | Bottom tabs: Home, Customers, Inventory, Reports; centre **+** opens entry sheet | |
+| NAV2 | Header **☰** → Masters / Entry / Reports / Support sections navigate correctly | |
+| NAV3 | `/app/more` redirects to Reports; Home = date + Sales invoice + Customers/Stock tabs + browse lists | |
+| NAV4 | Bill detail: **Share** opens system share sheet or downloads PDF | |
+| UI1 | **UI-1:** Products/Suppliers list — same **Add** button; Home tabs + green Sales invoice; form pages use same back/title block ([UI_CONSISTENCY_PLAN.md](../UI_CONSISTENCY_PLAN.md)) | |
 
 ---
 
@@ -123,7 +137,8 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 | STab2 | **Export** tab → download Products CSV; open in Excel (UTF-8 header row) | |
 | STab3 | **Business** → **Rows per page** (e.g. 20) → Save | Applies to customers, products, stock, suppliers — not stock-only |
 | STab3b | **New product** → category **Add** (e.g. “Beverages”) | Category in dropdown + filters; no Settings step |
-| STab4 | **Stock** tab → stock adjustment toggle → Save | More menu shows Stock adjustment when enabled |
+| STab4 | **Stock** tab → stock adjustment toggle → Save | Menu → Masters shows Stock adjustment when enabled |
+| STab6 | Menu → **Help & support** (`/app/support`) | Phone, email, WhatsApp from app config |
 | STab5 | VAT registered + VAT number → print sales bill title **TAX INVOICE** | |
 | STab5b | PAN only (not VAT) → print sales bill title **SALES INVOICE** | |
 | STab5b | Bill letterhead: **Address line 1** only by default; **VAT/PAN** + **Ph** right | Toggle “Include district and province on invoices” to add admin line |
@@ -150,7 +165,7 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| P1 | More → Products → New: name, buy **excl. VAT**, MRP, category, min qty; **opening qty** optional | Saves; opening qty editable only on create |
+| P1 | Menu → Products → New: name, buy **excl. VAT**, MRP, category, min qty; **opening qty** optional | Saves; opening qty editable only on create |
 | P1b | Edit same product | Opening qty read-only summary; on-hand shown; corrections via Purchase or Stock adjustment (if enabled) |
 | P2 | Edit product: change sell price | List and sale picker show new price |
 | P3 | Search product by name | Filters list |
@@ -299,7 +314,7 @@ open     = total − paid
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| CAP1 | More → Capital entries → Add: owner capital NPR 25000 | List shows entry; `capital_entries` row |
+| CAP1 | Reports → Capital entries → Add: owner capital NPR 25000 | List shows entry; `capital_entries` row |
 | CAP2 | Company overview → capital section | Totals include new entry |
 | CAP3 | See all → full list | All entries visible |
 | CAP4 | Fixed asset with current value ≠ amount | Book value on overview |
