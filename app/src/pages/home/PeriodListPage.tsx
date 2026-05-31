@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { ListRow } from "@/components/app/ListRow";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { useExpensesList, usePayments, usePnlTotals, usePurchasesList, useSales,
 import { purchaseDisplayTitle, purchaseDisplaySubtitle } from "@/lib/purchaseDisplay";
 import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr, fmtDate } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const CONFIG: Record<string, { title: string; description: string }> = {
   sales: { title: "Sales (period)", description: "All sales in selected period" },
@@ -42,9 +42,7 @@ export const PeriodListPage = () => {
 
   return (
     <PageShell>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-semibold">{cfg.title}</h1>
       <p className="mb-5 text-sm text-muted">{cfg.description}</p>
 

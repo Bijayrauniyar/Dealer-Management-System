@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, ChevronRight } from "lucide-react";
+import {Plus, ChevronRight} from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { downloadFilteredProducts, exportFilterSlug } from "@/lib/export/listExp
 import { usePagination } from "@/lib/usePagination";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { toast } from "sonner";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 type StatusFilter = "all" | "low_stock";
 
@@ -36,7 +37,7 @@ export const ProductsPage = () => {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [sort, setSort] = useState<ProductSort>("name_asc");
+  const sort: ProductSort = "name_asc";
 
   const categories = useMemo(() => productCategories(PRODUCTS), [PRODUCTS]);
 
@@ -57,7 +58,7 @@ export const ProductsPage = () => {
 
   const categoryOptions = useMemo((): BrowseFilterOption[] => {
     const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All categories (${searchMatched.length})` },
+      { value: "all", label: `All (${searchMatched.length})` },
     ];
     for (const c of categories) {
       const n = searchMatched.filter((p) => normalizeCategory(p.category) === c).length;
@@ -90,12 +91,7 @@ export const ProductsPage = () => {
   return (
     <PageShell>
       <div className="mb-4 flex items-center justify-between">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-sm font-medium text-teal-600"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <Button size="sm" onClick={() => navigate("/app/products/new")}>
           <Plus size={14} /> Add product
         </Button>
@@ -116,16 +112,6 @@ export const ProductsPage = () => {
           options: categoryOptions,
           onChange: setCategoryFilter,
         }}
-        sortValue={sort}
-        sortOptions={[
-          { value: "name_asc", label: "Name A–Z" },
-          { value: "name_desc", label: "Name Z–A" },
-          { value: "stock_asc", label: "Stock low → high" },
-          { value: "stock_desc", label: "Stock high → low" },
-          { value: "sell_asc", label: "Price low → high" },
-          { value: "sell_desc", label: "Price high → low" },
-        ]}
-        onSortChange={(v) => setSort(v as ProductSort)}
         summary={
           filtered.length > 0 ? browseListSummary(filtered.length, page.showingLabel) : undefined
         }

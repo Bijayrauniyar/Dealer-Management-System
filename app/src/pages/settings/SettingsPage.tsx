@@ -25,6 +25,7 @@ import {
 import { LIST_PAGE_SIZE_OPTIONS, parseListPageSize } from "@/lib/listPageSize";
 import { Select } from "@/components/ui/select";
 import { ProductCategoriesSection } from "@/components/app/ProductCategoriesSection";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const SectionTitle = ({ icon: Icon, label }: { icon: React.ElementType; label: string }) => (
   <div className="mb-3 mt-6 flex items-center gap-2 first:mt-0">
@@ -169,6 +170,18 @@ export function SettingsPage() {
 
   const handleSave = async () => {
     if (!tenantId) return;
+
+    if (taxKind === "vat") {
+      const missing: string[] = [];
+      if (!addr1.trim()) missing.push("address line 1");
+      if (!taxNumber.trim()) missing.push("VAT number");
+      if (!legalName.trim() && !name.trim()) missing.push("business or legal name");
+      if (missing.length > 0) {
+        toast.error(`VAT registration requires: ${missing.join(", ")}.`);
+        return;
+      }
+    }
+
     setSaving(true);
 
     const basePayload = {
@@ -241,6 +254,7 @@ export function SettingsPage() {
 
   return (
     <PageShell stickyBar>
+      <PageBackLink />
       <h1 className="mb-1 text-lg font-bold text-foreground">Settings</h1>
       <p className="mb-4 text-sm text-muted">Business profile, stock, and data export</p>
 
@@ -365,6 +379,11 @@ export function SettingsPage() {
           {tab === "bills" && (
             <>
           <SectionTitle icon={FileText} label="Tax &amp; registration" />
+          {taxKind === "vat" && (
+            <p className="mb-3 text-xs text-muted">
+              VAT shops need address line 1 and VAT number for Tax Invoice.
+            </p>
+          )}
           <div className="space-y-4">
             <FormField
               label="Registration type"

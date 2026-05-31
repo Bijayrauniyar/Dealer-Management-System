@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -14,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DAMAGE_REASONS } from "@/domain/catalogs";
 import { useProducts, commitDamageEntry } from "@/store/domain";
 import { toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 export const DamagePage = () => {
   const navigate  = useNavigate();
@@ -47,9 +47,7 @@ export const DamagePage = () => {
 
   return (
     <PageShell stickyBar>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-5 text-lg font-semibold">Damage entry</h1>
       <div className="space-y-4">
         <FormField label="Product" required>

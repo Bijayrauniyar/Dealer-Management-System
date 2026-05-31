@@ -29,7 +29,7 @@ import {
 import { usePagination } from "@/lib/usePagination";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { SALES_INVOICE_LABEL } from "@/lib/actionLabels";
-import { npr, fmtDate, toMiti, toDateInput } from "@/lib/utils";
+import { npr, fmtDateDual, toDateInput } from "@/lib/utils";
 import { toast } from "sonner";
 
 const TODAY = toDateInput();
@@ -63,11 +63,11 @@ export const HomePage = () => {
   const [search, setSearch] = useState("");
   const [custFilter, setCustFilter] = useState<CustFilter>("all");
   const [custArea, setCustArea] = useState("all");
-  const [custSort, setCustSort] = useState<CustomerSort>("dues_desc");
+  const custSort: CustomerSort = "dues_desc";
   const customerAreaList = useMemo(() => customerAreas(CUSTOMERS), [CUSTOMERS]);
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [stockCategory, setStockCategory] = useState<string>("all");
-  const [stockSort, setStockSort] = useState<ProductSort>("stock_asc");
+  const stockSort: ProductSort = "stock_asc";
 
   const custSearchMatched = useMemo(
     () => CUSTOMERS.filter((c) => matchesCustomerSearch(c, search)),
@@ -146,7 +146,7 @@ export const HomePage = () => {
 
   const custAreaOptions = useMemo((): BrowseFilterOption[] => {
     const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All areas (${custSearchMatched.length})` },
+      { value: "all", label: `All (${custSearchMatched.length})` },
     ];
     for (const area of customerAreaList) {
       const n = custSearchMatched.filter((c) => (c.area ?? "").trim() === area).length;
@@ -167,7 +167,7 @@ export const HomePage = () => {
 
   const stockCategoryOptions = useMemo((): BrowseFilterOption[] => {
     const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All categories (${stockSearchMatched.length})` },
+      { value: "all", label: `All (${stockSearchMatched.length})` },
     ];
     for (const cat of stockCategories) {
       const n = stockSearchMatched.filter((p) => normalizeCategory(p.category) === cat).length;
@@ -188,12 +188,9 @@ export const HomePage = () => {
 
   return (
     <PageShell>
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-foreground">{business.name}</h1>
-          <p className="text-xs text-muted">
-            {fmtDate(TODAY)} · Miti {toMiti(TODAY)}
-          </p>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground tabular-nums">{fmtDateDual(TODAY)}</p>
         </div>
         <button
           type="button"
@@ -237,21 +234,9 @@ export const HomePage = () => {
             <ChevronRight size={16} className="text-muted" />
           </div>
           {overdueCustomers.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {overdueCustomers.slice(0, 3).map((c) => (
-                <span
-                  key={c.id}
-                  className="rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] text-danger font-medium"
-                >
-                  {c.name} · {npr(c.outstanding)}
-                </span>
-              ))}
-              {overdueCustomers.length > 3 && (
-                <span className="rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] text-danger font-medium">
-                  +{overdueCustomers.length - 3} more
-                </span>
-              )}
-            </div>
+            <p className="mt-2 text-xs text-danger font-medium">
+              {overdueCustomers.length} customer{overdueCustomers.length === 1 ? "" : "s"} overdue — tap to view
+            </p>
           )}
         </button>
       )}
@@ -289,14 +274,6 @@ export const HomePage = () => {
               options: custAreaOptions,
               onChange: setCustArea,
             }}
-            sortValue={custSort}
-            sortOptions={[
-              { value: "dues_desc", label: "Credit high → low" },
-              { value: "dues_asc", label: "Credit low → high" },
-              { value: "name_asc", label: "Name A–Z" },
-              { value: "name_desc", label: "Name Z–A" },
-            ]}
-            onSortChange={(v) => setCustSort(v as CustomerSort)}
             summary={
               customers.length > 0
                 ? browseListSummary(customers.length, custPage.showingLabel)
@@ -404,16 +381,6 @@ export const HomePage = () => {
               options: stockCategoryOptions,
               onChange: setStockCategory,
             }}
-            sortValue={stockSort}
-            sortOptions={[
-              { value: "stock_asc", label: "Stock low → high" },
-              { value: "stock_desc", label: "Stock high → low" },
-              { value: "name_asc", label: "Name A–Z" },
-              { value: "name_desc", label: "Name Z–A" },
-              { value: "sell_asc", label: "Price low → high" },
-              { value: "sell_desc", label: "Price high → low" },
-            ]}
-            onSortChange={(v) => setStockSort(v as ProductSort)}
             summary={
               products.length > 0
                 ? browseListSummary(products.length, stockPage.showingLabel)

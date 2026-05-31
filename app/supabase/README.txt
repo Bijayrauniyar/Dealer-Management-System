@@ -119,6 +119,11 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Copy entire file → Paste → Run → Success.
    - Default off: bills show only address lines 1–2 from Settings.
 
+25. Migration 0024 (block oversell in create_sales_bill / update_sales_bill — Phase 0 Tier B INV-1)
+   - Open: app/supabase/migrations/0024_block_oversell_in_sales.sql
+   - Copy entire file → Paste → Run → Success.
+   - Required before live e2e oversell check: npm run e2e:stock:live
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 

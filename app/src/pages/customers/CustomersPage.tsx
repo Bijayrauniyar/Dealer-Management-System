@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus } from "lucide-react";
+import {Plus} from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { ListRow } from "@/components/app/ListRow";
 import { EmptyState } from "@/components/app/EmptyState";
@@ -16,6 +16,7 @@ import { downloadFilteredCustomers, exportFilterSlug } from "@/lib/export/listEx
 import { usePagination } from "@/lib/usePagination";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { toast } from "sonner";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 export const CustomersPage = () => {
   const navigate  = useNavigate();
@@ -28,7 +29,7 @@ export const CustomersPage = () => {
   const [areaFilter, setAreaFilter] = useState("all");
   const areaList = useMemo(() => customerAreas(CUSTOMERS), [CUSTOMERS]);
 
-  const [sort, setSort] = useState<"name_asc" | "name_desc">("name_asc");
+  const sort = "name_asc" as const;
 
   const filtered = useMemo(() => {
     const list = CUSTOMERS.filter((c) => {
@@ -66,7 +67,7 @@ export const CustomersPage = () => {
 
   const areaOptions = useMemo((): BrowseFilterOption[] => {
     const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All areas (${searchMatched.length})` },
+      { value: "all", label: `All (${searchMatched.length})` },
     ];
     for (const area of areaList) {
       const n = searchMatched.filter((c) => (c.area ?? "").trim() === area).length;
@@ -81,9 +82,7 @@ export const CustomersPage = () => {
   return (
     <PageShell>
       <div className="mb-4 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <Button size="sm" onClick={() => navigate("/app/customers/new")}>
           <Plus size={14} /> New
         </Button>
@@ -107,12 +106,6 @@ export const CustomersPage = () => {
           options: areaOptions,
           onChange: setAreaFilter,
         }}
-        sortValue={sort}
-        sortOptions={[
-          { value: "name_asc", label: "Name A–Z" },
-          { value: "name_desc", label: "Name Z–A" },
-        ]}
-        onSortChange={(v) => setSort(v as "name_asc" | "name_desc")}
         summary={
           filtered.length > 0 ? browseListSummary(filtered.length, page.showingLabel) : undefined
         }

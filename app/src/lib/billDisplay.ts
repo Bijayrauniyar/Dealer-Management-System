@@ -17,20 +17,21 @@ export function tenantChargesVat(
 }
 
 /**
- * Center title on printed bill (IRD Schedule 5: document must be identifiable as a tax invoice).
- * VAT-registered tenant with VAT number → **Tax Invoice**; otherwise **Invoice**.
+ * Center title on printed bill (IRD Schedule 5: tax invoice when VAT registered).
+ * VAT + VAT number → **Tax Invoice**; PAN shop → **Sales Invoice**; else **Invoice**.
  * App menus still say “Sales invoice” — see docs/IRD_BILL_LETTERHEAD.md.
  */
 export function billDocumentTitle(
-  settings?: Pick<BusinessSettings, "vatRegistered" | "vatNumber">,
+  settings?: Pick<BusinessSettings, "vatRegistered" | "vatNumber" | "panNumber">,
 ): string {
   if (settings && tenantChargesVat(settings)) return "Tax Invoice";
+  if (settings?.panNumber?.trim()) return "Sales Invoice";
   return "Invoice";
 }
 
 /** Uppercase title for bill header (screen + PDF). */
 export function billDocumentTitleDisplay(
-  settings?: Pick<BusinessSettings, "vatRegistered" | "vatNumber">,
+  settings?: Pick<BusinessSettings, "vatRegistered" | "vatNumber" | "panNumber">,
 ): string {
   return billDocumentTitle(settings).toUpperCase();
 }

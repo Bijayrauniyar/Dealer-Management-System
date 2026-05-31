@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](README.md) · [GTM Nepal](GTM_NEPAL.md) · [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) · [Deferred work](DEFERRED_WORK.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Backend checklist](backend/BACKEND-TODO.md)
 
-**Status:** Living launch plan. **Phase 0 Tier A — signed off (2026-05-26).** **Next target: Phase 0 Tier B** (INV-1, CRED-0, VAT-0b, notifications QA).
+**Status:** Living launch plan. **Phase 0 Tier A — signed off (2026-05-26).** **Tier B shipped in app (2026-05-26)** — apply migration **0024** on Supabase ([YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md)). **Next:** Tier C or Phase 1 per §7.
 
 **Last updated:** 2026-05-26 · Sign-off: [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md)
 

@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FilePlus, Package, Pencil, ShoppingCart, Tag } from "lucide-react";
+import {FilePlus, Package, Pencil, ShoppingCart, Tag} from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
   salesInvoiceWithProductLabel,
 } from "@/lib/actionLabels";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const TODAY = toDateInput();
 
@@ -47,13 +48,7 @@ export const ProductDetailPage = () => {
   if (!product) {
     return (
       <PageShell>
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <p className="mt-8 text-center text-sm text-muted">Product not found.</p>
       </PageShell>
     );
@@ -65,13 +60,7 @@ export const ProductDetailPage = () => {
 
   return (
     <PageShell>
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
 
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

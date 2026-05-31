@@ -29,9 +29,10 @@ IRD does not prescribe pixel layout; it requires particulars to be **clear and c
 |-------|-------|----------|
 | **App** (menus, buttons) | Sales invoice | Purchase invoice |
 | **Print / PDF** (VAT shop) | **TAX INVOICE** | **Purchase invoice** (your input-VAT record) |
-| **Print** (non-VAT) | **INVOICE** | Purchase invoice |
+| **Print** (PAN shop) | **SALES INVOICE** | Purchase invoice |
+| **Print** (no tax id) | **INVOICE** | Purchase invoice |
 
-**Why:** IRD expects the words **tax invoice** on outward taxable supply documents. “Sales invoice” is workflow language only — using it on print would confuse buyers and accountants.
+**Why:** IRD expects the words **tax invoice** on outward **VAT** supply documents. PAN-only shops use **Sales Invoice** on print (clearer than plain “Invoice”); app menus use the same wording.
 
 ---
 
@@ -43,7 +44,7 @@ IRD does not prescribe pixel layout; it requires particulars to be **clear and c
 | **Left — address** | **Line 1** (and optional **line 2**) from Settings — e.g. `Ranighat-11, Birgunj` | Dealer controls what prints; put full address in line 1 if needed. Optional second line: district · province · Nepal (toggle, off by default) |
 | **Right — VAT or PAN** | One tax id (VAT if registered, else PAN) | Seller registration on tax invoice |
 | **Right — Ph** | Mobile or landline **below** tax id | Contact for buyer/audit; **not** mixed into address (saves space on mobile/A4) |
-| **Center** | **TAX INVOICE** (VAT shop) or **INVOICE** | Statutory document title when VAT registered ([`billDocumentTitle`](app/src/lib/billDisplay.ts)) |
+| **Center** | **TAX INVOICE** (VAT) · **SALES INVOICE** (PAN) · **INVOICE** (no id) | [`billDocumentTitle`](app/src/lib/billDisplay.ts) |
 
 IRD does not mandate “phone under VAT,” but it requires seller **address** and **registration** to be **clear and conspicuous**. This layout matches most Nepali printed tax invoices and audit expectations.
 
@@ -51,7 +52,7 @@ IRD does not mandate “phone under VAT,” but it requires seller **address** a
 
 ## What we do *not* put on the letterhead
 
-- **“Sales invoice”** — app menu label only; print uses **Tax Invoice** / **Invoice** per law.
+- **“Sales invoice”** — app menu label; print uses **Tax Invoice** (VAT), **Sales Invoice** (PAN), or **Invoice** (no tax id).
 - Phone at the end of address (`Birgunj · … · Ph 98…`) — old layout; removed 2026-05-26.
 - City-only address (e.g. “Kathmandu”) — allowed in minimal software; we encourage full Settings address for VAT shops.
 

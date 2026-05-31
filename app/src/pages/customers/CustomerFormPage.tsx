@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -10,6 +9,7 @@ import { NumericInput } from "@/components/app/NumericInput";
 import { numericMoneyProps } from "@/lib/money";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomers, commitCustomer } from "@/store/domain";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 export const CustomerFormPage = () => {
   const navigate = useNavigate();
@@ -51,13 +51,7 @@ export const CustomerFormPage = () => {
 
   return (
     <PageShell stickyBar>
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-bold">{isEdit ? `Edit ${existing?.name}` : "New customer"}</h1>
       <p className="mb-5 text-sm text-muted">
         {isEdit ? "Update shop details." : "Add a customer to use on bills and payments."}

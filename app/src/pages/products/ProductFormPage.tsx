@@ -17,7 +17,7 @@
  */
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Info, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {Info, Plus, RefreshCw, Trash2} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -44,6 +44,7 @@ import {
 import type { Product, ProductUomConversion, ProductUomPrice } from "@/domain/types";
 import { effectiveMinQtyPcs, isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { Button } from "@/components/ui/button";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 type ExtraUomRow = { id: number; uom: string; mrp: number; sellingPrice: number };
 
@@ -260,9 +261,7 @@ export const ProductFormPage = () => {
 
   return (
     <PageShell stickyBar>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-bold">{isEdit ? `Edit ${existing?.name}` : "New product"}</h1>
       <p className="mb-5 text-sm text-muted">
         {isEdit ? "Update product details and pricing." : "Add a product to your catalogue."}

@@ -65,12 +65,12 @@ export function buildNotifications(
       });
     });
 
-  // 2. Due soon
+  // 2. Due soon (within window; strictly after overdue threshold so no double-count with §1)
   sales
     .filter((s) => {
       if (s.balance <= 0 || !s.dueDate) return false;
       const d = daysDiff(s.dueDate);
-      return d >= -overdueDays && d <= dueSoonDays;
+      return d > -overdueDays && d <= dueSoonDays;
     })
     .forEach((s) => {
       const d = daysDiff(s.dueDate!);

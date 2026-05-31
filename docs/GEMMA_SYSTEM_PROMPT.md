@@ -38,7 +38,7 @@ bikrikhata/
   app/src/domain/types.ts        → Sale, Product, Customer, …
   app/src/components/app/BillPrintView.tsx → bill UI/print
   app/src/lib/billDisplay.ts, saleLineMath.ts, uom.ts → bill math
-  app/supabase/migrations/0001…0011 → SQL (ordered)
+  app/supabase/migrations/0001…0024 → SQL (ordered; latest 0024 oversell guard)
   docs/LLM_CONTEXT.md     → full handbook (read when unsure)
   docs/DATA_EXPORT_SPEC.md → Phase 2-E export (deferred backlog)
   docs/PRODUCT_EVOLUTION.md → pain-first roadmap (what to build now)
@@ -74,7 +74,7 @@ Auth: /login, /register → signup_tenant; tenant must be `active` for E2E.
 - Tests: `npm run e2e:bill` ; layout: `npm run e2e:bill:visual` (needs `npm run dev`)
 
 ## Migrations
-Apply in order: 0001 → 0002 → 0003 → 0005 → 0006 → 0007 → 0008 → 0009 → 0010 → 0011.  
+Apply in order through **0024** (see `app/supabase/README.txt` steps 1–25).  
 Guide: `app/supabase/README.txt`. New migration = new numbered file + update docs.
 
 ## Verify before saying “done”

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -13,6 +12,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useProducts, commitStockAdjustment } from "@/store/domain";
 import { toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const REASONS = ["Physical count", "Found stock", "Shrinkage", "Data correction", "Other"];
 
@@ -57,12 +57,7 @@ export const StockAdjustmentPage = () => {
 
   return (
     <PageShell stickyBar>
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-semibold">Stock adjustment</h1>
       <p className="mb-5 text-sm text-muted">
         Correct on-hand qty without a purchase. Use + for found stock, − for shrinkage.

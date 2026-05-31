@@ -6,6 +6,8 @@ Use this **one document** for everything scripts do **not** fully cover, plus st
 
 **Phase 0 Tier A (2026-05-26):** Signed off — see [`../YOUR_TURN_PHASE0_TIER_A.md`](../YOUR_TURN_PHASE0_TIER_A.md). Apply migrations **`0019`–`0023`** before §3.2 Settings / Export / stock tests.
 
+**Phase 0 Tier B (2026-05-26):** Apply migration **`0024`** — see [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md). Manual: Back link, VAT settings validation, credit warning, oversell RPC, notifications.
+
 **Companion (automated):** [`phase1-use-cases-and-tests.md`](./phase1-use-cases-and-tests.md)  
 **Run scripts first:** `npm run e2e:full` (needs `npm run dev` for UI part)
 
@@ -123,6 +125,7 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 | STab3b | **New product** → category **Add** (e.g. “Beverages”) | Category in dropdown + filters; no Settings step |
 | STab4 | **Stock** tab → stock adjustment toggle → Save | More menu shows Stock adjustment when enabled |
 | STab5 | VAT registered + VAT number → print sales bill title **TAX INVOICE** | |
+| STab5b | PAN only (not VAT) → print sales bill title **SALES INVOICE** | |
 | STab5b | Bill letterhead: **Address line 1** only by default; **VAT/PAN** + **Ph** right | Toggle “Include district and province on invoices” to add admin line |
 | STab5c | Address line 1 on bill matches Settings; district not on bill until toggle | |
 

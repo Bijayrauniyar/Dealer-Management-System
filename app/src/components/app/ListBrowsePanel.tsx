@@ -52,11 +52,11 @@ function FilterField({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-muted">
+      <label className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-muted">
         {label}
       </label>
       <Select
-        className="h-10 text-xs"
+        className="h-9 text-xs"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
@@ -99,7 +99,7 @@ export function ListBrowsePanel({
         className,
       )}
     >
-      <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2.5 focus-within:ring-2 focus-within:ring-inset focus-within:ring-teal-500/40">
+      <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2 focus-within:ring-2 focus-within:ring-inset focus-within:ring-teal-500/40">
         <Search size={15} className="shrink-0 text-muted" aria-hidden />
         <input
           type="search"
@@ -121,11 +121,11 @@ export function ListBrowsePanel({
         ) : null}
       </div>
 
-      <div className="space-y-2 px-3 py-3">
+      <div className="space-y-2 px-3 py-2">
         <div
           className={cn(
             "grid gap-2",
-            extraFilter ? "grid-cols-2" : hasSort ? "grid-cols-2" : "grid-cols-1",
+            extraFilter || (hasSort && !extraFilter) ? "grid-cols-2" : "grid-cols-1",
           )}
         >
           <FilterField

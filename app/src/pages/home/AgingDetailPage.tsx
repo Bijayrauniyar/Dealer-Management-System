@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { ListRow } from "@/components/app/ListRow";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +6,7 @@ import { EmptyState } from "@/components/app/EmptyState";
 import { useCustomers } from "@/store/domain";
 import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const BUCKET_LABEL: Record<string, string> = {
   "0-7": "0–7 days",
@@ -37,12 +37,7 @@ export const AgingDetailPage = () => {
 
   return (
     <PageShell>
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600 hover:text-teal-700"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600 hover:text-teal-700" />
       <h1 className="mb-4 text-lg font-semibold text-foreground">Aging: {label}</h1>
 
       {rows.length === 0 ? (

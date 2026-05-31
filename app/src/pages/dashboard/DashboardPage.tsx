@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Lock } from "lucide-react";
+import {RefreshCw, Lock} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/app/PageShell";
 import { KpiCard } from "@/components/app/KpiCard";
@@ -20,6 +20,7 @@ import {
   useSuppliers,
 } from "@/store/domain";
 import { npr, nprNum, fmtDate } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 function defaultPeriodRange() {
   const to = new Date();
@@ -116,9 +117,7 @@ export const DashboardPage = () => {
   return (
     <PageShell>
       <div className="mb-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <div className="flex items-center gap-1.5 rounded-lg bg-surface-card border border-border-subtle px-2 py-1">
           <Lock size={11} className="text-muted" />
           <span className="text-xs text-muted">Private</span>
