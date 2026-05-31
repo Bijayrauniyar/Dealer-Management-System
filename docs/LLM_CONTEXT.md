@@ -364,19 +364,20 @@ Add one line under **Changelog** yourself:
 | [backend/BACKEND-TODO.md](backend/BACKEND-TODO.md) | Planned work |
 | [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md) | **Pain-first roadmap** — what to build for clients now (not feature count) |
 | [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) | Phase 2-E export design (**deferred** — reporting / migration / backup) |
-| [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | Product name & rebrand (**deferred** — ChatGPT brief) |
+| [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | BikriKhata branding (**shipped**) |
+| [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md) | Tier A sign-off checklist (**complete**) |
 
 ### What to build next (read first)
 
-Use **[PHASE_ROADMAP.md](PHASE_ROADMAP.md)** for launch scope (Phase 0–3). **Next implementation target: Phase 0** — app shell (side menu, tabs, Support section, header Settings + notifications), tabbed Settings, export P0, rebrand, opening stock UI, INV-1.
+Use **[PHASE_ROADMAP.md](PHASE_ROADMAP.md)** for launch scope (Phase 0–3). **Tier A complete (2026-05-26).** **Next: Tier B** — INV-1, CRED-0, VAT-0b, notifications QA ([YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md)).
 
-Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ features. Priority: export for accountant, categories/rebrand for 2nd tenant, paginate sales load — not van stock / Tally / barcode until a client asks. Schemes: save + auto-apply on sales (`schemeApply.ts`); test with `npm run seed:schemes`.
+Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ features. Tier A shipped: export, BikriKhata, categories, stock adjustment, PERF-0, Tax Invoice letterhead. Schemes: save + auto-apply on sales (`schemeApply.ts`); test with `npm run seed:schemes`.
 
 ### Deferred backlog (address later)
 
-**Deferred register** — [DEFERRED_WORK.md](DEFERRED_WORK.md): **INV-1** (DB oversell), **INV-2** (stock vs bill date), **SUP-1**, **EXP-1**, **BRAND-1**, optional **MIG-0012**. Effort estimates, touchpoints, acceptance criteria. Summaries also in [backend/BACKEND-TODO.md § Deferred](backend/BACKEND-TODO.md). **Not** scheme-deploy blockers.
+**Deferred register** — [DEFERRED_WORK.md](DEFERRED_WORK.md): **INV-1** (Tier B), **INV-2**, **SUP-1**, **IMP-0/1/2** (full backup/import). **EXP-1** and **BRAND-1** done for Tier A.
 
-**Data export (Phase 2-E)** — spec only, not built: [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) · checklist [BACKEND-TODO § 2-E](backend/BACKEND-TODO.md). Reporting CSV, migration ZIP, backup; `papaparse` unused. Do not implement until prioritized.
+**Data export** — Tier A shipped (`lib/export/*`, Settings → Export); **IMP-0** = full tenant ZIP (Phase 2): [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md).
 
 **Product branding** — **BikriKhata** in `app/src/config/productBrand.ts` ([bikrikhata.com](https://bikrikhata.com)). Shop legal name on bills = **Settings** (`tenant_settings`), not product brand.
 
@@ -384,6 +385,7 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ feat
 
 ## Changelog (newest first)
 
+- **2026-05-26** — Docs: **Tier A complete / Tier B next** in PHASE_ROADMAP, BACKEND-TODO, PRODUCT_EVOLUTION, DEFERRED_WORK (EXP-1, BRAND-1 done).
 - **2026-05-26** — **Phase 0 Tier A signed off** (migrations 0019–0023, export e2e, manual QA) — see [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md).
 - **2026-05-26** — App header: removed unused **Online** status pill (`AppShell.tsx`).
 - **2026-05-26** — **Docs/README/npm** safe rebrand sweep: BikriKhata, package `bikrikhata`; removed legacy product names from docs (domain [bikrikhata.com](https://bikrikhata.com) deploy steps in `deployment.md` — Auth URLs not changed in repo).

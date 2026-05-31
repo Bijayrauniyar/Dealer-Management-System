@@ -6,7 +6,7 @@
 
 **Rule for prioritization:** If it does not fix daily ops, trust, or go-live for the **current or next dealer**, it waits.
 
-**Last updated:** 2026-05-23
+**Last updated:** 2026-05-26 · **Tier A signed off** — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md)
 
 ---
 
@@ -30,28 +30,28 @@ Verticals later (grocery, hardware, pharma-lite) share the **same core loop**; o
 | Pain | What happens today | Priority | Action |
 |------|-------------------|----------|--------|
 | ~~Scheme screen lies~~ | ~~Fake save~~ | **Done** | Saves to `scheme_tracker`; **sales auto-apply** free lines (`schemeApply` + `SaleEntryPage`) |
-| **No data export** | Accountant still parallel Excel; owner fears cloud lock-in | **P0** | Phase 2-E: CSV registers + backup ZIP ([DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md)) |
-| **“Download my data”** | Only single-bill PDF | **P0** | Same as export |
-| **Credit limit shown, not enforced** | Customer form has limit; sales never block | **P1** | Enforce on save **or** hide limit until enforced |
+| **No data export** | Accountant still parallel Excel | **P1** | **Tier A done** — Settings → Export; full ZIP → IMP-0 |
+| **“Download my data”** | Only single-bill PDF | **P1** | Tier A partial ZIP + registers |
+| **Credit limit shown, not enforced** | Customer form has limit; sales never block | **P1 · Tier B** | CRED-0: enforce on save **or** hide limit |
 | **Edit bill without history** | `update_sales_bill` works; no audit list on bill | **P1** | Phase 2-D audit UI (accountant asks “who changed this?”) |
 
 ### B. Billing & stock (daily operations)
 
 | Pain | What happens today | Priority | Action |
 |------|-------------------|----------|--------|
-| **Sold out but bill still possible** | Picker blocks OOS on **new** lines; RPC allows oversell | **P1** | Deferred: DB oversell guard — document for staff until built |
+| **Sold out but bill still possible** | Picker blocks OOS on **new** lines; RPC allows oversell | **P1 · Tier B** | INV-1: DB oversell guard |
 | **Backdated purchase ignored** | **Fixed** — `purchase_date` from form → RPC | Done | Keep testing on production |
 | **Backdated sale date** | **Works** — `bill_date` saved | Done | — |
 | **Backdated sale + stock confusion** | Picker uses **today’s** stock, not stock on bill date | **P2** | Deferred; train: enter purchases before old sales |
 | **Pack vs PCS mistakes** | UOM on lines; stock in base units | **P1** | UX hints on sale line (already partly there); training |
 | **Bill print / discount wrong** | **Largely fixed** (footer vs line discount, layout) | Done | Monitor after deploy |
-| **Slow app with many bills** | `fetchDomainBundle` loads **all sales** for shell/home | **P1** | Paginate/filter bills; stop loading full history on every visit |
+| **Slow app with many bills** | Full history on every visit | **Done** | PERF-0: paginated sales headers |
 
 ### C. Masters & onboarding (next dealer)
 
 | Pain | What happens today | Priority | Action |
 |------|-------------------|----------|--------|
-| **Product categories = ice cream** | Hardcoded `Ice Cream`, `Bar`, `Party`… in product form | **P0** for 2nd tenant | Tenant-configurable categories |
+| **Product categories = ice cream** | Hardcoded list | **Done** | CAT-0: tenant categories (`0019`) |
 | **Login branding** | **Done** — BikriKhata + taglines | — | `productBrand.ts` |
 | **No bulk import** | Every SKU/customer typed | **P1** | Import templates (after export column spec) |
 | **Opening stock / opening udhar** | Manual product + purchase + bills | **P1** | Import: products + opening balances doc |
@@ -61,7 +61,7 @@ Verticals later (grocery, hardware, pharma-lite) share the **same core loop**; o
 
 | Pain | What happens today | Priority | Action |
 |------|-------------------|----------|--------|
-| **Sales / purchase register for CA** | No CSV | **P0** | Export by date range |
+| **Sales / purchase register for CA** | No CSV | **Done** | Settings → Export (Tier A) |
 | **Outstanding list** | In app (home) | **P1** | Export outstanding snapshot |
 | **VAT 13% hardcoded** | `BILL_VAT_RATE = 13` in code | **P1** | `tenant_settings.vat_rate` when non-13 needed |
 | **Daily cash half-built** | Page exists; save path incomplete | **P2** | Wire or hide — do not advertise |
@@ -103,11 +103,13 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | # | Work | Client pain solved |
 |---|------|-------------------|
 | ~~1~~ | ~~Scheme page + sales apply~~ | **Done** — save + auto free qty on bill |
-| 1 | **Export P0** — products, sales/purchase registers, outstanding, backup ZIP | Accountant + owner backup |
-| 2 | **Configurable product categories** + generic copy sweep | Second tenant onboarding |
-| 3 | **Product rebrand** (login, PWA) | **Done** — BikriKhata |
-| 4 | **Bill list / home data: paginated fetch** | App slows as bills grow |
-| 5 | **Credit limit: enforce or hide** | Misleading UI |
+| ~~1~~ | **Export Tier A** — registers, VAT summary, partial ZIP | **Done** |
+| ~~2~~ | **Configurable product categories** + copy sweep | **Done** |
+| ~~3~~ | **Product rebrand** (login, PWA) | **Done** — BikriKhata |
+| ~~4~~ | **Paginated sales / lighter load** | **Done** — PERF-0 |
+| ~~5~~ | **Opening stock + stock adjustment** | **Done** — STK-0* |
+| 6 | **Credit limit: enforce or hide** | **Tier B** — CRED-0 |
+| 7 | **DB oversell guard** | **Tier B** — INV-1 |
 
 ### Next (when pilot is stable)
 

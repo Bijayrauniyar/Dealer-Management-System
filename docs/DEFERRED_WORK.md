@@ -22,11 +22,11 @@
 | **INV-1** | Block oversell in DB | Backlog | **1–2 dev days** | UI disables OOS on new lines; RPC still allows oversell |
 | **INV-2** | Picker stock vs bill date | Backlog · **product decision** | **0–5 days** (see options) | Today’s `onHand` only; backdating is edge case for pilot |
 | **SUP-1** | Supplier scheme → pass-through to customer | Backlog | **3–5 days** | Scheme on sales shipped; purchase-side not built |
-| **EXP-1** | Export P0 (registers + backup ZIP) | **Partial** · Tier A shipped | **~1 week** left | Settings → Export tab; ZIP missing suppliers, settings, payments, all-time — see **IMP-0** |
+| **EXP-1** | Export P0 (registers + backup ZIP) | **Done (Tier A)** · partial ZIP | **IMP-0** for full | Tier A: registers + date-range ZIP shipped; full tenant backup → **IMP-0** |
+| **BRAND-1** | Product rebrand | **Done** | — | **BikriKhata** — `productBrand.ts`, docs, npm `bikrikhata` (2026-05-26) |
 | **IMP-0** | Complete full tenant backup ZIP | Backlog · **Phase 2** | **~1 week** | Export everything: settings, suppliers, payments, returns, expenses, damages, purchase lines, outstanding, all-history option |
 | **IMP-1** | CSV import hub (per entity) | Backlog · **Phase 2** | **~2–3 weeks** | Upload templates: products, customers, suppliers, categories, settings, opening stock/balance |
 | **IMP-2** | Restore / migration import (resume same point) | Backlog · **Phase 2** | **~3–5 weeks** | Import backup ZIP or ordered CSVs; recreate masters + optional history; after IMP-0/1 |
-| **BRAND-1** | Product rebrand | Backlog | **2–4 days** | Second dealer; see PRODUCT_NAMING_BRIEF |
 | **MIG-0012** | Scheme Box→PCS columns | Optional | **~10 min** SQL | Only if using cross-UOM schemes |
 | **CAT-1** | Parent/child product categories (2-level) | Backlog · **Phase 1** | **~3–5 days** | Phase 0 ships **flat** list (`0019`); build when tenant has 30+ groups or wants roll-up reports |
 | **CAT-2** | Category tree UI (ERP-style) | Backlog · **Phase 2** | **~1–2 weeks** | Full sidebar tree + deep hierarchy; after CAT-1 if still needed |

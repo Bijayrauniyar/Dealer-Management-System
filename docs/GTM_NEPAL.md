@@ -280,7 +280,7 @@ Dealers will **not pay monthly** without these:
 | 5 | Stock movement on sale/purchase/return/damage | Yes | + INV-1 trust |
 | 6 | Outstanding / overdue visibility | Yes | Home screen |
 | 7 | **Excel export** (sales, purchase, outstanding, products) | No | **P0** |
-| 8 | **Generic branding** (not BikriKhata-only) | Partial | **P0** |
+| 8 | **Product branding (BikriKhata)** | **Done** (Tier A) | — |
 | 9 | **Configurable product categories** | No | **P0** |
 | 10 | Works on mobile browser | PWA | Market it |
 | 11 | Performance with many bills | Weak | **P0** pagination |
@@ -391,25 +391,26 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ## 12. Changes needed in existing product (checklist)
 
-> **Canonical launch checklist:** [PHASE_ROADMAP.md](PHASE_ROADMAP.md) (Phase 0–3, including app shell, Settings tabs, notifications). Summary below.
+> **Canonical launch checklist:** [PHASE_ROADMAP.md](PHASE_ROADMAP.md). **Tier A complete (2026-05-26)** — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md). **Next: Tier B.**
 
 Before heavy AI or van modules:
 
-- [ ] **Phase 0 UI shell** — side menu (Masters / Entry / Reports / Support), sticky tabs (Home, Customers, Inventory, Reports), header Settings + notifications — [PHASE_ROADMAP.md §3.1](PHASE_ROADMAP.md#31-app-shell--navigation-new--phase-0)
-- [x] Export Tier A (partial) — Settings → Export; registers + backup ZIP
-- [ ] **IMP-0/1/2 (Phase 2)** — full backup, CSV import per entity, restore — [DEFERRED_WORK.md](DEFERRED_WORK.md)
-- [ ] Rebrand — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md), BRAND-1
-- [x] Tenant-configurable categories (flat list — `0019`)
-- [ ] Parent/child categories (**CAT-1**, Phase 1) · tree UI (**CAT-2**, Phase 2) — [DEFERRED_WORK.md](DEFERRED_WORK.md)
-- [ ] Paginate `sales_bills` / stop full bundle on home
-- [ ] Credit limit enforce or hide
-- [ ] INV-1 oversell in RPC
+- [ ] **Phase 0 UI shell (Tier C)** — full side menu + sticky tabs — [PHASE_ROADMAP.md §3.1](PHASE_ROADMAP.md#31-app-shell--navigation--tier-c-tier-a-ui-0809-only)
+- [x] **Tier A minimum UI** — header Settings + tabbed Settings (Export, Stock) + notifications bell
+- [x] Export Tier A — Settings → Export; registers + partial backup ZIP
+- [ ] **IMP-0/1/2 (Phase 2)** — full backup, CSV import, restore — [DEFERRED_WORK.md](DEFERRED_WORK.md)
+- [x] Rebrand — **BikriKhata** ([PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md))
+- [x] Tenant-configurable categories (flat — `0019`)
+- [ ] Parent/child categories (**CAT-1**, Phase 1) · tree UI (**CAT-2**, Phase 2)
+- [x] Paginate `sales_bills` / lighter shell load (PERF-0)
+- [ ] Credit limit enforce or hide — **Tier B** CRED-0
+- [ ] INV-1 oversell in RPC — **Tier B**
 - [ ] Purchase PDF/print parity with sales bill (if missing)
-- [ ] Onboarding doc for tenant (10 products, 5 customers, 1 purchase, 1 sale)
-- [ ] Stock adjustment RPC + UI + Settings toggle — [PHASE_ROADMAP.md](PHASE_ROADMAP.md) STK-0d–0f (Phase 0)
-- [ ] VAT bill: **Tax Invoice** title when VAT registered (`billDisplay.ts`)
-- [ ] Optional customer **VAT number** on bill (B2B)
-- [ ] Settings: require address + tax id when VAT registered
+- [ ] Onboarding doc for tenant — **Tier C** ONB-0
+- [x] Stock adjustment RPC + UI + Settings toggle (0020–0021)
+- [x] VAT bill: **Tax Invoice** when VAT registered
+- [ ] Optional customer **VAT number** on bill (B2B) — Tier C
+- [ ] Settings: require address + tax id when VAT registered — **Tier B** VAT-0b
 
 ---
 

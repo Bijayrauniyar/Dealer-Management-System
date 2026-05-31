@@ -2,9 +2,9 @@
 
 **Navigate:** [Docs hub](README.md) · [GTM Nepal](GTM_NEPAL.md) · [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) · [Deferred work](DEFERRED_WORK.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Backend checklist](backend/BACKEND-TODO.md)
 
-**Status:** Living launch plan. **Next target: Phase 0 implementation.**
+**Status:** Living launch plan. **Phase 0 Tier A — signed off (2026-05-26).** **Next target: Phase 0 Tier B** (INV-1, CRED-0, VAT-0b, notifications QA).
 
-**Last updated:** 2026-05-26
+**Last updated:** 2026-05-26 · Sign-off: [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md)
 
 ---
 
@@ -27,29 +27,27 @@
 
 ## 2. Already shipped (demo today)
 
-Use this list in sales demos; do not re-build unless fixing gaps in Phase 0.
+Use this list in sales demos. **Tier A** items below are shipped; **Tier B** gaps called out.
 
 
-| Area                                                                            | Shipped                                                                                        |
-| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Auth, tenant, Settings (single long page)                                       | ✓                                                                                              |
-| Sales bill — new/edit, VAT, schemes, print/PDF/share                            | ✓                                                                                              |
-| Purchase — supplier invoice no., VAT excl/incl, bill view, immutable after save | ✓                                                                                              |
-| Stock                                                                           | `v_stock`; Stock page (on hand only); OOS picker on new lines (UI)                             |
-| Customers, suppliers, payments, returns, damage, expense, capital               | ✓                                                                                              |
-| Home KPIs, overdue, outstanding                                                 | ✓                                                                                              |
-| Notifications                                                                   | Bell + panel from **computed** data (`buildNotifications`) — not DB table                      |
-| Nav today                                                                       | Bottom **Home / + / More**; header business name + bell — **no Settings icon**, no side drawer |
-| Bill title                                                                      | **“Sales details”** (not “Tax Invoice” when VAT registered)                                    |
-| Categories                                                                      | Hardcoded ice-cream list on product form                                                       |
-| Branding                                                                        | Login: **BikriKhata** + taglines ([bikrikhata.com](https://bikrikhata.com))                    |
-| Export / backup                                                                 | **Partial** — Settings → Export; **IMP-0/1/2** full backup + import → Phase 2                    |
-| `opening_stock`                                                                 | In DB + `v_stock` — **no product form field**                                                  |
-| DB oversell                                                                     | **Allowed** in RPC (INV-1 deferred)                                                            |
-| Performance                                                                     | `fetchDomainBundle` loads full sales history for shell                                         |
+| Area | Shipped |
+|------|---------|
+| Auth, tenant, **tabbed Settings** (Business · Bills & VAT · Stock · Export) | ✓ |
+| Header **Settings** gear + notifications bell | ✓ |
+| Sales bill — new/edit, VAT, schemes, print/PDF; **Tax Invoice** when VAT registered | ✓ |
+| Purchase — supplier invoice, VAT excl/incl, purchase bill view | ✓ |
+| Stock — on hand · opening · purchased · adjusted; adjustment toggle | ✓ |
+| Product **categories**; **opening qty** on form | ✓ |
+| Customers, suppliers, payments, returns, damage, expense, capital | ✓ |
+| Home KPIs, overdue; **paginated** sales load (PERF-0) | ✓ |
+| Export — registers + VAT summary + **partial** backup ZIP | ✓ |
+| Branding — **BikriKhata** ([bikrikhata.com](https://bikrikhata.com)) | ✓ |
+| Nav | Bottom **Home / + / More**; full side drawer → **Tier C** |
+| DB oversell | RPC allows → **Tier B** INV-1 |
+| Credit limit | Form only → **Tier B** CRED-0 |
 
 
-**Touchpoints:** `AppShell.tsx`, `SettingsPage.tsx`, `billDisplay.ts`, `domainLive.ts`.
+**Touchpoints:** `AppShell.tsx`, `SettingsPage.tsx`, `ExportSection.tsx`, `productBrand.ts`, `BillLetterhead.tsx`.
 
 ---
 
@@ -59,48 +57,50 @@ Use this list in sales demos; do not re-build unless fixing gaps in Phase 0.
 
 ### 3.0 Priority tiers (what to ship when)
 
-Use tiers to time-box launch: **ship all Tier A before ads / 2nd tenant**; add **B** before ~10 tenants; **C** when you have slack. **Tier D** is explicitly **not** Phase 0 — see [§3.6](#36-tier-d--not-phase-0) and [§7 Tier D map](#7-tier-d--later-phases-1-3).
+Use tiers to time-box launch: **Tier A complete** — add **B** before ~10 tenants; **C** when you have slack. **Tier D** is explicitly **not** Phase 0 — see [§3.6](#36-tier-d--not-phase-0) and [§7 Tier D map](#7-tier-d--later-phases-1-3).
 
 | Tier | Meaning | When |
 |------|---------|------|
-| **A — Must** | Deal-breaker for new paying wholesaler + CA | Before 2nd tenant & marketing |
+| **A — Must** | Deal-breaker for new paying wholesaler + CA | **Done** (2026-05-26) |
 | **B — Should** | Trust, scale, fewer support fires | Before ~10 tenants |
 | **C — Nice** | Polish & retention; app works without these short-term | Phase 0 if time; else cut scope |
 | **D — Later** | Wrong buyer or too heavy for solo launch | Phase 1–3 only |
 
-#### Tier A — Must (Phase 0)
+#### Tier A — Must (Phase 0) — **complete (2026-05-26)**
 
-Do **not** charge strangers or run Meta ads until these ship (pilot #1 can use today’s build with hand-holding).
+Signed off: migrations **0019–0023**, `deploy:check`, `e2e:export`, manual QA — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md).
 
-| ID | Item |
-|----|------|
-| **EXP-0** | Export hub + backup ZIP |
-| **EXP-0a–d** | Sales register, lines, purchase register, outstanding, products, stock snapshot, **VAT period summary** |
-| **BRAND-0** | BikriKhata rebrand (login, PWA) — **done** |
-| **CAT-0** | Tenant-configurable product categories |
-| **STK-0** | Opening qty on product form |
-| **STK-0b** | Stock page: on hand · opening · from purchases; category filter |
-| **STK-0c** | Copy: stock IN = Purchase; opening on product |
-| **STK-0d–f** | Manual stock adjustment + Settings toggle + adjusted qty in stock view (~3–7 days) |
-| **PERF-0** | Paginate/filter sales; lighter session load |
-| **VAT-0** | Print title **Tax Invoice** when VAT registered |
-| **NAME-0** | Labels: **Sales invoice** / **Purchase invoice** |
-| **F4** | Copy sweep (remove client-specific placeholders in generic forms) |
+| ID | Item | Status |
+|----|------|--------|
+| **EXP-0** | Export hub + partial backup ZIP | **Done** · full ZIP → IMP-0 |
+| **EXP-0a–d** | Sales/lines, purchase register, outstanding, products, stock, VAT summary | **Done** |
+| **BRAND-0** | BikriKhata rebrand (login, PWA, `productBrand.ts`) | **Done** |
+| **CAT-0** | Tenant-configurable product categories | **Done** |
+| **STK-0** | Opening qty on product form | **Done** |
+| **STK-0b** | Stock page: on hand · opening · purchased; category filter | **Done** |
+| **STK-0c** | Copy: stock IN = Purchase; opening on product | **Done** |
+| **STK-0d–f** | Stock adjustment + Settings toggle + adjusted in `v_stock` | **Done** |
+| **PERF-0** | Paginate/filter sales; lighter session load | **Done** |
+| **VAT-0** | Print title **Tax Invoice** when VAT registered | **Done** |
+| **NAME-0** | Labels: **Sales invoice** / **Purchase invoice** | **Done** |
+| **F4** | Copy sweep (generic forms) | **Done** |
+| **UI-0.8 / UI-0.11** | Header Settings + tabbed Settings (incl. Export, Stock) | **Done** |
 
-**Tier A minimum UI:** header **Settings** icon + **tabbed Settings** with **Export** and **Stock** tabs (UI-0.8, UI-0.11) — full side menu not required for Tier A.
+**Also:** list page size (0022), bill address toggle (0023), IRD letterhead, header Online pill removed.
 
-#### Tier B — Should (Phase 0)
+#### Tier B — Should (Phase 0) — **next**
 
-| ID | Item |
-|----|------|
-| **INV-0** | DB oversell guard (INV-1) |
-| **CRED-0** | Credit limit enforce or hide |
-| **VAT-0b** | Settings validation: address + tax id when VAT bills |
-| **UI-0.8** | Header Settings + Notifications bell |
-| **UI-0.11** | Settings tabs (Business · Bills & VAT · Stock & alerts · Export · Support) |
-| **UI-0.12** | Notifications QA (computed alerts correct + links work) |
-| **UI-0.9** | Consistent back button on inner pages |
-| **F1–F3, F5–F9, F12, F16** | Checklist alignment with rows above |
+Target before ~10 paying tenants.
+
+| ID | Item | Status |
+|----|------|--------|
+| **INV-0 / INV-1** | DB oversell guard | **Backlog** |
+| **CRED-0** | Credit limit enforce or hide | **Backlog** |
+| **VAT-0b** | Settings validation: address + tax id when VAT bills | **Backlog** |
+| **UI-0.8 / UI-0.11** | Header Settings + tabbed Settings | **Done** (Tier A) |
+| **UI-0.12** | Notifications QA | **Backlog** |
+| **UI-0.9** | Consistent back button on inner pages | **Backlog** |
+| **F6, F7, F11** | CRED-0, INV-0, notifications QA | **Backlog** |
 
 #### Tier C — Nice (Phase 0)
 
@@ -216,12 +216,12 @@ Sales orders, purchase orders, invoice photo attachments, brands master, custom 
 ### 3.7 Phase 0 — Suggested build order
 
 ```text
-Track 1 — Tier A (launch gate):
-  1. Export P0 (EXP-0*) + Settings Export tab
-  2. Rebrand + categories + copy sweep
-  3. Opening stock + stock columns + stock adjustment + toggle
-  4. Perf (PERF-0) + Tax Invoice + invoice naming
-  5. Minimal UI: Settings icon + tabbed Settings + back
+Track 1 — Tier A (launch gate): **complete**
+  1. ~~Export P0 (EXP-0*) + Settings Export tab~~
+  2. ~~Rebrand + categories + copy sweep~~
+  3. ~~Opening stock + stock columns + stock adjustment + toggle~~
+  4. ~~Perf (PERF-0) + Tax Invoice + invoice naming~~
+  5. ~~Minimal UI: Settings icon + tabbed Settings~~
 
 Track 2 — Tier B (before ~10 tenants):
   6. INV-1 + credit limit + VAT settings validation + notifications QA
