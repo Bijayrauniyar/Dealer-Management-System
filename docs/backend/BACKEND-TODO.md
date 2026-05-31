@@ -10,7 +10,7 @@
 
 ## Now — client pain points (priority over new features)
 
-> **Phase 0 Tier A — signed off (2026-05-26).** **Tier B shipped in app (2026-05-26)** — apply migration **0024** on Supabase; sign-off: [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md).  
+> **Phase 0 Tier A — signed off (2026-05-26).** **Tier B QA + 0024 signed off (2026-05-26)** — Netlify deploy pending: [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md).  
 > Full pain → action mapping: [`../PRODUCT_EVOLUTION.md`](../PRODUCT_EVOLUTION.md). Tier A: [`../YOUR_TURN_PHASE0_TIER_A.md`](../YOUR_TURN_PHASE0_TIER_A.md).
 
 - [x] **Scheme page** — persists buy-X-get-Y to `scheme_tracker` (`insertSchemeLive` / `commitSchemeEntry`).

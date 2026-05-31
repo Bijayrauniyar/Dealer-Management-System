@@ -2,9 +2,9 @@
 
 **Navigate:** [Docs hub](README.md) · [GTM Nepal](GTM_NEPAL.md) · [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) · [Deferred work](DEFERRED_WORK.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Backend checklist](backend/BACKEND-TODO.md)
 
-**Status:** Living launch plan. **Phase 0 Tier A — signed off (2026-05-26).** **Tier B shipped in app (2026-05-26)** — apply migration **0024** on Supabase ([YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md)). **Next:** Tier C or Phase 1 per §7.
+**Status:** Living launch plan. **Tier A signed off (2026-05-26).** **Tier B QA + 0024 signed off (2026-05-26)** — **deploy to Netlify `main` pending** ([YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md)). **Next after deploy:** Tier C or Phase 1 per §7.
 
-**Last updated:** 2026-05-26 · Sign-off: [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md)
+**Last updated:** 2026-05-26 · [Tier A](YOUR_TURN_PHASE0_TIER_A.md) · [Tier B](YOUR_TURN_PHASE0_TIER_B.md)
 
 ---
 
