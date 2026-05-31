@@ -9,7 +9,36 @@ Use this **one document** for everything scripts do **not** fully cover, plus st
 **Phase 0 Tier B (2026-05-26):** Signed off — migration **`0024`**, deploy — [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md).
 
 **Companion (automated):** [`phase1-use-cases-and-tests.md`](./phase1-use-cases-and-tests.md)  
-**Run scripts first:** `npm run e2e:full` (needs `npm run dev` for UI part)
+**Run scripts first:** `npm run e2e:phase0` (Tier A+B+C source) then `e2e:phase0:live` if DB touched; full regression: `e2e:full` (needs `npm run dev` for UI part)
+
+**Phase 0 Tier C:** Sign-off checklist also in [`../YOUR_TURN_PHASE0_TIER_C.md`](../YOUR_TURN_PHASE0_TIER_C.md) — **this doc is the master** for all manual rows.
+
+---
+
+## Maintaining this checklist (required on every feature)
+
+When you **add, change, or remove** a user-facing feature, update **this file in the same PR** as code (with e2e scripts — see [§ Keeping tests in sync](./phase1-use-cases-and-tests.md#keeping-tests-in-sync-required-on-every-change)):
+
+| Step | What to do |
+|------|------------|
+| 1 | Add or edit a row in **§2 Feature catalog** (module + routes). |
+| 2 | Add step-by-step rows under the right **§3.x** section (or create `§3.xx` for a new module). |
+| 3 | If scripts cannot cover it, add a **§1 Gaps** row (G#). Remove obsolete G# when automated. |
+| 4 | For Phase 0 tiers, use **§3.0a–c** below; mirror short lists in `YOUR_TURN_PHASE0_TIER_*.md` if helpful. |
+| 5 | Note new migrations in **§0** and [supabase README](../../app/supabase/README.txt). |
+| 6 | On release, tick **§6 Sign-off** (automated + manual suites). |
+
+Agents: `.cursor/rules/docs-on-change.mdc` enforces doc + e2e + manual checklist together.
+
+---
+
+## Phase 0 manual index (A · B · C)
+
+| Tier | What shipped | Manual section | Automated |
+|------|----------------|----------------|-----------|
+| **A** | Export tab, product categories, stock adjustment, list page size, district on bill, rebrand | [§3.0a](#30a-phase-0--tier-a-man-t0a) | `e2e:tier-a` / `e2e:export` |
+| **B** | Oversell block (0024), PageBackLink, VAT address validation, credit warning, notifications | [§3.0b](#30b-phase-0--tier-b-man-t0b) | `e2e:tier-b` / `e2e:tier-b:live` |
+| **C** | Bottom tabs, drawer, Reports hub, Support, Share bill, Home tabs, customer PAN/VAT | [§3.0c](#30c-phase-0--tier-c-man-t0c) | `e2e:tier-c` / `e2e:phase0` |
 
 ---
 
@@ -17,7 +46,7 @@ Use this **one document** for everything scripts do **not** fully cover, plus st
 
 | Item | Action |
 |------|--------|
-| Migrations | `0001` → `0002` → `0003` → **`0005`** applied in Supabase SQL Editor |
+| Migrations | `0001`–`0003`, **`0005`**–`0010`, **`0013`–`0017`**, **`0019`–`0026`** per [supabase README](../../app/supabase/README.txt) |
 | Env | `app/.env.local` has `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` |
 | Test user | `node scripts/create-e2e-user-and-test.mjs` → `app/.e2e-credentials.local` |
 | Tenant | `tenants.status = 'active'` for your user |
@@ -50,8 +79,8 @@ Check each row after manual testing.
 | G13 | **Supplier pay: multiple POs** | One PO in API | Two unpaid POs; one payment; FIFO which PO gets paid |
 | G14 | **Opening stock ≠ 0** | Tests assume opening 0 | Product with opening stock; after sale/purchase/damage/return check Stock page |
 | G15 | **Customer credit limit** | — | Sale pushing outstanding over limit (if UI enforces) |
-| G16 | **Customer PAN** | Not in schema | Field on form if present; DB column when added |
-| G17 | **Notifications panel** | — | Bell icon list; links open correct screens (static data today) |
+| G16 | **Customer PAN / VAT on print** | DB + form in `e2e:tier-c:live` | Bill print shows buyer PAN/VAT when filled (0026); layout readable |
+| G17 | **Notifications panel** | Link targets in source | Bell list; tap low-stock → Home stock tab; overdue → sensible route |
 | G18 | **Daily cash → Supabase** | Partial wiring | Confirm `daily_cash` row behaviour matches current implementation |
 | G19 | **Scheme → Supabase** | Menu → Entry → Scheme save | Row in `scheme_tracker`; sale qty 10 → free line if buy-10-get-1 |
 | G20 | **Dashboard charts** | — | `/app/dashboard` loads; data matches your tenant (if wired) |
@@ -73,14 +102,14 @@ Check each row after manual testing.
 | Module | Use cases | Route / entry |
 |--------|-----------|----------------|
 | **Auth** | Login, register, pending tenant, no tenant, sign out | `/login`, `/register`, `/pending-approval`, `/no-tenant` |
-| **Home** | KPIs, quick actions, aging buckets, overdue list, period lists | `/app/home`, `/app/home/overdue`, `/app/home/aging/:bucket`, `/app/home/period/:type` |
+| **Home** | Date + Sales invoice; **Customers / Stock** tabs; browse lists; aging/overdue via drawer | `/app/home`, `/app/home?tab=customers`, `/app/home?tab=stock`, `/app/home/overdue`, … |
 | **Settings** | Tabbed: Business, Bills & VAT, Stock, **Export** | `/app/settings` |
 | **Products** | List, search, add, edit, inactive/active | `/app/products`, `/app/products/new`, `.../edit/:id` |
 | **Customers** | List, filter outstanding, add, edit, detail, new bill from customer | `/app/customers`, `.../new`, `.../edit/:id`, `.../:id` |
 | **Suppliers** | List, add/edit, expandable actions | `/app/suppliers`, `…/new`, `…/edit/:id` |
 | **Stock** | On-hand, opening, purchased; optional adjustment | `/app/stock`, `/app/stock-adjustment/new` |
 | **Sale** | New bill, edit existing (`update_sales_bill`), preview, print | `/app/sales/new`, `/app/sales/edit/:billNo` |
-| **Bill detail** | View, print, return, pay, edit pencil | `/app/bills/:billNo` |
+| **Bill detail** | View, **Share**, Print, PDF, Return, **Collect** (green), Edit | `/app/bills/:billNo` |
 | **Payment** | Customer payment, bill allocation | `/app/payments/new` |
 | **Return** | Return against bill, stock back, credit | `/app/returns/new` |
 | **Purchase** | Stock in, supplier payable | `/app/purchases/new` |
@@ -104,17 +133,72 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 
 ---
 
-### 3.0 Navigation — Tier C shell (MAN-NAV)
+### 3.0 Phase 0 — Tier A (MAN-T0A)
+
+Migrations **0019–0023**. Automated: `npm run e2e:tier-a` (+ `:live`).
 
 | # | Step | Pass |
 |---|------|------|
-| NAV1 | Bottom tabs: Home, Customers, Inventory, Reports; centre **+** opens entry sheet | |
-| NAV2 | Header **☰** → Masters / Entry / Reports / Support sections navigate correctly | |
-| NAV3 | `/app/more` redirects to Reports; Home = date + Sales invoice + Customers/Stock tabs + browse lists | |
-| NAV4 | Bill detail: **Share** opens system share sheet or downloads PDF | |
-| UI1 | **UI-1:** Products/Suppliers list — same **Add** button; Home tabs + green Sales invoice; form pages use same back/title block ([UI_CONSISTENCY_PLAN.md](../UI_CONSISTENCY_PLAN.md)) | |
+| T0A1 | Header **Settings** (gear) → `/app/settings` | |
+| T0A2 | **Export** tab → download **Products** CSV → open in Excel (UTF-8, header row) | |
+| T0A3 | **Business** → add category (e.g. Snacks) → Save → **Products → New** | Category in dropdown + filters |
+| T0A4 | New product: **Opening qty** on create only → **Stock** tab on Home | Opening / on-hand visible |
+| T0A5 | **Stock** tab in Settings → enable **Allow stock adjustment** → Save | Drawer → Stock adjustment entry |
+| T0A6 | Stock adjustment +5 on a SKU → Home **Stock** tab | On-hand +5 |
+| T0A7 | **Rows per page** (e.g. 20) → Save | Lists paginate consistently |
+| T0A8 | VAT registered + VAT number → sales bill **Print** | Title **TAX INVOICE** |
+| T0A9 | Toggle **district/province on bill** → print | District appears only when on |
+| T0A10 | Login / branding | **BikriKhata** on login screen | |
 
 ---
+
+### 3.0b Phase 0 — Tier B (MAN-T0B)
+
+Migration **0024**. Automated: `npm run e2e:tier-b` (+ `:live` includes oversell RPC).
+
+| # | Step | Pass |
+|---|------|------|
+| T0B1 | Product form → **Back** → previous screen (not blank) | |
+| T0B2 | Settings → **Back** | |
+| T0B3 | VAT registered ON, address incomplete → **Save blocked** with clear message | |
+| T0B4 | VAT registered ON, address + VAT number filled → Save OK | |
+| T0B5 | Sale over customer **credit limit** → **warning**; bill can still save if you proceed | |
+| T0B6 | Sale qty **greater than on-hand** → error; bill not saved (0024) | |
+| T0B7 | Notifications bell → tap overdue / low-stock items | Opens correct screen (e.g. stock tab for low stock) |
+| T0B8 | Edit existing bill: change qty within stock | Saves via `update_sales_bill` |
+
+---
+
+### 3.0c Phase 0 — Tier C (MAN-T0C)
+
+Migrations **0025** (optional), **0026** (customer tax). Automated: `npm run e2e:tier-c` / `npm run e2e:phase0`.
+
+| # | Step | Pass |
+|---|------|------|
+| T0C1 | Bottom tabs: **Home · Customers · Inventory · Reports**; centre **+** entry sheet | |
+| T0C2 | **Customers** tab → `/app/home?tab=customers`; **Inventory** → `?tab=stock` | |
+| T0C3 | Header **☰** drawer: **Masters**, **Entry**, **Reports**, **Support** links work | |
+| T0C4 | `/app/more` → redirects to **Reports** | |
+| T0C5 | **Help & support** — BikriKhata (platform) contact; not shop retail helpline | |
+| T0C6 | **No Support tab** in Settings (help only via menu) | |
+| T0C7 | Home: **date (EN + BS)**, green **Sales invoice**, **Customers \| Stock** tabs, search/filters | |
+| T0C8 | Customer form: optional **PAN / VAT** → save → print bill with customer | |
+| T0C9 | Bill detail: **Share** (outline) + Print + PDF; **Collect** green when balance due | |
+| T0C10 | **Products** / **Suppliers** masters: same **Add** button style ([UI_CONSISTENCY_PLAN](../UI_CONSISTENCY_PLAN.md)) | |
+
+---
+
+### 3.0d Navigation & shell (MAN-NAV) — cross-tier
+
+| # | Step | Pass |
+|---|------|------|
+| NAV1 | Bottom **Home** highlights on `/app/home` (no tab query) | |
+| NAV2 | From customer detail → back → sensible screen | |
+| NAV3 | Reports hub links (outstanding, dashboard, company, export hint) | |
+| UI1 | New form pages use **FormPageHeader** + **PageBackLink** where expected | |
+
+---
+
 
 ### 3.1 Auth & tenant (MAN-AUTH)
 
@@ -138,7 +222,8 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 | STab3 | **Business** → **Rows per page** (e.g. 20) → Save | Applies to customers, products, stock, suppliers — not stock-only |
 | STab3b | **New product** → category **Add** (e.g. “Beverages”) | Category in dropdown + filters; no Settings step |
 | STab4 | **Stock** tab → stock adjustment toggle → Save | Menu → Masters shows Stock adjustment when enabled |
-| STab6 | Menu → **Help & support** (`/app/support`) | Phone, email, WhatsApp from app config |
+| STab6 | Menu → **Help & support** (`/app/support`) | Phone, email, WhatsApp from `PLATFORM_SUPPORT` in app config |
+| STab7 | Settings tabs: **no Support tab** (Tier C) | Only Business, Bills & VAT, Stock, Export |
 | STab5 | VAT registered + VAT number → print sales bill title **TAX INVOICE** | |
 | STab5b | PAN only (not VAT) → print sales bill title **SALES INVOICE** | |
 | STab5b | Bill letterhead: **Address line 1** only by default; **VAT/PAN** + **Ph** right | Toggle “Include district and province on invoices” to add admin line |
@@ -178,7 +263,8 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| C1 | Customers → New: name, phone, area, address, credit limit | Saves; list shows customer |
+| C1 | **Home → Customers tab** or drawer → Customers → New: name, phone, area, address, credit limit | Saves; appears in Home list |
+| C1b | Optional **PAN** and **VAT** on customer form → Save | Values in `customers`; print on bill when set |
 | C2 | Customer detail → **Edit** → change name | Saves; detail and sale picker updated |
 | C3 | Filter “with balance” if available | Only outstanding &gt; 0 |
 | C4 | Customer detail → outstanding, bill history | Matches Supabase `v_customer_balance` / bills |
@@ -244,11 +330,14 @@ open     = total − paid
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| B1 | Open bill from home/customer | Lines, totals, paid, balance correct |
-| B2 | Print from bill detail | Layout readable; footer text correct |
-| B3 | Return button | Opens return with customer + bill pre-filled |
-| B4 | Pay button (if balance &gt; 0) | Opens payment with customer |
-| B5 | Paid bill: no pay button / edit behaviour | Consistent with status |
+| B1 | Open bill from Home customer row / customer detail | Lines, totals, paid, balance correct |
+| B2 | **Share** (mobile: system sheet; desktop: PDF download toast) | PDF readable |
+| B3 | **Print** and **PDF** buttons (outline style) | Same bill content |
+| B4 | **Collect · NPR …** (green) when balance &gt; 0 | Opens payment with customer |
+| B5 | **Return** (outline) | Return form with customer + bill |
+| B6 | **Edit** when not fully paid | Sale edit opens |
+| B7 | Paid bill: Collect hidden; behaviour consistent | |
+| B8 | Print layout | Footer, VAT title, customer PAN/VAT if set |
 
 ---
 
@@ -304,9 +393,10 @@ open     = total − paid
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| ST1 | Note product X closing stock | Record number |
-| ST2 | After sale/purchase/return/damage sequence | `closing = opening + purchased − sold − damaged + returned` |
-| ST3 | Compare Stock page vs `v_stock` in Supabase | Match |
+| ST1 | Home → **Stock** tab: search, filters, export | Same browse pattern as Customers |
+| ST2 | Note product X closing stock | Record number |
+| ST3 | After sale/purchase/return/damage/adjustment sequence | `closing` matches movement |
+| ST4 | Compare Home Stock list vs `v_stock` in Supabase | Match |
 
 ---
 
@@ -333,27 +423,29 @@ open     = total − paid
 
 ---
 
-### 3.15 Home, overdue, aging (MAN-HOME)
+### 3.15 Home, browse, overdue (MAN-HOME)
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| H1 | Home KPIs load | No infinite loading |
-| H2 | Tap overdue / aging bucket | Correct list of customers/bills |
-| H3 | Notification bell | Panel opens; tap item navigates (if link exists) |
-| H4 | Quick **Sales invoice** | Opens sale entry |
-| H5 | **Export all (N)** on browse card | CSV has every **filtered** row, not only current page; N = match count |
-| H5b | Settings → **Business** → **Rows per page** 20 → Home customers | List shows 20 per page; export still all filtered |
-| H5c | Stock low-stock banner **Show list** | Not comma name wall |
+| H1 | Home loads: date row + green **Sales invoice** | No infinite loading |
+| H2 | **Customers** tab: search, Status, Area filters | List updates; **Clear ›** on zero balance rows |
+| H3 | **Stock** tab: search, low-stock filter | SKUs match `v_stock` |
+| H4 | Drawer or Reports → **Outstanding / Overdue / Aging** | Correct lists |
+| H5 | Notification bell | Panel opens; links work (Tier B) |
+| H6 | **Export all (N)** on browse card | CSV = all **filtered** rows, not one page only |
+| H7 | Settings **Rows per page** → Home list pagination | Page size applies |
 
 ---
 
-### 3.16 Dashboard & reports (MAN-RPT)
+### 3.16 Reports hub & dashboard (MAN-RPT)
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| RP1 | Dashboard `/app/dashboard` | Loads without crash |
-| RP2 | Company overview net worth | Plausible vs manual calc |
-| RP3 | Supplier ledger link from More | Opens period/supplier view |
+| RP1 | Bottom **Reports** or `/app/reports` | Hub lists links (dashboard, outstanding, company, …) |
+| RP2 | Dashboard `/app/dashboard` | Loads without crash |
+| RP3 | Company overview net worth | Plausible vs manual calc |
+| RP4 | Supplier ledger from hub/drawer | Opens period/supplier view |
+| RP5 | **Help & support** from drawer only | Not under Settings tabs |
 
 ---
 
@@ -371,9 +463,9 @@ open     = total − paid
 
 | # | Action |
 |---|--------|
-| 1 | Login |
+| 1 | Login → Home **Customers** tab visible |
 | 2 | Change settings footer → save |
-| 3 | Add customer |
+| 3 | Add customer from Home tab or Products master |
 | 4 | Add product |
 | 5 | New sale (credit with due date) |
 | 6 | Payment on bill |
@@ -428,12 +520,17 @@ After manual flows, spot-check in **Table Editor**:
 
 ## 6. Sign-off
 
-| Suite | Automated (`e2e:full`) | Manual (this doc) | Tester | Date |
-|-------|------------------------|-------------------|--------|------|
-| API matrix 45 checks | ☐ | — | | |
-| UI script ~20 steps | ☐ | — | | |
+| Suite | Automated | Manual (this doc) | Tester | Date |
+|-------|-----------|-------------------|--------|------|
+| Phase 0 `e2e:phase0` | ☐ | — | | |
+| Phase 0 `e2e:phase0:live` | ☐ | — | | |
+| §3.0a Tier A (T0A1–T0A10) | — | ☐ | | |
+| §3.0b Tier B (T0B1–T0B8) | — | ☐ | | |
+| §3.0c Tier C (T0C1–T0C10) | — | ☐ | | |
+| API matrix (`e2e:matrix`) | ☐ | — | | |
+| UI script (`e2e:ui`) | ☐ | — | | |
 | Gaps G1–G30 | — | ☐ | | |
-| Full manual §3 | — | ☐ | | |
+| Full manual §3 (all modules) | — | ☐ | | |
 
 **Notes / bugs found:**
 
@@ -443,17 +540,24 @@ After manual flows, spot-check in **Table Editor**:
 
 ---
 
-## 7. When Phase 2 lands — retest
+## 7. When new features ship — retest
 
-Include **data export** (Phase 2-E, when built): Settings → Export hub, date-range CSV, full ZIP backup — see [DATA_EXPORT_SPEC.md](../DATA_EXPORT_SPEC.md).
+**Rule:** Add manual rows to §2 + §3 (and e2e scripts) in the **same PR** as the feature.
 
-- [ ] Bill edit + `sales_bill_audit` history  
-- [ ] Supplier New UI  
+### Phase 1+ (planned)
+
+- [ ] UI-1 full symmetry pass — extend §3.0d UI1 + [UI_CONSISTENCY_PLAN](../UI_CONSISTENCY_PLAN.md)
+- [ ] Sales orders / salesman (SF-0, ORD-*) — new §3.xx
+- [ ] Bill edit audit history  
 - [ ] Live daily cash + schemes tables  
-- [ ] Live notifications  
+- [ ] Live notifications DB  
 - [ ] Capital edit + audit history UI  
+- [ ] Data export P1 (`.xlsx` pack) — [DATA_EXPORT_SPEC.md](../DATA_EXPORT_SPEC.md)
 
-Update this file when those features ship.
+### Phase 2
+
+- [ ] Full backup / restore (IMP-0/2)  
+- [ ] Parent/child categories (CAT-1)
 
 ---
 

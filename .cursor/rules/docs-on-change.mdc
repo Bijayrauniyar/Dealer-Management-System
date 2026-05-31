@@ -13,8 +13,8 @@ When you **change app behavior**, **add a feature**, **add/alter a migration**, 
 2. **Update mapped docs** (below) — remove stale text (e.g. removed UI, old flows).
 3. **Migrations** — add step to `app/supabase/README.txt`; note in `docs/backend/phase1-use-cases-and-tests.md` pre-flight if tests need it.
 4. **Changelog** — one bullet in `docs/LLM_CONTEXT.md` (newest first, date + what changed).
-5. **Tests** — extend `app/scripts/e2e-*.mjs` when behavior is testable in source/live checks.
-6. **Manual QA** — add/adjust rows in `docs/backend/phase1-manual-e2e-checklist.md` for new screens or flows.
+5. **Tests** — extend or update `app/scripts/e2e-*.mjs` in the **same PR** when behavior is testable (source grep, routes, live RPC/DB). Do not change Tier A/B/C/UI/patterns code without touching the matching e2e script (see table below).
+6. **Manual QA** — add/adjust rows in `docs/backend/phase1-manual-e2e-checklist.md` (§2 catalog + §3 steps + §1 Gaps if needed); keep `YOUR_TURN_PHASE0_TIER_*.md` in sync only for short sign-off lists.
 
 ## Doc map (what to touch)
 
@@ -29,8 +29,23 @@ When you **change app behavior**, **add a feature**, **add/alter a migration**, 
 | GTM / pricing / ICP / VAT·IRD / stock model | `docs/GTM_NEPAL.md` (§5 VAT/IRD, stock model) + `PRODUCT_EVOLUTION.md` |
 | Deferred / future work only | `docs/DEFERRED_WORK.md` or `BACKEND-TODO.md` — not LLM_CONTEXT unless shipped |
 | New `npm run e2e:*` script | `docs/backend/phase1-use-cases-and-tests.md`, project `README.md` if user-facing |
+| Phase 0 Tier A (export, categories, stock adj., settings tabs) | `e2e-tier-a.mjs` (+ `:live`), `e2e-export.mjs` if export-only; README **0019–0023** |
+| Phase 0 Tier B (oversell 0024, back link, VAT/credit, notifications) | `e2e-tier-b.mjs` (+ `:live` → `e2e:stock:live`); manual checklist |
+| Phase 0 Tier C (shell, support, Share, Home tabs, 0025/0026) | `e2e-tier-c.mjs` (+ `:live`); `YOUR_TURN_PHASE0_TIER_C.md` QA rows |
+| UI chrome (`patterns.tsx`, `PageActionBar`, `ListPageHeader`, buttons) | `e2e-tier-c.mjs` and/or `UI_CONSISTENCY_PLAN.md`; run `npm run e2e:phase0` before release |
+| Any Phase 0 change | Prefer `npm run e2e:phase0` (or `e2e:phase0:live` if DB/RPC touched); update manual §3.0a–c — see `phase1-use-cases-and-tests.md` |
+| New screen / flow / behaviour change | `docs/backend/phase1-manual-e2e-checklist.md` §2 + §3 (+ §7 backlog if Phase 1+) |
 
 Hub index: `docs/README.md` — add a link when you add a new top-level doc.
+
+## E2E sync rule (required)
+
+When you **add, remove, or rename** user-visible behavior, routes, migrations, or shared UI components:
+
+1. Find the script in the table above (or add a new `e2e-*.mjs` + document it).
+2. **Add** a `r.pass` / live check for new behavior; **update** greps/labels when copy or paths change; **delete** obsolete checks when features are removed.
+3. Run the relevant npm script locally (`e2e:phase0` covers A+B+C source gates).
+4. Update manual checklist rows if scripts cannot cover the flow (browser-only UX).
 
 ## Style
 

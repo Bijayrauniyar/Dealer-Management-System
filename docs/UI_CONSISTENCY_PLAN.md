@@ -72,12 +72,27 @@
 
 ---
 
+## When you change UI — update tests (required)
+
+Same rule as [phase1-use-cases-and-tests.md § Keeping tests in sync](backend/phase1-use-cases-and-tests.md#keeping-tests-in-sync-required-on-every-change):
+
+| You change… | Update… | Run |
+|-------------|---------|-----|
+| `patterns.tsx` or a page that should use it | `e2e-tier-c.mjs` (source greps for component names / routes) | `npm run e2e:tier-c` |
+| `PageActionBar` or bill detail actions | `e2e-tier-c.mjs` (`BillDetailPage` Share/Collect labels) | `npm run e2e:tier-c` |
+| Any list/form chrome migration | `e2e-tier-c.mjs` + manual checklist **UI1** | `npm run e2e:phase0` |
+
+Remove obsolete greps when you delete a feature (e.g. old “WhatsApp” label). Add a new `r.pass` when you add a route or button.
+
+---
+
 ## Acceptance
 
 1. New pages import from `patterns.tsx` / `Button` — no ad-hoc teal button classes.
 2. List pages: same header (title + Add), same browse card (`ListBrowsePanel`).
 3. Form pages: same header block (`FormPageHeader`).
 4. Bill / form footers use `PageActionBar` or `StickyBar` only.
+5. Matching e2e script updated and `e2e:phase0` passes before merge.
 
 ---
 

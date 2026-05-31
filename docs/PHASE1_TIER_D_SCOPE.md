@@ -54,6 +54,8 @@ Use `app/src/components/app/patterns.tsx` + existing `Button` / `ListBrowsePanel
 
 **Remaining:** payment/purchase/return/expense/damage/scheme/capital/product form headers; dashboard/reports hub cards; settings segment control; audit `bg-teal-600` in `pages/`.
 
+**Tests:** Each UI-1 page migration → update `e2e-tier-c.mjs` (or new check in `patterns` section) + run `npm run e2e:phase0`. See [phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md#keeping-tests-in-sync-required-on-every-change).
+
 ---
 
 ## How to start Phase 1 in this repo

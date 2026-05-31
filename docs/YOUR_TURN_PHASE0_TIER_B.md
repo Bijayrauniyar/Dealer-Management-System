@@ -24,10 +24,13 @@
 | `npm run e2e:smoke` | [x] |
 | `npm run e2e:stock` | [x] |
 | `npm run e2e:stock:live` (47/47) | [x] |
+| `npm run e2e:tier-b` / `e2e:tier-b:live` | [x] optional gate |
 
 ---
 
 ## 3. Manual QA — done
+
+Full checklist: **[phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.md)** §3.0b (T0B1–T0B8). Quick list:
 
 | # | Test | Pass |
 |---|------|------|

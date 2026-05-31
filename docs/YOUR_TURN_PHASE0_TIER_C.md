@@ -19,6 +19,8 @@ Run in SQL Editor (see [`app/supabase/README.txt`](../app/supabase/README.txt)):
 
 ## 2. Manual QA (≈15 min)
 
+Full step-by-step list: **[phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.md)** §3.0c (T0C1–T0C10). Quick tick list:
+
 | # | Test | Pass? |
 |---|------|-------|
 | 1 | Bottom tabs: **Home · Customers · Inventory · Reports** + centre **+** | ☐ |
@@ -28,7 +30,7 @@ Run in SQL Editor (see [`app/supabase/README.txt`](../app/supabase/README.txt)):
 | 5 | Help only via menu → **Help & support** (not in Settings tabs) | ☐ |
 | 6 | Bill detail: **Share** button — system share sheet (WhatsApp, email, etc.) or PDF download | ☐ |
 | 7 | Customer form: optional PAN/VAT; prints on bill when filled (after 0026) | ☐ |
-| 8 | Home: outstanding card + shortcuts only (no duplicate customer/stock tabs) | ☐ |
+| 8 | Home: date + Sales invoice + Customers/Stock tabs + browse lists | ☐ |
 
 ---
 
@@ -39,7 +41,20 @@ Run in SQL Editor (see [`app/supabase/README.txt`](../app/supabase/README.txt)):
 
 ---
 
-## 4. Deploy
+## 4. Automated checks (optional)
+
+From `app/`:
+
+```bash
+npm run e2e:phase0        # Tier A + B + C source
+npm run e2e:phase0:live   # + DB checks (needs .e2e-credentials.local)
+```
+
+Or per tier: `e2e:tier-a`, `e2e:tier-b`, `e2e:tier-c` (add `:live` for DB).
+
+**After any Tier C (or shell/UI) code change:** update `app/scripts/e2e-tier-c.mjs` in the same commit and re-run `e2e:phase0`. See [phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md#keeping-tests-in-sync-required-on-every-change).
+
+## 5. Deploy
 
 - `npm run build` in `app/`
 - Deploy to Netlify (or your host) after prod migrations.

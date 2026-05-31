@@ -394,6 +394,9 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ feat
 - **2026-05-26** — **Phase 0 Tier A signed off** (migrations 0019–0023, export e2e, manual QA) — see [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md).
 - **2026-05-26** — **Copy pass:** Removed dev/Supabase/migration wording from user-facing screens; shortened Help, Settings, Reports, Export, and form hints.
 - **2026-05-26** — **Support UX:** Help via menu only (`/app/support`, `PLATFORM_SUPPORT`); removed Settings Support tab.
+- **2026-05-26** — Manual E2E master checklist: Phase 0 §3.0a–c (Tier A/B/C), maintenance policy, sign-off table; links from YOUR_TURN tier docs.
+- **2026-05-26** — Policy: Phase 0 / UI changes must update matching `e2e-tier-*.mjs` + manual checklist (docs-on-change + phase1-use-cases § Keeping tests in sync).
+- **2026-05-26** — E2E Phase 0: `e2e:tier-a|b|c`, `e2e:phase0` (+ `:live`) for Tier A/B/C gates.
 - **2026-05-26** — Bill detail: Share/Print/PDF/Return **secondary**; **Collect** only **primary** green when balance due.
 - **2026-05-26** — **UI-1 (Phase 1):** `patterns.tsx` (`ListPageHeader`, `FormPageHeader`, `SegmentedTabs`, `InfoCallout`, …); migrated Home/Products/Suppliers/Support/Customer form/Sale entry; todo in [PHASE1_TIER_D_SCOPE.md](PHASE1_TIER_D_SCOPE.md).
 - **2026-05-26** — UI consistency plan [UI_CONSISTENCY_PLAN.md](UI_CONSISTENCY_PLAN.md); `PageActionBar` + bill detail uses shared `Button` variants.

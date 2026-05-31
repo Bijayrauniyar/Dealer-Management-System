@@ -18,6 +18,8 @@ Update docs in the **same change** as code — do not leave README/schema/UI doc
 | Settings fields | `data-model.md` (§ `tenant_settings`), manual checklist § Settings |
 | User-facing flow | [`LLM_CONTEXT.md`](LLM_CONTEXT.md) changelog + manual checklist row |
 | Buttons / page chrome / action bars | [`UI_CONSISTENCY_PLAN.md`](UI_CONSISTENCY_PLAN.md) |
+| Phase 0 e2e (Tier A/B/C) | [`backend/phase1-use-cases-and-tests.md`](backend/phase1-use-cases-and-tests.md) § Keeping tests in sync; `npm run e2e:phase0` |
+| Manual QA (all features) | [`backend/phase1-manual-e2e-checklist.md`](backend/phase1-manual-e2e-checklist.md) — **master**; update §2+§3 on every feature change |
 | GTM / pricing / ICP / VAT·IRD | [`GTM_NEPAL.md`](GTM_NEPAL.md) — §5 compliance checklist + revision log |
 | Full backup + import + restore | [`DEFERRED_WORK.md`](DEFERRED_WORK.md) (**IMP-0/1/2** Phase 2), [`DATA_EXPORT_SPEC.md`](DATA_EXPORT_SPEC.md) |
 | Product name (pick one) | [`BRAND_NAME_OPTIONS.md`](BRAND_NAME_OPTIONS.md) → then `app/src/config/productBrand.ts` |
