@@ -21,7 +21,7 @@ Update docs in the **same change** as code — do not leave README/schema/UI doc
 | Full backup + import + restore | [`DEFERRED_WORK.md`](DEFERRED_WORK.md) (**IMP-0/1/2** Phase 2), [`DATA_EXPORT_SPEC.md`](DATA_EXPORT_SPEC.md) |
 | Product name (pick one) | [`BRAND_NAME_OPTIONS.md`](BRAND_NAME_OPTIONS.md) → then `app/src/config/productBrand.ts` |
 | Bill print letterhead (IRD layout) | [`IRD_BILL_LETTERHEAD.md`](IRD_BILL_LETTERHEAD.md) |
-| Launch phases 0–3 | [`PHASE_ROADMAP.md`](PHASE_ROADMAP.md) — **Tier A done**; **next: Tier B** |
+| Launch phases 0–3 | [`PHASE_ROADMAP.md`](PHASE_ROADMAP.md) — **Tier A + B done**; **next: Tier C / Phase 1** |
 | Phase 0 Tier A sign-off | [`YOUR_TURN_PHASE0_TIER_A.md`](YOUR_TURN_PHASE0_TIER_A.md) |
 | Phase 0 Tier B (Gemma copy-paste) | [`PHASE0_TIER_B_DELEGATION.md`](PHASE0_TIER_B_DELEGATION.md) |
 | Phase 0 Tier B sign-off | [`YOUR_TURN_PHASE0_TIER_B.md`](YOUR_TURN_PHASE0_TIER_B.md) |

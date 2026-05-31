@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](README.md) · [GTM Nepal](GTM_NEPAL.md) · [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) · [Deferred work](DEFERRED_WORK.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Backend checklist](backend/BACKEND-TODO.md)
 
-**Status:** Living launch plan. **Tier A signed off (2026-05-26).** **Tier B QA + 0024 signed off (2026-05-26)** — **deploy to Netlify `main` pending** ([YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md)). **Next after deploy:** Tier C or Phase 1 per §7.
+**Status:** Living launch plan. **Phase 0 Tier A + Tier B signed off (2026-05-26)** — migrations **0019–0024**, production deploy. **Next:** Tier C or Phase 1 per §7 ([YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md)).
 
 **Last updated:** 2026-05-26 · [Tier A](YOUR_TURN_PHASE0_TIER_A.md) · [Tier B](YOUR_TURN_PHASE0_TIER_B.md)
 
@@ -27,7 +27,7 @@
 
 ## 2. Already shipped (demo today)
 
-Use this list in sales demos. **Tier A** items below are shipped; **Tier B** gaps called out.
+Use this list in sales demos. **Tier A + Tier B** items below are shipped unless marked Tier C / Phase 1.
 
 
 | Area | Shipped |
@@ -43,8 +43,8 @@ Use this list in sales demos. **Tier A** items below are shipped; **Tier B** gap
 | Export — registers + VAT summary + **partial** backup ZIP | ✓ |
 | Branding — **BikriKhata** ([bikrikhata.com](https://bikrikhata.com)) | ✓ |
 | Nav | Bottom **Home / + / More**; full side drawer → **Tier C** |
-| DB oversell | RPC allows → **Tier B** INV-1 |
-| Credit limit | Form only → **Tier B** CRED-0 |
+| DB oversell | Blocked in RPC (**0024**) — **Tier B done** |
+| Credit limit | Warning on sale (**CRED-0**) — **Tier B done** |
 
 
 **Touchpoints:** `AppShell.tsx`, `SettingsPage.tsx`, `ExportSection.tsx`, `productBrand.ts`, `BillLetterhead.tsx`.
@@ -88,19 +88,16 @@ Signed off: migrations **0019–0023**, `deploy:check`, `e2e:export`, manual QA 
 
 **Also:** list page size (0022), bill address toggle (0023), IRD letterhead, header Online pill removed.
 
-#### Tier B — Should (Phase 0) — **next**
-
-Target before ~10 paying tenants.
+#### Tier B — Should (Phase 0) — **signed off (2026-05-26)**
 
 | ID | Item | Status |
 |----|------|--------|
-| **INV-0 / INV-1** | DB oversell guard | **Backlog** |
-| **CRED-0** | Credit limit enforce or hide | **Backlog** |
-| **VAT-0b** | Settings validation: address + tax id when VAT bills | **Backlog** |
+| **INV-1** | DB oversell guard (`0024`) | **Done** |
+| **CRED-0** | Credit limit warning (no block) | **Done** |
+| **VAT-0b** | Settings validation when VAT registered | **Done** |
+| **UI-0.12** | Notifications QA | **Done** |
+| **UI-0.9** | `PageBackLink` on inner pages | **Done** |
 | **UI-0.8 / UI-0.11** | Header Settings + tabbed Settings | **Done** (Tier A) |
-| **UI-0.12** | Notifications QA | **Backlog** |
-| **UI-0.9** | Consistent back button on inner pages | **Backlog** |
-| **F6, F7, F11** | CRED-0, INV-0, notifications QA | **Backlog** |
 
 #### Tier C — Nice (Phase 0)
 
@@ -223,8 +220,8 @@ Track 1 — Tier A (launch gate): **complete**
   4. ~~Perf (PERF-0) + Tax Invoice + invoice naming~~
   5. ~~Minimal UI: Settings icon + tabbed Settings~~
 
-Track 2 — Tier B (before ~10 tenants):
-  6. INV-1 + credit limit + VAT settings validation + notifications QA
+Track 2 — ~~Tier B~~ **done (2026-05-26):**
+  6. ~~INV-1 + credit warn + VAT settings validation + notifications QA + PageBackLink~~
 
 Track 3 — Tier C (polish):
   7. Full side menu + bottom tabs + Support section + onboarding doc + WhatsApp prominence

@@ -6,7 +6,7 @@ Use this **one document** for everything scripts do **not** fully cover, plus st
 
 **Phase 0 Tier A (2026-05-26):** Signed off — see [`../YOUR_TURN_PHASE0_TIER_A.md`](../YOUR_TURN_PHASE0_TIER_A.md). Apply migrations **`0019`–`0023`** before §3.2 Settings / Export / stock tests.
 
-**Phase 0 Tier B (2026-05-26):** Apply migration **`0024`** — see [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md). Manual: Back link, VAT settings validation, credit warning, oversell RPC, notifications.
+**Phase 0 Tier B (2026-05-26):** Signed off — migration **`0024`**, deploy — [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md).
 
 **Companion (automated):** [`phase1-use-cases-and-tests.md`](./phase1-use-cases-and-tests.md)  
 **Run scripts first:** `npm run e2e:full` (needs `npm run dev` for UI part)
