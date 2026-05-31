@@ -120,12 +120,11 @@ export const DashboardPage = () => {
         <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <div className="flex items-center gap-1.5 rounded-lg bg-surface-card border border-border-subtle px-2 py-1">
           <Lock size={11} className="text-muted" />
-          <span className="text-xs text-muted">Private</span>
+          <span className="text-xs text-muted">Owner</span>
         </div>
       </div>
 
-      <h1 className="mb-1 text-lg font-bold text-foreground">Business Dashboard</h1>
-      <p className="mb-4 text-xs text-muted">This page contains sensitive financial data. Do not show to customers or staff.</p>
+      <h1 className="mb-4 text-lg font-bold text-foreground">Business Dashboard</h1>
 
       <div className="mb-4 flex items-center gap-2 rounded-xl bg-white border border-border-subtle px-3 py-2 shadow-card">
         <span className="text-xs font-medium text-muted">Period</span>
@@ -257,7 +256,7 @@ export const DashboardPage = () => {
         </CardContent>
       </Card>
 
-      <SectionHeader title="Top 5 customers (period)" onSeeAll={() => navigate("/app/customers")} className="mb-2" />
+      <SectionHeader title="Top 5 customers (period)" onSeeAll={() => navigate("/app/home?tab=customers")} className="mb-2" />
       <Card className="mb-5">
         <CardContent className="p-0 px-4">
           {topCustomers.length === 0 ? (

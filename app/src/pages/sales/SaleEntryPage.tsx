@@ -41,7 +41,7 @@ import {
 } from "@/lib/actionLabels";
 import { syncSchemeFreeLines, schemeHintForLine, type SaleDraftLine } from "@/lib/schemeApply";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader, InfoCallout, PreviewToolbar } from "@/components/app/patterns";
 
 type Line = SaleDraftLine;
 
@@ -239,7 +239,7 @@ export const SaleEntryPage = () => {
     const projected = customer.outstanding - priorBillBalance + balanceDue;
     if (projected > customer.creditLimit) {
       toast.warning("Credit limit exceeded", {
-        description: `Limit ${npr(customer.creditLimit)}, projected outstanding ${npr(projected)} after this bill.`,
+        description: `Limit ${npr(customer.creditLimit)} · after bill ${npr(projected)}`,
       });
     }
   };
@@ -391,32 +391,30 @@ export const SaleEntryPage = () => {
         <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm print:relative print:inset-auto print:bg-white print:block">
           <div className="bill-preview-chrome flex items-center justify-between bg-white px-4 py-3 shadow-sm shrink-0 print:hidden">
             <p className="text-sm font-semibold text-foreground">Bill preview</p>
-            <div className="flex gap-2">
-              <button
+            <PreviewToolbar>
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 disabled={exportingPreview}
                 onClick={() => printBill(buildSale().billNo || "Bill")}
-                className="flex items-center gap-1 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-muted hover:bg-slate-50 disabled:opacity-50"
               >
                 Print
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={exportingPreview}
                 onClick={() => void handlePreviewDownload()}
-                className="flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100 disabled:opacity-50"
               >
-                <Download size={13} />
+                <Download size={13} aria-hidden />
                 {exportingPreview ? "…" : "PDF"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrev(false)}
-                className="flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white"
-              >
-                <X size={13} /> Close
-              </button>
-            </div>
+              </Button>
+              <Button type="button" size="sm" onClick={() => setPrev(false)}>
+                <X size={13} aria-hidden /> Close
+              </Button>
+            </PreviewToolbar>
           </div>
           <div className="bill-print-zone flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4 print:flex print:justify-center print:overflow-visible print:p-0">
             <BillPrintView sale={buildSale()} customer={customer} isPreview />
@@ -424,10 +422,9 @@ export const SaleEntryPage = () => {
         </div>
       )}
 
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-5 text-lg font-semibold">
-        {isEdit ? `Edit sales invoice ${editBillNo}` : "New sales invoice"}
-      </h1>
+      <FormPageHeader
+        title={isEdit ? `Edit sales invoice ${editBillNo}` : "New sales invoice"}
+      />
 
       <div className="space-y-4">
         {/* ── Bill header ── */}
@@ -657,9 +654,9 @@ export const SaleEntryPage = () => {
         </Card>
 
         {tenantVat && vatAmt > 0 && (
-          <p className="rounded-lg border border-teal-200/80 bg-teal-50/40 px-3 py-2 text-xs text-teal-900">
+          <InfoCallout>
             VAT {vatPct}% — {npr(vatAmt)} included in grand total. Rate is set under Settings → Bills & VAT.
-          </p>
+          </InfoCallout>
         )}
 
         {/* ── Payment now (new bills only — use Payments screen to collect on issued bills) ── */}
@@ -668,8 +665,8 @@ export const SaleEntryPage = () => {
             <p className="text-sm font-medium text-foreground">Payment received now</p>
             {isEdit ? (
               <p className="text-xs text-muted rounded-lg bg-slate-50 border border-border-subtle px-3 py-2">
-                Already recorded on this bill: <strong className="text-foreground">{npr(recordedPaid)}</strong>.
-                To add more, use <strong>Collect</strong> on the bill detail screen.
+                Paid on this bill: <strong className="text-foreground">{npr(recordedPaid)}</strong>. Use{" "}
+                <strong>Collect</strong> on the bill to add more.
               </p>
             ) : (
               <FormField label="Amount received (NPR)" hint={`Grand total: ${npr(grandTotal)} · 0 = credit`}>

@@ -46,7 +46,8 @@ Expect 4 columns + 1 RPC row.
 ```bash
 cd app
 npm run deploy:check
-npm run e2e:export
+npm run e2e:tier-a
+# or: npm run e2e:export
 npm run e2e:suppliers
 npm run e2e:bill
 ```
@@ -64,6 +65,8 @@ Paste any failing output to the agent (one message per failure).
 ---
 
 ## 3. Manual UI (~20 min)
+
+Full checklist: **[phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.md)** §3.0a (T0A1–T0A10). Quick list:
 
 | # | Do | Pass |
 |---|-----|------|

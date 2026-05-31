@@ -391,7 +391,7 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ## 12. Changes needed in existing product (checklist)
 
-> **Canonical launch checklist:** [PHASE_ROADMAP.md](PHASE_ROADMAP.md). **Tier A complete (2026-05-26)** — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md). **Next: Tier B.**
+> **Canonical launch checklist:** [PHASE_ROADMAP.md](PHASE_ROADMAP.md). **Tier A + Tier B complete (2026-05-26)** — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md), [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md). **Next: Tier C / Phase 1.**
 
 Before heavy AI or van modules:
 
@@ -403,14 +403,14 @@ Before heavy AI or van modules:
 - [x] Tenant-configurable categories (flat — `0019`)
 - [ ] Parent/child categories (**CAT-1**, Phase 1) · tree UI (**CAT-2**, Phase 2)
 - [x] Paginate `sales_bills` / lighter shell load (PERF-0)
-- [ ] Credit limit enforce or hide — **Tier B** CRED-0
-- [ ] INV-1 oversell in RPC — **Tier B**
+- [x] Credit limit warning on sale (no block) — **Tier B** CRED-0
+- [x] INV-1 oversell in RPC — **Tier B** **0024**
 - [ ] Purchase PDF/print parity with sales bill (if missing)
 - [ ] Onboarding doc for tenant — **Tier C** ONB-0
 - [x] Stock adjustment RPC + UI + Settings toggle (0020–0021)
 - [x] VAT bill: **Tax Invoice** when VAT registered
 - [ ] Optional customer **VAT number** on bill (B2B) — Tier C
-- [ ] Settings: require address + tax id when VAT registered — **Tier B** VAT-0b
+- [x] Settings: require address + tax id when VAT registered — **Tier B** VAT-0b
 
 ---
 

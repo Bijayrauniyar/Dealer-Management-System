@@ -20,15 +20,14 @@ import { ExpensePage } from "@/pages/expense/ExpensePage";
 import { DailyCashPage } from "@/pages/daily-cash/DailyCashPage";
 import { SchemePage } from "@/pages/scheme/SchemePage";
 import { ProductsPage } from "@/pages/products/ProductsPage";
-import { CustomersPage } from "@/pages/customers/CustomersPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { CustomerFormPage } from "@/pages/customers/CustomerFormPage";
 import { SuppliersPage } from "@/pages/suppliers/SuppliersPage";
 import { SupplierFormPage } from "@/pages/suppliers/SupplierFormPage";
 import { SupplierInvoicesPage } from "@/pages/suppliers/SupplierInvoicesPage";
-import { StockPage } from "@/pages/stock/StockPage";
 import { StockAdjustmentPage } from "@/pages/stock/StockAdjustmentPage";
-import { MorePage } from "@/pages/more/MorePage";
+import { ReportsHubPage } from "@/pages/reports/ReportsHubPage";
+import { SupportPage } from "@/pages/support/SupportPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
 import { CompanyOverviewPage } from "@/pages/company/CompanyOverviewPage";
 import { CapitalListPage } from "@/pages/company/CapitalListPage";
@@ -78,20 +77,22 @@ const AppRoutesInner = () => (
       <Route path="products/new" element={<ProductFormPage />} />
       <Route path="products/edit/:productId" element={<ProductFormPage />} />
       <Route path="products/:productId" element={<ProductDetailPage />} />
-      <Route path="customers" element={<CustomersPage />} />
       <Route path="customers/new" element={<CustomerFormPage />} />
       <Route path="customers/edit/:customerId" element={<CustomerFormPage />} />
       <Route path="customers/:id" element={<CustomerDetailPage />} />
+      <Route path="customers" element={<Navigate to="/app/home?tab=customers" replace />} />
       <Route path="suppliers" element={<SuppliersPage />} />
       <Route path="suppliers/new" element={<SupplierFormPage />} />
       <Route path="suppliers/edit/:supplierId" element={<SupplierFormPage />} />
       <Route path="suppliers/:supplierId/invoices" element={<SupplierInvoicesPage />} />
-      <Route path="stock" element={<StockPage />} />
       <Route path="stock-adjustment/new" element={<StockAdjustmentPage />} />
+      <Route path="stock" element={<Navigate to="/app/home?tab=stock" replace />} />
       <Route path="company" element={<CompanyOverviewPage />} />
       <Route path="capital" element={<CapitalListPage />} />
       <Route path="capital/new" element={<CapitalEntryPage />} />
-      <Route path="more" element={<MorePage />} />
+      <Route path="reports" element={<ReportsHubPage />} />
+      <Route path="support" element={<SupportPage />} />
+      <Route path="more" element={<Navigate to="/app/reports" replace />} />
       <Route path="settings" element={<SettingsPage />} />
     </Route>
 

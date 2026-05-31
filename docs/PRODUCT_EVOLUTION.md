@@ -6,7 +6,7 @@
 
 **Rule for prioritization:** If it does not fix daily ops, trust, or go-live for the **current or next dealer**, it waits.
 
-**Last updated:** 2026-05-26 · **Tier A signed off** — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md)
+**Last updated:** 2026-05-26 · **Tier A + Tier B signed off** — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md), [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md)
 
 ---
 
@@ -32,14 +32,14 @@ Verticals later (grocery, hardware, pharma-lite) share the **same core loop**; o
 | ~~Scheme screen lies~~ | ~~Fake save~~ | **Done** | Saves to `scheme_tracker`; **sales auto-apply** free lines (`schemeApply` + `SaleEntryPage`) |
 | **No data export** | Accountant still parallel Excel | **P1** | **Tier A done** — Settings → Export; full ZIP → IMP-0 |
 | **“Download my data”** | Only single-bill PDF | **P1** | Tier A partial ZIP + registers |
-| **Credit limit shown, not enforced** | Customer form has limit; sales never block | **P1 · Tier B** | CRED-0: enforce on save **or** hide limit |
+| ~~Credit limit shown, not enforced~~ | **Tier B done** — warning on sale; save still allowed | **Done** | CRED-0 warn-only |
 | **Edit bill without history** | `update_sales_bill` works; no audit list on bill | **P1** | Phase 2-D audit UI (accountant asks “who changed this?”) |
 
 ### B. Billing & stock (daily operations)
 
 | Pain | What happens today | Priority | Action |
 |------|-------------------|----------|--------|
-| **Sold out but bill still possible** | Picker blocks OOS on **new** lines; RPC allows oversell | **P1 · Tier B** | INV-1: DB oversell guard |
+| ~~Sold out but bill still possible~~ | **Tier B done** — RPC blocks oversell (`0024`) | **Done** | INV-1 |
 | **Backdated purchase ignored** | **Fixed** — `purchase_date` from form → RPC | Done | Keep testing on production |
 | **Backdated sale date** | **Works** — `bill_date` saved | Done | — |
 | **Backdated sale + stock confusion** | Picker uses **today’s** stock, not stock on bill date | **P2** | Deferred; train: enter purchases before old sales |
@@ -108,8 +108,8 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | ~~3~~ | **Product rebrand** (login, PWA) | **Done** — BikriKhata |
 | ~~4~~ | **Paginated sales / lighter load** | **Done** — PERF-0 |
 | ~~5~~ | **Opening stock + stock adjustment** | **Done** — STK-0* |
-| 6 | **Credit limit: enforce or hide** | **Tier B** — CRED-0 |
-| 7 | **DB oversell guard** | **Tier B** — INV-1 |
+| ~~6~~ | ~~Credit limit warning~~ | **Done** — Tier B CRED-0 |
+| ~~7~~ | ~~DB oversell guard~~ | **Done** — Tier B INV-1 **0024** |
 
 ### Next (when pilot is stable)
 

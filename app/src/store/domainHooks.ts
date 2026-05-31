@@ -336,6 +336,8 @@ export async function commitCustomer(input: {
   address: string;
   creditLimit: number;
   openingBalance?: number;
+  panNumber?: string;
+  vatNumber?: string;
 }): Promise<string> {
   return upsertCustomerLive({
     id: input.id,
@@ -345,6 +347,8 @@ export async function commitCustomer(input: {
     address: input.address,
     credit_limit: input.creditLimit,
     opening_balance: input.openingBalance,
+    pan_number: input.panNumber,
+    vat_number: input.vatNumber,
   });
 }
 

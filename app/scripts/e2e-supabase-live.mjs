@@ -76,6 +76,24 @@ const { data: products, error: pe } = await supabase.from("products").select("id
 if (pe) fail("products read", pe.message);
 else pass("products read", `${products?.length ?? 0} rows (RLS ok)`);
 
+for (const { name, run } of [
+  {
+    name: "0026 customers.pan_number,vat_number",
+    run: () => supabase.from("customers").select("pan_number, vat_number").limit(1),
+  },
+  {
+    name: "0025 tenant_settings.support_*",
+    run: () =>
+      supabase.from("tenant_settings").select("support_phone, support_email, support_whatsapp").limit(1),
+  },
+]) {
+  const { error } = await run();
+  if (error) {
+    const missing = /column|does not exist|Could not find/i.test(error.message);
+    fail(name, missing ? `migration not applied — ${error.message}` : error.message);
+  } else pass(name);
+}
+
 const { error: expErr } = await supabase.rpc("record_expense", {
   p_expense_date: new Date().toISOString().slice(0, 10),
   p_category: "Miscellaneous",

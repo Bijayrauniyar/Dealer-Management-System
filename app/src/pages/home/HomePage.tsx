@@ -1,12 +1,14 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ChevronRight, FilePlus } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ChevronRight, FilePlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SegmentedTabs } from "@/components/app/patterns";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
 import { ListPagination } from "@/components/app/ListPagination";
-import { useBusinessSettings, useCustomers, useProducts, useOutstandingBills, useSchemes } from "@/store/domain";
+import { useBusinessSettings, useCustomers, useProducts, useSchemes } from "@/store/domain";
 import { isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { pickBestScheme, productIdsWithActiveSchemes, schemeSummaryLabel } from "@/lib/schemeApply";
 import {
@@ -29,7 +31,7 @@ import {
 import { usePagination } from "@/lib/usePagination";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { SALES_INVOICE_LABEL } from "@/lib/actionLabels";
-import { npr, fmtDateDual, toDateInput } from "@/lib/utils";
+import { fmtDateDual, npr, toDateInput } from "@/lib/utils";
 import { toast } from "sonner";
 
 const TODAY = toDateInput();
@@ -38,28 +40,32 @@ type Tab = "customers" | "stock";
 type CustFilter = "all" | "overdue" | "dues";
 type StockFilter = "all" | "low" | "scheme";
 
+function tabFromSearch(raw: string | null): Tab {
+  return raw === "stock" ? "stock" : "customers";
+}
+
 export const HomePage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const business = useBusinessSettings();
   const OVERDUE_DAYS = business.overdueDays;
 
   const CUSTOMERS = useCustomers();
   const PRODUCTS = useProducts();
   const SCHEMES = useSchemes();
-  const OUTSTANDING_BILLS = useOutstandingBills();
 
-  const totalOutstanding = CUSTOMERS.reduce((s, c) => s + c.outstanding, 0);
-  const overdueCustomers = CUSTOMERS.filter(
-    (c) => c.oldestBillDays > OVERDUE_DAYS && c.outstanding > 0,
-  );
-  const openBillsCount = OUTSTANDING_BILLS.filter((b) => b.balance > 0).length;
   const schemeProductIds = useMemo(
     () => productIdsWithActiveSchemes(SCHEMES, TODAY),
     [SCHEMES],
   );
   const stockCategories = useMemo(() => productCategories(PRODUCTS), [PRODUCTS]);
 
-  const [tab, setTab] = useState<Tab>("customers");
+  const [tab, setTab] = useState<Tab>(() => tabFromSearch(searchParams.get("tab")));
+
+  useEffect(() => {
+    const next = tabFromSearch(searchParams.get("tab"));
+    setTab((prev) => (prev === next ? prev : next));
+  }, [searchParams]);
   const [search, setSearch] = useState("");
   const [custFilter, setCustFilter] = useState<CustFilter>("all");
   const [custArea, setCustArea] = useState("all");
@@ -146,7 +152,7 @@ export const HomePage = () => {
 
   const custAreaOptions = useMemo((): BrowseFilterOption[] => {
     const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All (${custSearchMatched.length})` },
+      { value: "all", label: `All areas (${custSearchMatched.length})` },
     ];
     for (const area of customerAreaList) {
       const n = custSearchMatched.filter((c) => (c.area ?? "").trim() === area).length;
@@ -183,80 +189,35 @@ export const HomePage = () => {
     setCustFilter("all");
     setCustArea("all");
     setStockFilter("all");
-    setStockCategory("all");
+    setSearchParams(t === "customers" ? {} : { tab: t }, { replace: true });
   };
 
   return (
     <PageShell>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground tabular-nums">{fmtDateDual(TODAY)}</p>
-        </div>
-        <button
+        <p className="min-w-0 text-sm font-semibold text-foreground tabular-nums leading-snug">
+          {fmtDateDual(TODAY)}
+        </p>
+        <Button
           type="button"
+          size="sm"
+          className="shrink-0 gap-1.5 shadow-sm"
           onClick={() => navigate("/app/sales/new")}
-          className="flex items-center gap-1.5 rounded-xl bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 active:bg-teal-800 transition-colors"
         >
-          <FilePlus size={15} /> {SALES_INVOICE_LABEL}
-        </button>
+          <FilePlus size={15} aria-hidden />
+          {SALES_INVOICE_LABEL}
+        </Button>
       </div>
 
-      {totalOutstanding > 0 && (
-        <button
-          type="button"
-          onClick={() => navigate("/app/home/outstanding")}
-          className="mb-4 w-full rounded-2xl border border-border-subtle bg-white shadow-card px-4 py-3 text-left"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                  overdueCustomers.length > 0 ? "bg-red-100" : "bg-amber-100"
-                }`}
-              >
-                <AlertTriangle
-                  size={16}
-                  className={overdueCustomers.length > 0 ? "text-danger" : "text-warning"}
-                />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">{npr(totalOutstanding)} outstanding</p>
-                <p className="text-xs text-muted">
-                  {openBillsCount} open bills ·{" "}
-                  {overdueCustomers.length > 0 ? (
-                    <span className="text-danger font-medium">{overdueCustomers.length} overdue</span>
-                  ) : (
-                    "all current"
-                  )}
-                </p>
-              </div>
-            </div>
-            <ChevronRight size={16} className="text-muted" />
-          </div>
-          {overdueCustomers.length > 0 && (
-            <p className="mt-2 text-xs text-danger font-medium">
-              {overdueCustomers.length} customer{overdueCustomers.length === 1 ? "" : "s"} overdue — tap to view
-            </p>
-          )}
-        </button>
-      )}
-
-      <div className="mb-3 flex rounded-xl bg-surface-card border border-border-subtle overflow-hidden">
-        {(["customers", "stock"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => handleTabChange(t)}
-            className={`flex-1 py-2.5 text-sm font-semibold capitalize transition-colors ${
-              tab === t ? "bg-teal-600 text-white" : "text-muted"
-            }`}
-          >
-            {t === "customers"
-              ? `Customers (${CUSTOMERS.length})`
-              : `Stock (${PRODUCTS.length} SKUs)`}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        className="mb-3"
+        value={tab}
+        onChange={handleTabChange}
+        options={[
+          { id: "customers", label: `Customers (${CUSTOMERS.length})` },
+          { id: "stock", label: `Stock (${PRODUCTS.length} SKUs)` },
+        ]}
+      />
 
       {tab === "customers" && (
         <>
@@ -318,34 +279,39 @@ export const HomePage = () => {
                         <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
                         <p className="text-xs text-muted">{c.area}</p>
                       </div>
-                      <div className="ml-3 flex flex-col items-end gap-1 shrink-0">
+                      <div className="ml-3 flex shrink-0 items-center gap-0.5">
                         {c.outstanding > 0 ? (
-                          <span
-                            className={`text-sm font-bold ${
-                              c.oldestBillDays > 7 ? "text-danger" : "text-warning"
-                            }`}
-                          >
-                            {npr(c.outstanding)}
-                          </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span
+                              className={`text-sm font-bold ${
+                                c.oldestBillDays > 7 ? "text-danger" : "text-warning"
+                              }`}
+                            >
+                              {npr(c.outstanding)}
+                            </span>
+                            <Badge
+                              variant={
+                                c.oldestBillDays > 30
+                                  ? "danger"
+                                  : c.oldestBillDays > 7
+                                    ? "warning"
+                                    : "teal"
+                              }
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {c.oldestBillDays}d
+                            </Badge>
+                          </div>
                         ) : (
-                          <span className="text-xs font-semibold text-success-foreground">Clear</span>
+                          <span className="flex items-center text-xs font-semibold text-teal-600">
+                            Clear
+                            <ChevronRight size={14} className="-mr-0.5" aria-hidden />
+                          </span>
                         )}
                         {c.outstanding > 0 && (
-                          <Badge
-                            variant={
-                              c.oldestBillDays > 30
-                                ? "danger"
-                                : c.oldestBillDays > 7
-                                  ? "warning"
-                                  : "teal"
-                            }
-                            className="text-[10px] px-1.5 py-0"
-                          >
-                            {c.oldestBillDays}d
-                          </Badge>
+                          <ChevronRight size={14} className="ml-1 shrink-0 text-muted" aria-hidden />
                         )}
                       </div>
-                      <ChevronRight size={14} className="ml-2 shrink-0 text-muted" />
                     </button>
                   ))}
                 </CardContent>

@@ -62,7 +62,7 @@ export const LoginPage = () => {
         >
           <div>
             <h2 className="text-xl font-semibold text-foreground">Sign in</h2>
-            <p className="mt-1 text-sm text-muted">Use your Supabase account email and password.</p>
+            <p className="mt-1 text-sm text-muted">Sign in with your email and password.</p>
           </div>
 
           <FormField label="Email" required>
@@ -99,7 +99,6 @@ export const LoginPage = () => {
           </p>
         </form>
 
-        <p className="mt-6 text-center text-xs text-muted">Google sign-in available later.</p>
       </div>
     </div>
   );

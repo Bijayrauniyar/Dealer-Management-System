@@ -63,6 +63,9 @@ One row per tenant — stores the full business profile that appears on invoices
 | allow_stock_adjustment | boolean DEFAULT false | Enables `/app/stock-adjustment/new` (`0021`). |
 | list_page_size | integer DEFAULT 10 | Rows per page on browse lists; Settings → Business tab (`0022`). Allowed: 10, 20, 50, 100. |
 | show_district_province_on_bill | boolean DEFAULT false | When true, bill letterhead adds district · province · country after address lines (`0023`). |
+| support_phone | text | Reserved (`0025`). **App support** for tenant owners = `PLATFORM_SUPPORT` in code, not these columns. |
+| support_email | text | Reserved (`0025`). |
+| support_whatsapp | text | Reserved (`0025`). |
 | updated_at | timestamptz | |
 
 > **FE note:** Loaded via `useBusinessSettings()` (React Query); invalidate `DOMAIN_QUERY_KEY` on save from Settings page.
@@ -82,7 +85,8 @@ One row per tenant — stores the full business profile that appears on invoices
 | phone | text | |
 | area | text | Short locality name |
 | address | text | Full address — printed on invoices |
-| pan_number | text | क्रेताको पान नं. — VAT/PAN No. printed on bills |
+| pan_number | text | Optional buyer PAN — printed on sales bills (`0026`) |
+| vat_number | text | Optional buyer VAT — printed when filled (`0026`) |
 | credit_limit | numeric DEFAULT 0 | |
 | outstanding | numeric DEFAULT 0 | Denormalised; updated on each sale/payment/return |
 | advance_credit | numeric DEFAULT 0 | Overpayments kept as credit |

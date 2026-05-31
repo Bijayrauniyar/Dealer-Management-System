@@ -93,7 +93,7 @@ export const CompanyOverviewPage = () => {
         <div>
           <h1 className="text-xl font-bold text-foreground">Company overview</h1>
           <p className="text-sm text-muted">
-            From {fmtDate(businessStartDate)} till today — all figures come from your live books in Supabase.
+            From {fmtDate(businessStartDate)} till today.
           </p>
         </div>
         <Button size="sm" onClick={() => navigate("/app/capital/new")}>

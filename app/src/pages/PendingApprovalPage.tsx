@@ -20,8 +20,8 @@ export const PendingApprovalPage = () => {
       }
       toast.message(
         profile.status
-          ? `Workspace is still "${profile.status}". Set tenants.status = active in Supabase, then try again.`
-          : "No tenant linked to this account yet.",
+          ? "Your workspace is not active yet. Contact support when approved."
+          : "No workspace linked to this account yet.",
       );
     });
   };
@@ -43,10 +43,7 @@ export const PendingApprovalPage = () => {
           Your dealer workspace is <strong>{tenantStatus ?? "unknown"}</strong>. An administrator must approve it
           before you can use the app.
         </p>
-        <p className="text-xs text-muted">
-          If you set <code className="rounded bg-slate-100 px-1">tenants.status</code> to{" "}
-          <code className="rounded bg-slate-100 px-1">active</code> in Supabase, click below — no need to sign out.
-        </p>
+        <p className="text-xs text-muted">After approval, tap below to continue.</p>
         <div className="flex flex-col gap-2 pt-2">
           <Button variant="primary" size="full" onClick={handleCheckAgain}>
             I&apos;ve been approved — continue

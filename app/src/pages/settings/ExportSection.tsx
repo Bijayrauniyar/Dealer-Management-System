@@ -51,9 +51,7 @@ export function ExportSection() {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted">
-        CSV exports for your accountant (UTF-8, opens in Excel). Full backup is owner data only — keep files private.
-      </p>
+      <p className="text-sm text-muted">Download CSV or backup for your records.</p>
 
       <div>
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-teal-600">Quick export</p>

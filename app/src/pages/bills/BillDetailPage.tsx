@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import type { Sale, BillStatus } from "@/domain/types";
-import {Printer, Pencil, CreditCard, RotateCcw, Download, Share2} from "lucide-react";
+import { Printer, Pencil, CreditCard, RotateCcw, Download, Share2 } from "lucide-react";
 import { downloadBillPdf, shareBillPdf } from "@/lib/billExport";
 import { printBill, useBillDocumentTitle } from "@/lib/printBill";
 import { PageShell } from "@/components/app/PageShell";
@@ -19,6 +19,7 @@ import {
 } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
 import { PageBackLink } from "@/components/app/PageBackLink";
+import { PageActionBar } from "@/components/app/PageActionBar";
 
 function saleFromLocationState(raw: unknown, urlBillNo: string | undefined): Sale | undefined {
   if (!raw || typeof raw !== "object") return undefined;
@@ -90,8 +91,8 @@ export const BillDetailPage = () => {
     setExporting(true);
     try {
       const result = await shareBillPdf({ sale, customer, business });
-      if (result === "shared") toast.success("Bill shared");
-      else toast.success("Bill downloaded (share not available on this device)");
+      if (result === "shared") toast.success("Shared");
+      else toast.success("PDF downloaded — share from your files");
     } catch (e) {
       if ((e as Error)?.name !== "AbortError") {
         toast.error(e instanceof Error ? e.message : "Share failed");
@@ -216,67 +217,66 @@ export const BillDetailPage = () => {
         </div>
       )}
 
-      {/* ── Sticky bottom actions (two rows — no overlap with bill totals) ── */}
-      <div
-        data-no-print
-        className="fixed bottom-16 left-0 right-0 z-20 mx-auto max-w-xl border-t border-border-subtle bg-white/95 px-3 py-2 shadow-card-md backdrop-blur"
-      >
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={exporting}
-            onClick={() => sale && printBill(sale.billNo)}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-white py-2.5 text-xs font-semibold sm:text-sm"
-            title="Print: disable Headers and footers in the dialog; enable Background graphics."
-          >
-            <Printer size={14} /> Print
-          </button>
-          <button
-            type="button"
-            disabled={exporting}
-            onClick={handleDownload}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-white py-2.5 text-xs font-semibold sm:text-sm"
-          >
-            <Download size={14} /> PDF
-          </button>
-          <button
-            type="button"
-            disabled={exporting}
-            onClick={handleShare}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-teal-200 bg-teal-50 py-2.5 text-xs font-semibold text-teal-800 sm:text-sm"
-          >
-            <Share2 size={14} /> Share
-          </button>
-          {status !== "paid" && (
-            <button
-              type="button"
-              onClick={() => navigate(`/app/sales/edit/${sale.billNo}`, { state: { sale } })}
-              className="flex items-center justify-center rounded-lg border border-border-subtle bg-white px-3 py-2.5"
-              aria-label="Edit bill"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
-        </div>
-        <div className="mt-2 flex gap-2">
-          <button
-            type="button"
-            onClick={() => navigate(`/app/returns/new?customerId=${sale.customerId}&billNo=${sale.billNo}`)}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-white py-2.5 text-xs font-semibold sm:text-sm"
-          >
-            <RotateCcw size={14} /> Return
-          </button>
-          {sale.balance > 0 && (
-            <button
-              type="button"
-              onClick={() => navigate(`/app/payments/new?customerId=${sale.customerId}`)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-teal-600 py-2.5 text-xs font-bold text-white sm:text-sm"
-            >
-              <CreditCard size={14} /> Collect · {npr(sale.balance)}
-            </button>
-          )}
-        </div>
-      </div>
+      <PageActionBar
+        disabled={exporting}
+        rows={[
+          [
+            {
+              label: "Share",
+              icon: Share2,
+              variant: "secondary",
+              onClick: handleShare,
+              title: "Share bill PDF",
+            },
+            {
+              label: "Print",
+              icon: Printer,
+              variant: "secondary",
+              onClick: () => sale && printBill(sale.billNo),
+              title: "Print bill",
+            },
+            {
+              label: "PDF",
+              icon: Download,
+              variant: "secondary",
+              onClick: handleDownload,
+            },
+            ...(status !== "paid"
+              ? [
+                  {
+                    label: "Edit bill",
+                    icon: Pencil,
+                    variant: "icon" as const,
+                    onClick: () =>
+                      navigate(`/app/sales/edit/${sale.billNo}`, { state: { sale } }),
+                  },
+                ]
+              : []),
+          ],
+          [
+            {
+              label: "Return",
+              icon: RotateCcw,
+              variant: "secondary",
+              onClick: () =>
+                navigate(
+                  `/app/returns/new?customerId=${sale.customerId}&billNo=${sale.billNo}`,
+                ),
+            },
+            ...(sale.balance > 0
+              ? [
+                  {
+                    label: `Collect · ${npr(sale.balance)}`,
+                    icon: CreditCard,
+                    variant: "primary" as const,
+                    onClick: () =>
+                      navigate(`/app/payments/new?customerId=${sale.customerId}`),
+                  },
+                ]
+              : []),
+          ],
+        ]}
+      />
     </PageShell>
   );
 };

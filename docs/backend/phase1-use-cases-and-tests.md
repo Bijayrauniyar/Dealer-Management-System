@@ -8,6 +8,31 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 
 ---
 
+## Keeping tests in sync (required on every change)
+
+**Rule:** If you change Phase 0 features, navigation, export, stock/VAT guards, bill Share, Home tabs, or shared UI (`patterns.tsx`, `PageActionBar`), update the matching e2e script in the **same commit** — do not ship UI/RPC-only diffs.
+
+| Area changed | Update script(s) | Typical check to add/change |
+|--------------|------------------|-----------------------------|
+| Tier A — export, categories, stock adjustment, settings tabs | `e2e-tier-a.mjs`, sometimes `e2e-export.mjs` | New settings field, migration **0019–0023**, `ExportSection` wiring |
+| Tier B — oversell, back nav, VAT address, credit warn, notifications | `e2e-tier-b.mjs` | `0024` SQL strings, `PageBackLink`, oversell message; live via `e2e:tier-b:live` |
+| Tier C — bottom tabs, drawer, support, Share, Home, customer tax ids | `e2e-tier-c.mjs` | `AppRouter` paths, `BillDetailPage` actions, `HomePage` tabs, **0025/0026** live columns |
+| UI symmetry — buttons, list headers, tabs | `e2e-tier-c.mjs` + [UI_CONSISTENCY_PLAN.md](../UI_CONSISTENCY_PLAN.md) | `patterns.tsx` exports; pages use `ListPageHeader` / `FormPageHeader` |
+| New migration | `app/supabase/README.txt` + tier script **`:live`** column/RPC probe | Pre-flight table below |
+| Any user-visible feature | [phase1-manual-e2e-checklist.md](./phase1-manual-e2e-checklist.md) §2 catalog + §3 steps (+ §1 Gaps if not automatable) | See *Maintaining this checklist* in that file |
+
+**Gate before Phase 0 release:**
+
+```bash
+cd app
+npm run e2e:phase0        # source — all tiers
+npm run e2e:phase0:live     # + DB — needs .e2e-credentials.local
+```
+
+Agents: see `.cursor/rules/docs-on-change.mdc` (always applied).
+
+---
+
 ## Pre-flight (automated tests)
 
 | Gate | Why |
@@ -19,6 +44,7 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `0014`–`0017` applied | **`supplier_invoice_no`**, purchase VAT (`rate_excl`, `subtotal_excl`, `vat_amount`), Settings **Default VAT %**. See [Purchase reference numbers](../PURCHASE_REFERENCE_NUMBERS.md). |
 | `0019`–`0021` applied (Tier A) | **Product categories**, `stock_adjustments`, `allow_stock_adjustment`, `v_stock.adjusted`. README steps 20–22. |
 | `0024` applied (Tier B) | **INV-1** oversell guard on `create_sales_bill` / `update_sales_bill`. README step 25. Required for `e2e:stock:live` oversell check. |
+| `0025`–`0026` applied (Tier C) | **Support** fields on `tenant_settings`; **customer** `pan_number` / `vat_number`. README steps 26–27. |
 | `0008`–`0010` applied | Matrix **`uom.*`** cases: pack sale (2 Box → 20 PCS stock), `sales_items.unit`, `update_sales_bill` with `unit`. |
 
 ---
@@ -35,6 +61,14 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `npm run e2e:bill:ui` | Same + browser bill DOM + `app/test-output/bill-print-ui.png` (needs `npm run dev`) |
 | `npm run e2e:bill:full` | `e2e:bill` + `--live` + `--ui` |
 | `npm run e2e:export` | **Phase 0 export** — `lib/export`, Settings Export tab, product brand (no login) |
+| `npm run e2e:tier-a` | **Phase 0 Tier A** — migrations 0019–0023, export, categories, stock adjustment UI (source) |
+| `npm run e2e:tier-a:live` | Tier A + `tenant_settings` columns + `record_stock_adjustment` RPC probe |
+| `npm run e2e:tier-b` | **Phase 0 Tier B** — migration 0024, PageBackLink, VAT/credit/notifications (source) |
+| `npm run e2e:tier-b:live` | Tier B source + `e2e:stock:live` (oversell block + stock dates) |
+| `npm run e2e:tier-c` | **Phase 0 Tier C** — shell, support, Share, Home tabs, 0025/0026 files (source) |
+| `npm run e2e:tier-c:live` | Tier C + live columns + customer PAN/VAT insert |
+| `npm run e2e:phase0` | **All Tier A + B + C** source checks in one command |
+| `npm run e2e:phase0:live` | Tier A/B/C live (B includes full `e2e:stock:live`) |
 | `npm run e2e:suppliers` | **Supplier invoices** — routes, button wiring, types (no login) |
 | `npm run e2e:suppliers:live` | Same + DB: `supplier_invoice_no`, purchase lines, `update_purchase`, `payment_status` |
 | `npm run e2e:bill:visual` | **Screenshots** (mobile + desktop) + **PDF download** text check (`test-output/`) |

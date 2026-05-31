@@ -37,6 +37,10 @@ export type BusinessSettings = {
   listPageSize: number;
   /** When true, bill letterhead adds district · province · country after address lines. */
   showDistrictProvinceOnBill: boolean;
+  /** Reserved in DB (`0025`); app support uses `PLATFORM_SUPPORT`, not these fields. */
+  supportPhone: string;
+  supportEmail: string;
+  supportWhatsapp: string;
 };
 
 export type Customer = {
@@ -46,6 +50,7 @@ export type Customer = {
   area: string;
   address: string;
   panNumber: string;
+  vatNumber: string;
   outstanding: number;
   creditLimit: number;
   oldestBillDays: number;

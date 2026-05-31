@@ -17,11 +17,17 @@ Update docs in the **same change** as code — do not leave README/schema/UI doc
 | Products / pricing | `data-model.md` (§ products), [`phase1-manual-e2e-checklist.md`](backend/phase1-manual-e2e-checklist.md) § Products |
 | Settings fields | `data-model.md` (§ `tenant_settings`), manual checklist § Settings |
 | User-facing flow | [`LLM_CONTEXT.md`](LLM_CONTEXT.md) changelog + manual checklist row |
+| Buttons / page chrome / action bars | [`UI_CONSISTENCY_PLAN.md`](UI_CONSISTENCY_PLAN.md) |
+| Phase 0 e2e (Tier A/B/C) | [`backend/phase1-use-cases-and-tests.md`](backend/phase1-use-cases-and-tests.md) § Keeping tests in sync; `npm run e2e:phase0` |
+| Manual QA (all features) | [`backend/phase1-manual-e2e-checklist.md`](backend/phase1-manual-e2e-checklist.md) — **master**; update §2+§3 on every feature change |
 | GTM / pricing / ICP / VAT·IRD | [`GTM_NEPAL.md`](GTM_NEPAL.md) — §5 compliance checklist + revision log |
 | Full backup + import + restore | [`DEFERRED_WORK.md`](DEFERRED_WORK.md) (**IMP-0/1/2** Phase 2), [`DATA_EXPORT_SPEC.md`](DATA_EXPORT_SPEC.md) |
 | Product name (pick one) | [`BRAND_NAME_OPTIONS.md`](BRAND_NAME_OPTIONS.md) → then `app/src/config/productBrand.ts` |
 | Bill print letterhead (IRD layout) | [`IRD_BILL_LETTERHEAD.md`](IRD_BILL_LETTERHEAD.md) |
-| Launch phases 0–3 | [`PHASE_ROADMAP.md`](PHASE_ROADMAP.md) — **Tier A done**; **next: Tier B** |
+| Launch phases 0–3 | [`PHASE_ROADMAP.md`](PHASE_ROADMAP.md) — **Tier A + B done**; **Tier C in app**; **Phase 1 = Tier D** |
+| First shop onboarding | [`ONBOARDING_FIRST_SHOP.md`](ONBOARDING_FIRST_SHOP.md) |
+| Phase 0 Tier C sign-off | [`YOUR_TURN_PHASE0_TIER_C.md`](YOUR_TURN_PHASE0_TIER_C.md) |
+| Tier D → Phase 1 scope | [`PHASE1_TIER_D_SCOPE.md`](PHASE1_TIER_D_SCOPE.md) |
 | Phase 0 Tier A sign-off | [`YOUR_TURN_PHASE0_TIER_A.md`](YOUR_TURN_PHASE0_TIER_A.md) |
 | Phase 0 Tier B (Gemma copy-paste) | [`PHASE0_TIER_B_DELEGATION.md`](PHASE0_TIER_B_DELEGATION.md) |
 | Phase 0 Tier B sign-off | [`YOUR_TURN_PHASE0_TIER_B.md`](YOUR_TURN_PHASE0_TIER_B.md) |

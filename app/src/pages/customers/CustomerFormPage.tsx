@@ -9,7 +9,7 @@ import { NumericInput } from "@/components/app/NumericInput";
 import { numericMoneyProps } from "@/lib/money";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomers, commitCustomer } from "@/store/domain";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader } from "@/components/app/patterns";
 
 export const CustomerFormPage = () => {
   const navigate = useNavigate();
@@ -23,6 +23,8 @@ export const CustomerFormPage = () => {
   const [area, setArea] = useState(existing?.area ?? "");
   const [address, setAddress] = useState(existing?.address ?? "");
   const [creditLimit, setCreditLimit] = useState(existing?.creditLimit ?? 0);
+  const [panNumber, setPanNumber] = useState(existing?.panNumber ?? "");
+  const [vatNumber, setVatNumber] = useState(existing?.vatNumber ?? "");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -39,9 +41,11 @@ export const CustomerFormPage = () => {
         area: area.trim(),
         address: address.trim(),
         creditLimit,
+        panNumber: panNumber.trim(),
+        vatNumber: vatNumber.trim(),
       });
       toast.success(isEdit ? `${name} updated.` : `${name} added.`);
-      navigate(isEdit ? `/app/customers/${id}` : "/app/customers");
+      navigate(isEdit ? `/app/customers/${id}` : "/app/home?tab=customers");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save customer");
     } finally {
@@ -51,11 +55,12 @@ export const CustomerFormPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-1 text-lg font-bold">{isEdit ? `Edit ${existing?.name}` : "New customer"}</h1>
-      <p className="mb-5 text-sm text-muted">
-        {isEdit ? "Update shop details." : "Add a customer to use on bills and payments."}
-      </p>
+      <FormPageHeader
+        title={isEdit ? `Edit ${existing?.name}` : "New customer"}
+        subtitle={
+          isEdit ? "Update shop details." : "Add a customer to use on bills and payments."
+        }
+      />
 
       <div className="space-y-4">
         <FormField label="Shop / customer name" required>
@@ -84,7 +89,22 @@ export const CustomerFormPage = () => {
             rows={2}
           />
         </FormField>
-        <FormField label="Credit limit (NPR)" hint="Max outstanding allowed; 0 = no limit set">
+        <FormField label="Customer PAN (optional)">
+          <Input
+            value={panNumber}
+            onChange={(e) => setPanNumber(e.target.value)}
+            maxLength={9}
+            placeholder="Buyer PAN"
+          />
+        </FormField>
+        <FormField label="Customer VAT no. (optional)">
+          <Input
+            value={vatNumber}
+            onChange={(e) => setVatNumber(e.target.value)}
+            placeholder="Buyer VAT number"
+          />
+        </FormField>
+        <FormField label="Credit limit (NPR)" hint="0 = no limit">
           <NumericInput
             {...numericMoneyProps}
             min={0}

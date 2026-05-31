@@ -63,7 +63,7 @@ export function toMiti(isoDate: string): string {
   return `${String(rem + 1).padStart(2, "0")}/${String(bsMonth).padStart(2, "0")}/${bsYear}`;
 }
 
-/** English date + Bikram Sambat in parentheses, e.g. "31 May 2026 (17/02/2083)". */
+/** English date + Bikram Sambat in brackets, e.g. "31 May 2026 (17/02/2083)". */
 export function fmtDateDual(iso: string): string {
   const bs = toMiti(iso);
   if (bs === iso) return fmtDate(iso);

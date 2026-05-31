@@ -99,17 +99,11 @@ export const SchemePage = () => {
     }
   };
 
-  const buyLabel = buyUom ? `${buyQty} ${buyUom}` : String(buyQty);
-  const freeLabel = freeUom ? `${freeQty} ${freeUom}` : String(freeQty);
-
   return (
     <PageShell stickyBar>
       <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-5 text-lg font-semibold">Scheme entry</h1>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Buy-X-get-Y-free for one product. Use different units for pack deals (e.g. buy 1 Box, get 1
-        piece free).
-      </p>
+      <p className="mb-4 text-sm text-muted-foreground">Buy X, get Y free on one product.</p>
       <div className="space-y-4">
         <FormField label="Scheme name" required>
           <Input
@@ -139,7 +133,7 @@ export const SchemePage = () => {
 
         {product?.uomConversion && (
           <Button type="button" variant="outline" size="sm" onClick={applyBoxPiecePreset}>
-            Use example: 1 {product.uomConversion.packUom} → 1 {product.uom} free
+            1 {product.uomConversion.packUom} → 1 {product.uom} free
           </Button>
         )}
 
@@ -147,7 +141,7 @@ export const SchemePage = () => {
           <FormField label="Buy qty" required>
             <NumericInput min={1} value={buyQty} onChange={(v) => setBuyQty(Math.max(1, v))} />
           </FormField>
-          <FormField label="Buy unit" hint={product ? "Paid line UOM on bill" : undefined}>
+          <FormField label="Buy unit">
             <Select
               value={buyUom || product?.uom || "PCS"}
               disabled={!product}
@@ -165,7 +159,7 @@ export const SchemePage = () => {
           <FormField label="Free qty" required>
             <NumericInput min={1} value={freeQty} onChange={(v) => setFreeQty(Math.max(1, v))} />
           </FormField>
-          <FormField label="Free unit" hint="Usually base unit (piece)">
+          <FormField label="Free unit">
             <Select
               value={freeUom || product?.uom || "PCS"}
               disabled={!product}
@@ -179,9 +173,6 @@ export const SchemePage = () => {
             </Select>
           </FormField>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Example: buy {buyLabel}, get {freeLabel} free on the selected product.
-        </p>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Start date">
             <Input type="date" value={startDate} onChange={(e) => setStart(e.target.value)} />

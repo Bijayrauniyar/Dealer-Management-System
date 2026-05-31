@@ -47,7 +47,7 @@ export const StockAdjustmentPage = () => {
         adjustmentDate: date,
       });
       toast.success("Stock adjustment saved.");
-      navigate("/app/stock");
+      navigate("/app/home?tab=stock");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save");
     } finally {

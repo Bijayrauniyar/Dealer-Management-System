@@ -43,7 +43,7 @@ export const NoTenantPage = () => {
     void refreshProfile()
       .then((profile) => {
         if (!profile.tenantId) {
-          toast.message("Still no workspace linked. Check tenant_users in Supabase or create one below.");
+          toast.message("No workspace linked yet. Create one below or contact support.");
           return;
         }
         toast.success("Workspace found.");

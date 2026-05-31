@@ -581,14 +581,11 @@ export const ProductFormPage = () => {
             <div className="mb-4 flex items-start gap-2 rounded-xl bg-slate-50 border border-border-subtle px-3 py-3">
               <Info size={14} className="mt-0.5 shrink-0 text-teal-600" />
               <p className="text-xs text-muted leading-snug">
-                One-time godown count when you add this SKU. After save, stock changes via{" "}
-                <strong>Purchase invoice</strong> and sales
-                {business.allowStockAdjustment
-                  ? ", or Stock adjustment in More (when enabled in Settings)."
-                  : "."}
+                Opening count for this product. Later changes come from purchases and sales
+                {business.allowStockAdjustment ? " or stock adjustment." : "."}
               </p>
             </div>
-            <FormField label={`Opening qty (${uom})`} hint="Count in hand today before any purchase in the app">
+            <FormField label={`Opening qty (${uom})`}>
               <NumericInput {...numericQtyProps} min={0} value={openingStock} onChange={setOpeningStock} />
             </FormField>
           </>
@@ -598,8 +595,8 @@ export const ProductFormPage = () => {
               <strong>Opening qty:</strong> {existing?.openingStock ?? 0} {uom} (set when product was created).
             </p>
             <p className="mt-1">
-              On hand now: <strong>{existing?.onHand ?? 0}</strong> {uom}. To fix counts, use Purchase invoice
-              {business.allowStockAdjustment ? " or Stock adjustment (Settings → enable first)." : "."}
+              On hand: <strong>{existing?.onHand ?? 0}</strong> {uom}. Update via purchase
+              {business.allowStockAdjustment ? " or stock adjustment." : "."}
             </p>
           </div>
         )}

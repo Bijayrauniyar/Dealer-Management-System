@@ -11,7 +11,7 @@ import type { Supplier } from "@/domain/types";
 import { npr } from "@/lib/utils";
 import { ListPagination } from "@/components/app/ListPagination";
 import { usePagination } from "@/lib/usePagination";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { ListPageHeader } from "@/components/app/patterns";
 
 const SupplierCard = ({
   s,
@@ -174,14 +174,12 @@ export const SuppliersPage = () => {
 
   return (
     <PageShell>
-      <div className="mb-4 flex items-center justify-between">
-        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-        <Button size="sm" type="button" onClick={() => navigate("/app/suppliers/new")}>
-          <Plus size={14} /> Add supplier
-        </Button>
-      </div>
-
-      <h1 className="mb-4 text-lg font-bold text-foreground">Suppliers</h1>
+      <ListPageHeader
+        showBack
+        title="Suppliers"
+        addLabel="Add supplier"
+        onAdd={() => navigate("/app/suppliers/new")}
+      />
 
       {/* Search */}
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-border-subtle bg-white px-3 py-2 shadow-card focus-within:ring-2 focus-within:ring-teal-500">
