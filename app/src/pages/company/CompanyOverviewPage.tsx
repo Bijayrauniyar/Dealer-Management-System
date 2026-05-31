@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, TrendingUp, TrendingDown } from "lucide-react";
+import {Plus, TrendingUp, TrendingDown} from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { SectionHeader } from "@/components/app/SectionHeader";
 import { KpiCard } from "@/components/app/KpiCard";
@@ -12,6 +12,7 @@ import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
 import { summarizeCapital } from "@/lib/capitalSummary";
 import { useCapitalEntries, useCustomers, useLatestCashClosing, useProducts, usePnlTotals, useSales, useSuppliers } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const categoryLabel = (cat: string) => CAPITAL_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
 
@@ -86,9 +87,7 @@ export const CompanyOverviewPage = () => {
 
   return (
     <PageShell>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
 
       <div className="mb-5 flex items-start justify-between">
         <div>

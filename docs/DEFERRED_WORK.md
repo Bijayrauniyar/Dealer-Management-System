@@ -19,7 +19,7 @@
 
 | ID | Title | Status | Effort (est.) | Why deferred |
 |----|--------|--------|---------------|--------------|
-| **INV-1** | Block oversell in DB | Backlog | **1–2 dev days** | UI disables OOS on new lines; RPC still allows oversell |
+| **INV-1** | Block oversell in DB | **Done (2026-05-26)** | **1–2 dev days** | Migration `0024_block_oversell_in_sales.sql`; apply on Supabase before live e2e |
 | **INV-2** | Picker stock vs bill date | Backlog · **product decision** | **0–5 days** (see options) | Today’s `onHand` only; backdating is edge case for pilot |
 | **SUP-1** | Supplier scheme → pass-through to customer | Backlog | **3–5 days** | Scheme on sales shipped; purchase-side not built |
 | **EXP-1** | Export P0 (registers + backup ZIP) | **Done (Tier A)** · partial ZIP | **IMP-0** for full | Tier A: registers + date-range ZIP shipped; full tenant backup → **IMP-0** |
@@ -43,7 +43,7 @@
 
 | Layer | Files |
 |-------|--------|
-| DB | New migration `0013_*` — helper `line_qty_to_base_pcs`, `assert_sale_stock_available`; patch `create_sales_bill`, `update_sales_bill` in latest migration copy |
+| DB | Migration `0024_block_oversell_in_sales.sql` — `line_qty_to_base_pcs`, `assert_sale_stock_available`; patch `create_sales_bill`, `update_sales_bill` |
 | App | Map RPC error in `commitSaleLive` ([`domainLive.ts`](../app/src/lib/live/domainLive.ts)) → user toast |
 | Tests | [`e2e-stock-dates.mjs`](../app/scripts/e2e-stock-dates.mjs) (today notes “oversell allowed”) |
 

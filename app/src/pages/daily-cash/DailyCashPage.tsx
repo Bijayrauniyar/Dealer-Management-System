@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Lock, Info } from "lucide-react";
+import {Lock, Info} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { commitDailyCashClose, useDailyCashBreakdown } from "@/store/domain";
 import { npr, toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 export const DailyCashPage = () => {
   const navigate = useNavigate();
@@ -143,13 +144,7 @@ export const DailyCashPage = () => {
 
   return (
     <PageShell stickyBar>
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
 
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Daily cash</h1>

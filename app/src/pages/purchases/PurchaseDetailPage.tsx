@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { PurchaseDetail, Supplier } from "@/domain/types";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
 import { useBusinessSettings, useSuppliers } from "@/store/domain";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const PAYMENT_BADGE: Record<
   PurchaseDetail["paymentStatus"],
@@ -60,13 +61,7 @@ export const PurchaseDetailPage = () => {
   if (error || !detail) {
     return (
       <PageShell>
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <p className="text-sm text-danger">{error ?? "Purchase not found."}</p>
       </PageShell>
     );

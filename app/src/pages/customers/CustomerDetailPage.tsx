@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, AlertTriangle, Clock, CheckCircle2, ChevronRight, CreditCard, FilePlus, Pencil } from "lucide-react";
+import {AlertTriangle, Clock, CheckCircle2, ChevronRight, CreditCard, FilePlus, Pencil} from "lucide-react";
 import { DetailActions } from "@/components/app/DetailActions";
 import { PageShell } from "@/components/app/PageShell";
 import { SALES_INVOICE_LABEL } from "@/lib/actionLabels";
@@ -14,6 +14,7 @@ import { useCustomers, useOutstandingBills, usePayments } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
 import { ListPagination } from "@/components/app/ListPagination";
 import { usePagination } from "@/lib/usePagination";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const TODAY = "2026-05-14";
@@ -115,9 +116,7 @@ export const CustomerDetailPage = () => {
   const customer = CUSTOMERS.find((c) => c.id === id);
   if (!customer) return (
     <PageShell>
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <p className="mt-8 text-center text-muted">Customer not found.</p>
     </PageShell>
   );
@@ -144,9 +143,7 @@ export const CustomerDetailPage = () => {
 
   return (
     <PageShell>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
 
       <div className="mb-3 min-w-0">
         <h1 className="text-lg font-bold text-foreground leading-tight">{customer.name}</h1>

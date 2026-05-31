@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Phone, Mail, MapPin, ChevronDown, ChevronUp, Search, Pencil, Wallet, FileText } from "lucide-react";
+import {Plus, Phone, Mail, MapPin, ChevronDown, ChevronUp, Search, Pencil, Wallet, FileText} from "lucide-react";
 import { DetailActions } from "@/components/app/DetailActions";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import type { Supplier } from "@/domain/types";
 import { npr } from "@/lib/utils";
 import { ListPagination } from "@/components/app/ListPagination";
 import { usePagination } from "@/lib/usePagination";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const SupplierCard = ({
   s,
@@ -174,12 +175,7 @@ export const SuppliersPage = () => {
   return (
     <PageShell>
       <div className="mb-4 flex items-center justify-between">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-sm font-medium text-teal-600"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <Button size="sm" type="button" onClick={() => navigate("/app/suppliers/new")}>
           <Plus size={14} /> Add supplier
         </Button>

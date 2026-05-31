@@ -179,7 +179,7 @@ async function runLiveTests() {
   const { data: purPastRows, error: purPastErr } = await supabase.rpc("record_purchase", {
     p_purchase_date: yesterday,
     p_supplier_id: supplierId,
-    p_lines: [{ product_id: productId, qty: 20, rate: 50 }],
+    p_lines: [{ product_id: productId, qty: 20, rate_excl: 50 }],
     p_notes: `e2e-stock-past-pur-${stamp}`,
   });
   if (purPastErr) r.fail("live.purchase.past.rpc", purPastErr.message);
@@ -207,7 +207,7 @@ async function runLiveTests() {
   const { data: purTodayRows, error: purTodayErr } = await supabase.rpc("record_purchase", {
     p_purchase_date: today,
     p_supplier_id: supplierId,
-    p_lines: [{ product_id: productId, qty: 5, rate: 50 }],
+    p_lines: [{ product_id: productId, qty: 5, rate_excl: 50 }],
     p_notes: `e2e-stock-today-pur-${stamp}`,
   });
   if (purTodayErr) r.fail("live.purchase.today.rpc", purTodayErr.message);
@@ -288,6 +288,9 @@ async function runLiveTests() {
   productRow.onHand = onHand;
   r.assertEq(productStockStatus(productRow), "in_stock", "live.picker.stillInStockAt20");
 
+  if (!pastBillId) {
+    r.fail("live.sale.amendDate.rpc", "skipped — past sale bill not created");
+  }
   const { error: updErr } = await supabase.rpc("update_sales_bill", {
     p_bill_id: pastBillId,
     p_customer_id: customerId,
@@ -318,7 +321,7 @@ async function runLiveTests() {
     "live.picker.editLineSelectable",
   );
 
-  // Drain stock → out + disabled (RPC still allows — UI-only block)
+  // Drain stock → out + disabled
   const { data: drainRows, error: drainErr } = await supabase.rpc("create_sales_bill", {
     p_customer_id: customerId,
     p_bill_date: today,
@@ -333,11 +336,27 @@ async function runLiveTests() {
   if (drainErr) r.fail("live.sale.drain.rpc", drainErr.message);
   else {
     const row = Array.isArray(drainRows) ? drainRows[0] : drainRows;
-    r.pass("live.sale.drain.rpc", row?.bill_no ?? "ok (oversell allowed in DB)");
+    r.pass("live.sale.drain.rpc", row?.bill_no ?? "ok");
   }
 
   onHand = await stockForProduct(supabase, productId);
   r.assertEq(onHand, 0, "live.stock.afterDrain");
+
+  const { error: oversellErr } = await supabase.rpc("create_sales_bill", {
+    p_customer_id: customerId,
+    p_bill_date: today,
+    p_payment_mode: "Cash",
+    p_discount: 0,
+    p_items: [{ product_id: productId, qty: 1, rate: 80 }],
+    p_paid: 0,
+    p_notes: `e2e-stock-oversell-${stamp}`,
+    p_vat_amount: 0,
+    p_extra_charges: 0,
+  });
+  if (!oversellErr) r.fail("live.sale.oversell.rpc", "expected Insufficient stock");
+  else if (!/insufficient stock/i.test(oversellErr.message)) {
+    r.fail("live.sale.oversell.rpc", oversellErr.message);
+  } else r.pass("live.sale.oversell.rpc", "blocked");
   productRow.onHand = 0;
   r.assertEq(productStockStatus(productRow), "out", "live.picker.outAfterDrain");
   r.assertEq(

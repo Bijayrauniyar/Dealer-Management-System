@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useProducts, commitSchemeEntry } from "@/store/domain";
 import { productUomChoices } from "@/lib/uom";
 import { toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 export const SchemePage = () => {
   const navigate = useNavigate();
@@ -104,13 +104,7 @@ export const SchemePage = () => {
 
   return (
     <PageShell stickyBar>
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-5 text-lg font-semibold">Scheme entry</h1>
       <p className="mb-4 text-sm text-muted-foreground">
         Buy-X-get-Y-free for one product. Use different units for pack deals (e.g. buy 1 Box, get 1

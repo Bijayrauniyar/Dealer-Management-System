@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus } from "lucide-react";
+import {Plus} from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { KpiCard } from "@/components/app/KpiCard";
 import { ListRow } from "@/components/app/ListRow";
@@ -13,6 +13,7 @@ import { summarizeCapital } from "@/lib/capitalSummary";
 import { useCapitalEntries } from "@/store/domain";
 import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr, fmtDate } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 const categoryLabel = (cat: string) =>
   CAPITAL_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
@@ -40,9 +41,7 @@ export const CapitalListPage = () => {
   return (
     <PageShell>
       <div className="mb-4 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <Button size="sm" onClick={() => navigate("/app/capital/new")}>
           <Plus size={14} /> Add entry
         </Button>

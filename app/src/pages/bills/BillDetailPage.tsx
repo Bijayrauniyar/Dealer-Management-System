@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import type { Sale, BillStatus } from "@/domain/types";
-import { ArrowLeft, Printer, Pencil, CreditCard, RotateCcw, Download, Share2 } from "lucide-react";
+import {Printer, Pencil, CreditCard, RotateCcw, Download, Share2} from "lucide-react";
 import { downloadBillPdf, shareBillPdf } from "@/lib/billExport";
 import { printBill, useBillDocumentTitle } from "@/lib/printBill";
 import { PageShell } from "@/components/app/PageShell";
@@ -18,6 +18,7 @@ import {
   useBusinessSettings,
 } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 function saleFromLocationState(raw: unknown, urlBillNo: string | undefined): Sale | undefined {
   if (!raw || typeof raw !== "object") return undefined;
@@ -112,9 +113,7 @@ export const BillDetailPage = () => {
   if (loadState === "loading" || saleQuery.isLoading) {
     return (
       <PageShell>
-        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="mb-0 flex items-center gap-1 text-sm font-medium text-teal-600" />
         <p className="mt-16 text-center text-sm text-slate-600">Loading bill…</p>
       </PageShell>
     );
@@ -123,9 +122,7 @@ export const BillDetailPage = () => {
   if (loadState === "error") {
     return (
       <PageShell>
-        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="mb-0 flex items-center gap-1 text-sm font-medium text-teal-600" />
         <p className="mt-16 text-center text-sm text-slate-600">Could not load shop data. Check your connection and try again.</p>
       </PageShell>
     );
@@ -135,18 +132,14 @@ export const BillDetailPage = () => {
     if (!saleQuery.isFetched) {
       return (
         <PageShell>
-          <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-            <ArrowLeft size={16} /> Back
-          </button>
+          <PageBackLink className="mb-0 flex items-center gap-1 text-sm font-medium text-teal-600" />
           <p className="mt-16 text-center text-sm text-slate-600">Loading bill…</p>
         </PageShell>
       );
     }
     return (
       <PageShell>
-        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="mb-0 flex items-center gap-1 text-sm font-medium text-teal-600" />
         <div className="mx-auto mt-16 max-w-sm space-y-3 px-4 text-center">
           <p className="text-sm text-slate-700">
             No bill <span className="font-mono font-semibold text-slate-900">{billNo ? decodeURIComponent(billNo) : "—"}</span>{" "}
@@ -175,12 +168,7 @@ export const BillDetailPage = () => {
     <PageShell className="pb-56">
       {/* ── Top bar: back + status + actions ── */}
       <div data-no-print className="mb-4 flex items-center justify-between gap-2">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-sm font-medium text-teal-600"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="mb-0 flex items-center gap-1 text-sm font-medium text-teal-600" />
 
         <Badge variant={cfg.variant} className="text-xs px-2.5 py-1">{cfg.label}</Badge>
       </div>

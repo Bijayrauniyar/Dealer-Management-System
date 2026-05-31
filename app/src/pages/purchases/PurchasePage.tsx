@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import {Plus, Trash2} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -31,6 +31,7 @@ import {
   productUomChoices,
 } from "@/lib/uom";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 type Line = {
   id: number;
@@ -296,13 +297,7 @@ export const PurchasePage = () => {
   if (isEdit && editLoadError) {
     return (
       <PageShell>
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="mb-3 flex items-center gap-1 text-sm font-medium text-teal-600"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
         <p className="text-sm text-danger">{editLoadError}</p>
       </PageShell>
     );
@@ -310,13 +305,7 @@ export const PurchasePage = () => {
 
   return (
     <PageShell stickyBar>
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mb-3 flex items-center gap-1 text-sm font-medium text-teal-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-semibold">{isEdit ? "Edit purchase invoice" : "New purchase invoice"}</h1>
       {isEdit && paidOnPurchase > 0 && (
         <p className="mb-3 text-sm text-muted">Paid {npr(paidOnPurchase)} on this purchase</p>

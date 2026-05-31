@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -13,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EXPENSE_CATEGORIES } from "@/domain/catalogs";
 import { commitExpenseEntry } from "@/store/domain";
 import { npr, toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
@@ -46,9 +46,7 @@ export const ExpensePage = () => {
 
   return (
     <PageShell stickyBar>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-semibold">Expense entry</h1>
       <p className="mb-5 text-sm text-muted">
         Day-to-day running costs (fuel, salary, rent, utilities). Not for buying assets or owner investment — use Capital for those.

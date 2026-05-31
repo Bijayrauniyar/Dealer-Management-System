@@ -10,8 +10,8 @@
 
 ## Now — client pain points (priority over new features)
 
-> **Phase 0 Tier A — signed off (2026-05-26).** **Next:** [Tier B](../PHASE_ROADMAP.md#tier-b--should-phase-0--next) — INV-1, CRED-0, VAT-0b, notifications QA.  
-> Full pain → action mapping: [`../PRODUCT_EVOLUTION.md`](../PRODUCT_EVOLUTION.md). Sign-off: [`../YOUR_TURN_PHASE0_TIER_A.md`](../YOUR_TURN_PHASE0_TIER_A.md).
+> **Phase 0 Tier A — signed off (2026-05-26).** **Tier B QA + 0024 signed off (2026-05-26)** — Netlify deploy pending: [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md).  
+> Full pain → action mapping: [`../PRODUCT_EVOLUTION.md`](../PRODUCT_EVOLUTION.md). Tier A: [`../YOUR_TURN_PHASE0_TIER_A.md`](../YOUR_TURN_PHASE0_TIER_A.md).
 
 - [x] **Scheme page** — persists buy-X-get-Y to `scheme_tracker` (`insertSchemeLive` / `commitSchemeEntry`).
 - [x] **Scheme on sales** — active scheme per product + bill date → auto free line (`schemeApply.ts`, `SaleEntryPage`); Home stock filter **On scheme**. Test: `npm run seed:schemes`.
@@ -21,7 +21,10 @@
 - [ ] **CAT-1** — Parent/child categories (2-level) — **Phase 1** — [DEFERRED_WORK.md](../DEFERRED_WORK.md).
 - [ ] **CAT-2** — Category tree UI — **Phase 2** — [DEFERRED_WORK.md](../DEFERRED_WORK.md).
 - [x] **Performance (PERF-0)** — paginated sales headers; lighter domain bundle for shell.
-- [ ] **Credit limit (CRED-0)** — enforce on bill save or hide field until enforced — **Tier B**.
+- [x] **Credit limit (CRED-0)** — warning toast when projected outstanding exceeds limit; save still allowed (Tier B).
+- [x] **INV-1** — block oversell in `create_sales_bill` / `update_sales_bill` — migration **0024** (Tier B).
+- [x] **VAT-0b** — Settings save requires address + VAT number when VAT registered (Tier B).
+- [x] **UI-0.9** — `PageBackLink` on inner pages + Settings (Tier B).
 - [x] **Rebrand (BRAND-0)** — **BikriKhata** ([`../PRODUCT_NAMING_BRIEF.md`](../PRODUCT_NAMING_BRIEF.md), `productBrand.ts`).
 - [x] **Opening stock + stock adjustment (STK-0d–f)** — migrations 0020–0021; Settings toggle; Stock adjustment page.
 - [x] **Tabbed Settings + Export tab** — UI-0.8 / UI-0.11 (Tier A).
@@ -121,7 +124,7 @@ Wire the UI to Supabase **RPCs and/or constrained updates** via `domainLive.ts` 
 
 > **Details, effort, touchpoints, acceptance criteria:** [`../DEFERRED_WORK.md`](../DEFERRED_WORK.md) (**INV-1**, **INV-2**). Not scheme/deploy blockers.
 
-- [ ] **INV-1** — Block oversell in `create_sales_bill` / `update_sales_bill`.
+- [x] **INV-1** — Block oversell in `create_sales_bill` / `update_sales_bill` (migration **0024**).
 - [ ] **INV-2** — Picker stock vs bill date (product decision TBD).
 
 ---

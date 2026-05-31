@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Circle } from "lucide-react";
+import {CheckCircle2, Circle} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -16,6 +16,7 @@ import { PAYMENT_MODES } from "@/domain/catalogs";
 import type { Supplier } from "@/domain/types";
 import { useSuppliers, commitSupplierPayment } from "@/store/domain";
 import { npr, fmtDate, toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 /** Single allocation bucket from live supplier outstanding (Supabase); not a separate invoice table in v1. */
 type OpenInvoice = {
@@ -145,9 +146,7 @@ export const SupplierPaymentPage = () => {
 
   return (
     <PageShell stickyBar>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-5 text-lg font-semibold">Supplier payment</h1>
 
       <div className="space-y-4">

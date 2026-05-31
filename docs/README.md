@@ -23,6 +23,8 @@ Update docs in the **same change** as code — do not leave README/schema/UI doc
 | Bill print letterhead (IRD layout) | [`IRD_BILL_LETTERHEAD.md`](IRD_BILL_LETTERHEAD.md) |
 | Launch phases 0–3 | [`PHASE_ROADMAP.md`](PHASE_ROADMAP.md) — **Tier A done**; **next: Tier B** |
 | Phase 0 Tier A sign-off | [`YOUR_TURN_PHASE0_TIER_A.md`](YOUR_TURN_PHASE0_TIER_A.md) |
+| Phase 0 Tier B (Gemma copy-paste) | [`PHASE0_TIER_B_DELEGATION.md`](PHASE0_TIER_B_DELEGATION.md) |
+| Phase 0 Tier B sign-off | [`YOUR_TURN_PHASE0_TIER_B.md`](YOUR_TURN_PHASE0_TIER_B.md) |
 | E2E script | `phase1-use-cases-and-tests.md` command table |
 
 Also add a dated line to **`docs/LLM_CONTEXT.md`** changelog and extend **`app/scripts/e2e-*.mjs`** when the behavior is assertable.

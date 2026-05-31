@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Minus, Plus } from "lucide-react";
+import {Minus, Plus} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCustomers, useSales, commitReturn } from "@/store/domain";
 import { roundMoney } from "@/lib/money";
 import { npr, fmtDate } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 type ReturnLine = {
   productId:   string;
@@ -104,9 +105,7 @@ export const ReturnPage = () => {
 
   return (
     <PageShell stickyBar>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-5 text-lg font-semibold">Return entry</h1>
 
       <div className="space-y-4">

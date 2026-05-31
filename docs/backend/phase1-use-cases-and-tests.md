@@ -18,6 +18,7 @@ Run migrations `0001` → `0002` → `0003` → **`0005`** → **`0006`** → **
 | `0013` applied | **`update_purchase`**; UI **Edit purchase** on supplier invoice detail. |
 | `0014`–`0017` applied | **`supplier_invoice_no`**, purchase VAT (`rate_excl`, `subtotal_excl`, `vat_amount`), Settings **Default VAT %**. See [Purchase reference numbers](../PURCHASE_REFERENCE_NUMBERS.md). |
 | `0019`–`0021` applied (Tier A) | **Product categories**, `stock_adjustments`, `allow_stock_adjustment`, `v_stock.adjusted`. README steps 20–22. |
+| `0024` applied (Tier B) | **INV-1** oversell guard on `create_sales_bill` / `update_sales_bill`. README step 25. Required for `e2e:stock:live` oversell check. |
 | `0008`–`0010` applied | Matrix **`uom.*`** cases: pack sale (2 Box → 20 PCS stock), `sales_items.unit`, `update_sales_bill` with `unit`. |
 
 ---

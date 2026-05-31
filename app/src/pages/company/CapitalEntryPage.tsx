@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -15,6 +14,7 @@ import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
 import type { CapitalEntry } from "@/domain/types";
 import { commitCapitalEntry } from "@/store/domain";
 import { npr, toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 export const CapitalEntryPage = () => {
   const navigate = useNavigate();
@@ -58,9 +58,7 @@ export const CapitalEntryPage = () => {
 
   return (
     <PageShell stickyBar>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-semibold">Add capital entry</h1>
       <p className="mb-5 text-sm text-muted">
         Money or assets invested in the business (freezer, vehicle, owner cash, loans, deposits). For daily running costs use Expense; for stock from suppliers use Purchase.

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import {AlertTriangle} from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
@@ -18,6 +18,7 @@ import {
 import { usePagination } from "@/lib/usePagination";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { toast } from "sonner";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 type StatusFilter = "all" | "low_stock";
 
@@ -28,7 +29,7 @@ export const StockPage = () => {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [sort, setSort] = useState<ProductSort>("stock_asc");
+  const sort: ProductSort = "stock_asc";
 
   const categories = useMemo(() => productCategories(PRODUCTS), [PRODUCTS]);
 
@@ -51,7 +52,7 @@ export const StockPage = () => {
 
   const categoryOptions = useMemo((): BrowseFilterOption[] => {
     const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All categories (${searchMatched.length})` },
+      { value: "all", label: `All (${searchMatched.length})` },
     ];
     for (const c of categories) {
       const n = searchMatched.filter((p) => normalizeCategory(p.category) === c).length;
@@ -76,12 +77,7 @@ export const StockPage = () => {
 
   return (
     <PageShell>
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-1 text-lg font-semibold">Stock</h1>
       <p className="mb-4 text-sm text-muted">
         On hand = opening + purchased + adjustments − sold − damage + returns
@@ -130,14 +126,6 @@ export const StockPage = () => {
           options: categoryOptions,
           onChange: setCategoryFilter,
         }}
-        sortValue={sort}
-        sortOptions={[
-          { value: "stock_asc", label: "Stock low → high" },
-          { value: "stock_desc", label: "Stock high → low" },
-          { value: "name_asc", label: "Name A–Z" },
-          { value: "name_desc", label: "Name Z–A" },
-        ]}
-        onSortChange={(v) => setSort(v as ProductSort)}
         summary={
           filtered.length > 0 ? browseListSummary(filtered.length, page.showingLabel) : undefined
         }

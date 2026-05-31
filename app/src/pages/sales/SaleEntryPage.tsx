@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Download, Plus, Trash2, Eye, X, Save } from "lucide-react";
+import {Download, Plus, Trash2, Eye, X, Save} from "lucide-react";
 import { downloadBillPdf } from "@/lib/billExport";
 import { printBill } from "@/lib/printBill";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ import {
 } from "@/lib/actionLabels";
 import { syncSchemeFreeLines, schemeHintForLine, type SaleDraftLine } from "@/lib/schemeApply";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 type Line = SaleDraftLine;
 
@@ -232,6 +233,17 @@ export const SaleEntryPage = () => {
   };
 
   // ── Save ────────────────────────────────────────────────────────────
+  const maybeWarnCreditLimit = () => {
+    if (!customer || customer.creditLimit <= 0 || balanceDue <= 0) return;
+    const priorBillBalance = isEdit && existing ? existing.balance : 0;
+    const projected = customer.outstanding - priorBillBalance + balanceDue;
+    if (projected > customer.creditLimit) {
+      toast.warning("Credit limit exceeded", {
+        description: `Limit ${npr(customer.creditLimit)}, projected outstanding ${npr(projected)} after this bill.`,
+      });
+    }
+  };
+
   const validate = () => {
     if (!customerId) { toast.error("Choose a customer."); return false; }
     if (lines.every((l) => !l.productId)) { toast.error("Add at least one item."); return false; }
@@ -298,8 +310,22 @@ export const SaleEntryPage = () => {
     total:           grandTotal,
   });
 
+  const saleSaveErrorMessage = (e: unknown) => {
+    const msg =
+      e instanceof Error
+        ? e.message
+        : e && typeof e === "object" && "message" in e
+          ? String((e as { message: unknown }).message)
+          : "Could not save bill";
+    if (/insufficient stock/i.test(msg)) {
+      return "Insufficient stock for one or more products. Reduce quantity or check stock.";
+    }
+    return msg || "Could not save bill";
+  };
+
   const handleSave = async () => {
     if (!validate()) return;
+    maybeWarnCreditLimit();
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
@@ -312,13 +338,7 @@ export const SaleEntryPage = () => {
           : `Bill ${finalBillNo} saved · ${npr(grandTotal)}${balanceDue > 0 ? ` · ${npr(balanceDue)} due` : " · Fully paid"}`,
       );
     } catch (e) {
-      const msg =
-        e instanceof Error
-          ? e.message
-          : e && typeof e === "object" && "message" in e
-            ? String((e as { message: unknown }).message)
-            : "Could not save bill";
-      toast.error(msg || "Could not save bill");
+      toast.error(saleSaveErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -326,6 +346,7 @@ export const SaleEntryPage = () => {
 
   const handleSaveAndPrint = async () => {
     if (!validate()) return;
+    maybeWarnCreditLimit();
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
@@ -334,13 +355,7 @@ export const SaleEntryPage = () => {
       navigate(`/app/bills/${encodeURIComponent(finalBillNo)}?print=1`, { state: { sale: { ...sale, billNo: finalBillNo } } });
       toast.success(isEdit ? "Bill updated — opening print view…" : "Bill saved — opening print view…");
     } catch (e) {
-      const msg =
-        e instanceof Error
-          ? e.message
-          : e && typeof e === "object" && "message" in e
-            ? String((e as { message: unknown }).message)
-            : "Could not save bill";
-      toast.error(msg || "Could not save bill");
+      toast.error(saleSaveErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -409,9 +424,7 @@ export const SaleEntryPage = () => {
         </div>
       )}
 
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-5 text-lg font-semibold">
         {isEdit ? `Edit sales invoice ${editBillNo}` : "New sales invoice"}
       </h1>
@@ -645,7 +658,7 @@ export const SaleEntryPage = () => {
 
         {tenantVat && vatAmt > 0 && (
           <p className="rounded-lg border border-teal-200/80 bg-teal-50/40 px-3 py-2 text-xs text-teal-900">
-            VAT {vatPct}% ({npr(vatAmt)}) is added from <strong>Settings</strong> — your shop is VAT registered.
+            VAT {vatPct}% — {npr(vatAmt)} included in grand total. Rate is set under Settings → Bills & VAT.
           </p>
         )}
 

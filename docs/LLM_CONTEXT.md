@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](README.md) · [Gemma 4 system prompt](GEMMA_SYSTEM_PROMPT.md) · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
 
-**Last updated:** 2026-05-26 (Phase 0 Tier A)
+**Last updated:** 2026-05-26 (Phase 0 Tier B)
 
 **Gemma 4 26B:** paste **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** into System instructions, then attach this file each session.
 
@@ -366,16 +366,17 @@ Add one line under **Changelog** yourself:
 | [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) | Phase 2-E export design (**deferred** — reporting / migration / backup) |
 | [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | BikriKhata branding (**shipped**) |
 | [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md) | Tier A sign-off checklist (**complete**) |
+| [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md) | Tier B sign-off — **QA + 0024 done**; deploy pending |
 
 ### What to build next (read first)
 
-Use **[PHASE_ROADMAP.md](PHASE_ROADMAP.md)** for launch scope (Phase 0–3). **Tier A complete (2026-05-26).** **Next: Tier B** — INV-1, CRED-0, VAT-0b, notifications QA ([YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md)).
+Use **[PHASE_ROADMAP.md](PHASE_ROADMAP.md)** for launch scope (Phase 0–3). **Tier A complete (2026-05-26).** **Tier B QA signed off (2026-05-26)** — push/merge/deploy still pending; see [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md).
 
 Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ features. Tier A shipped: export, BikriKhata, categories, stock adjustment, PERF-0, Tax Invoice letterhead. Schemes: save + auto-apply on sales (`schemeApply.ts`); test with `npm run seed:schemes`.
 
 ### Deferred backlog (address later)
 
-**Deferred register** — [DEFERRED_WORK.md](DEFERRED_WORK.md): **INV-1** (Tier B), **INV-2**, **SUP-1**, **IMP-0/1/2** (full backup/import). **EXP-1** and **BRAND-1** done for Tier A.
+**Deferred register** — [DEFERRED_WORK.md](DEFERRED_WORK.md): **INV-2**, **SUP-1**, **IMP-0/1/2** (full backup/import). **INV-1**, **CRED-0** (warn-only), **VAT-0b**, **UI-0.9** done Tier B. **EXP-1** and **BRAND-1** done Tier A.
 
 **Data export** — Tier A shipped (`lib/export/*`, Settings → Export); **IMP-0** = full tenant ZIP (Phase 2): [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md).
 
@@ -385,6 +386,10 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ feat
 
 ## Changelog (newest first)
 
+- **2026-05-26** — **Tier B sign-off:** 0024 dev+prod, manual QA, `e2e:stock:live` 47/47; deploy (push/MR/Netlify) pending per [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md).
+- **2026-05-26** — Home: shop name only in AppShell header; date `fmtDateDual` (AD + BS in parentheses); outstanding card without name pills; `ListBrowsePanel` 2-row filters (Status|Area, Sort full width); shorter filter labels.
+- **2026-05-26** — Print title **SALES INVOICE** when tenant has PAN (non-VAT); **TAX INVOICE** unchanged for VAT shops (`billDocumentTitle`).
+- **2026-05-26** — **Phase 0 Tier B:** `PageBackLink` (UI-0.9); Settings VAT validation (VAT-0b); credit-limit warning on sale (CRED-0 warn-only); notification due-soon boundary fix; migration **0024** oversell guard + `e2e:stock` live oversell test. Apply **0024** in Supabase before live stock e2e.
 - **2026-05-26** — Docs: **Tier A complete / Tier B next** in PHASE_ROADMAP, BACKEND-TODO, PRODUCT_EVOLUTION, DEFERRED_WORK (EXP-1, BRAND-1 done).
 - **2026-05-26** — **Phase 0 Tier A signed off** (migrations 0019–0023, export e2e, manual QA) — see [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md).
 - **2026-05-26** — App header: removed unused **Online** status pill (`AppShell.tsx`).

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Circle } from "lucide-react";
+import {CheckCircle2, Circle} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -16,6 +16,7 @@ import { PAYMENT_MODES } from "@/domain/catalogs";
 import type { Sale } from "@/domain/types";
 import { useCustomers, useSales, commitPayment } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
+import { PageBackLink } from "@/components/app/PageBackLink";
 
 /** Open bills for allocation UI — sourced from live `useSales()` (Supabase). */
 type OpenBill = {
@@ -118,9 +119,7 @@ export const PaymentPage = () => {
 
   return (
     <PageShell stickyBar>
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
+      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
       <h1 className="mb-5 text-lg font-semibold">Payment received</h1>
 
       <div className="space-y-4">
