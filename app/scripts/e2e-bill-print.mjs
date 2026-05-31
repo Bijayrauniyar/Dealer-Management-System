@@ -27,7 +27,9 @@ import {
 import { createE2eReporter, createAuthedClient, parseNpr } from "./lib/e2e-helpers.mjs";
 import {
   buildSellerContactLine,
+  formatSellerAddressLines,
   formatSellerAddressSegments,
+  sellerPhoneNumber,
 } from "../src/lib/sellerAddressLine.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -79,8 +81,46 @@ function runUnitTests() {
   );
   r.assertEq(
     buildSellerContactLine(freshmentSegments, { mobile: "9845982192", phone: "" }),
-    "Birgunj Nepal · Parsa · Ph 9845982192",
-    "seller contact line with phone",
+    "Birgunj Nepal · Parsa",
+    "seller address line (phone on letterhead right, not in address string)",
+  );
+
+  const shortBillAddr = formatSellerAddressLines({
+    addressLine1: "Ranighat-11, Birgunj",
+    addressLine2: "",
+    district: "Parsa",
+    province: "Madhesh Pradesh",
+    country: "Nepal",
+  });
+  r.assertEq(shortBillAddr.length, 1, "bill address: line 1 only by default");
+  r.assertEq(shortBillAddr[0], "Ranighat-11, Birgunj", "bill address: prints Settings line 1");
+  r.assertEq(
+    shortBillAddr.join(" ").includes("Parsa"),
+    false,
+    "bill address: district not on bill unless toggle",
+  );
+
+  const addrLines = formatSellerAddressLines(
+    {
+      addressLine1: "Birgunj Nepal",
+      addressLine2: "Nepal",
+      district: "Parsa",
+      province: "Nepal",
+      country: "Nepal",
+    },
+    { includeDistrictProvince: true },
+  );
+  r.assertEq(addrLines.length, 2, "bill address + district line when toggle on");
+  r.assertEq(
+    addrLines.join(" ").includes("9845982192"),
+    false,
+    "IRD letterhead: address lines exclude phone",
+  );
+
+  r.assertEq(
+    sellerPhoneNumber({ mobile: "9800000001", phone: "" }),
+    "9800000001",
+    "letterhead phone (mobile preferred)",
   );
 
   const hydrated = hydrateBillLineFromDbItem({
@@ -129,6 +169,7 @@ function runUnitTests() {
 // ── 2. Source: layout contracts for print + PDF capture ─────────────────────
 function runSourceTests() {
   const billView = readFileSync(resolve(SRC, "components/app/BillPrintView.tsx"), "utf8");
+  const purchaseBill = readFileSync(resolve(SRC, "components/app/PurchaseBillView.tsx"), "utf8");
   const saleEntry = readFileSync(resolve(SRC, "pages/sales/SaleEntryPage.tsx"), "utf8");
   const entityPicker = readFileSync(resolve(SRC, "components/app/EntityPicker.tsx"), "utf8");
   const stockAlert = readFileSync(resolve(SRC, "lib/stockAlert.ts"), "utf8");
@@ -146,6 +187,10 @@ function runSourceTests() {
     ["BillPrintView", "bill-print-summary", billView],
     ["BillPrintView", "billLineAmount", billView],
     ["BillPrintView", "lineDiscPct", billView],
+    ["BillPrintView", "BillLetterhead", billView],
+    ["BillPrintView", "sellerLetterheadFromBusiness", billView],
+    ["PurchaseBillView", "BillLetterhead", purchaseBill],
+    ["billPdfDocument", "sellerLetterheadFromBusiness", billPdf],
     ["billExport", "createBillPdf", billExport],
     ["billPdfDocument", "createBillPdf", billPdf],
     ["billPdfDocument", "billLineAmount", billPdf],

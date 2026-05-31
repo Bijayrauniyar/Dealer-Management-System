@@ -5,6 +5,7 @@ import { ListRow } from "@/components/app/ListRow";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/app/EmptyState";
 import { useCustomers } from "@/store/domain";
+import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr } from "@/lib/utils";
 
 const BUCKET_LABEL: Record<string, string> = {
@@ -49,15 +50,19 @@ export const AgingDetailPage = () => {
       ) : (
         <Card>
           <CardContent className="p-0 px-4">
-            {rows.map((c) => (
-              <ListRow
-                key={c.id}
-                left={c.name}
-                right={npr(c.outstanding)}
-                sub={`${c.oldestBillDays}d overdue · ${c.area}`}
-                onClick={() => navigate(`/app/payments/new?customerId=${c.id}`)}
-              />
-            ))}
+            <PaginatedListSection
+              items={rows}
+              resetKey={bucket}
+              renderItem={(c) => (
+                <ListRow
+                  key={c.id}
+                  left={c.name}
+                  right={npr(c.outstanding)}
+                  sub={`${c.oldestBillDays}d overdue · ${c.area}`}
+                  onClick={() => navigate(`/app/payments/new?customerId=${c.id}`)}
+                />
+              )}
+            />
           </CardContent>
         </Card>
       )}

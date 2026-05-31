@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/app/FormField";
+import { AuthBrandHeader } from "@/components/app/AuthBrandHeader";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -53,10 +54,7 @@ export const LoginPage = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-surface-page px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <span className="text-2xl font-bold text-teal-600">DealerOS</span>
-          <p className="mt-1 text-sm text-muted">Havmor Distributor Panel</p>
-        </div>
+        <AuthBrandHeader />
 
         <form
           onSubmit={(e) => void handleSubmit(e)}

@@ -6,6 +6,7 @@ import { ListRow } from "@/components/app/ListRow";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/app/EmptyState";
 import { useBusinessSettings, useCustomers } from "@/store/domain";
+import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr } from "@/lib/utils";
 
 export const OverduePage = () => {
@@ -38,15 +39,19 @@ export const OverduePage = () => {
       ) : (
         <Card>
           <CardContent className="p-0 px-4">
-            {overdue.map((c) => (
-              <ListRow
-                key={c.id}
-                left={c.name}
-                right={npr(c.outstanding)}
-                sub={`oldest ${c.oldestBillDays}d · ${c.area}`}
-                onClick={() => navigate(`/app/payments/new?customerId=${c.id}`)}
-              />
-            ))}
+            <PaginatedListSection
+              items={overdue}
+              resetKey={String(OVERDUE_DAYS)}
+              renderItem={(c) => (
+                <ListRow
+                  key={c.id}
+                  left={c.name}
+                  right={npr(c.outstanding)}
+                  sub={`oldest ${c.oldestBillDays}d · ${c.area}`}
+                  onClick={() => navigate(`/app/payments/new?customerId=${c.id}`)}
+                />
+              )}
+            />
           </CardContent>
         </Card>
       )}

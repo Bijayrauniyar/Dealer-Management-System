@@ -1,5 +1,5 @@
 /**
- * Shared helpers for Havmor E2E scripts (API + UI).
+ * Shared helpers for BikriKhata E2E scripts (API + UI).
  */
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";

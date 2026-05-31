@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Building2, Phone, MapPin, FileText, Receipt, SlidersHorizontal } from "lucide-react";
+import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { ExportSection } from "@/pages/settings/ExportSection";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { StickyBar } from "@/components/app/StickyBar";
@@ -19,6 +22,9 @@ import {
   taxNumberFromSettings,
   type TaxRegistrationKind,
 } from "@/lib/billDisplay";
+import { LIST_PAGE_SIZE_OPTIONS, parseListPageSize } from "@/lib/listPageSize";
+import { Select } from "@/components/ui/select";
+import { ProductCategoriesSection } from "@/components/app/ProductCategoriesSection";
 
 const SectionTitle = ({ icon: Icon, label }: { icon: React.ElementType; label: string }) => (
   <div className="mb-3 mt-6 flex items-center gap-2 first:mt-0">
@@ -51,7 +57,20 @@ type TenantSettingsRow = {
   default_min_qty: number;
   default_min_pack_qty: number;
   default_vat_pct?: number;
+  product_categories?: unknown;
+  allow_stock_adjustment?: boolean | null;
+  list_page_size?: number | null;
+  show_district_province_on_bill?: boolean | null;
 };
+
+const SETTINGS_TABS = [
+  { id: "business", label: "Business" },
+  { id: "bills", label: "Bills & VAT" },
+  { id: "stock", label: "Stock" },
+  { id: "export", label: "Export" },
+] as const;
+
+type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -79,6 +98,11 @@ export function SettingsPage() {
   const [defaultMinQty, setDefaultMinQty] = useState(20);
   const [defaultMinPackQty, setDefaultMinPackQty] = useState(2);
   const [defaultVatPct, setDefaultVatPct] = useState(13);
+  const [productCategories, setProductCategories] = useState<string[]>(["General"]);
+  const [allowStockAdjustment, setAllowStockAdjustment] = useState(false);
+  const [listPageSize, setListPageSize] = useState(10);
+  const [showDistrictOnBill, setShowDistrictOnBill] = useState(false);
+  const [tab, setTab] = useState<SettingsTab>("business");
   const [saving, setSaving] = useState(false);
 
   const applyRow = (data: TenantSettingsRow) => {
@@ -108,6 +132,13 @@ export function SettingsPage() {
     setDefaultMinQty(data.default_min_qty);
     setDefaultMinPackQty(data.default_min_pack_qty ?? 2);
     setDefaultVatPct(Number(data.default_vat_pct ?? 13));
+    const cats = Array.isArray(data.product_categories)
+      ? (data.product_categories as unknown[]).map((x) => String(x).trim()).filter(Boolean)
+      : ["General"];
+    setProductCategories(cats.length ? cats : ["General"]);
+    setAllowStockAdjustment(Boolean(data.allow_stock_adjustment));
+    setListPageSize(parseListPageSize(data.list_page_size));
+    setShowDistrictOnBill(Boolean(data.show_district_province_on_bill));
   };
 
   useEffect(() => {
@@ -139,7 +170,8 @@ export function SettingsPage() {
   const handleSave = async () => {
     if (!tenantId) return;
     setSaving(true);
-    const payload = {
+
+    const basePayload = {
       name,
       legal_name: legalName || null,
       region: region || null,
@@ -160,22 +192,73 @@ export function SettingsPage() {
       default_min_qty: defaultMinQty,
       default_min_pack_qty: defaultMinPackQty,
       default_vat_pct: defaultVatPct,
+      product_categories: productCategories,
+      allow_stock_adjustment: allowStockAdjustment,
     };
 
-    const { error } = await supabase.from("tenant_settings").update(payload).eq("tenant_id", tenantId);
+    type OptionalCol = "list_page_size" | "show_district_province_on_bill";
+    let payload: Record<string, unknown> = {
+      ...basePayload,
+      list_page_size: parseListPageSize(listPageSize),
+      show_district_province_on_bill: showDistrictOnBill,
+    };
+    const skipped = new Set<OptionalCol>();
+    let error: { message: string } | null = null;
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const res = await supabase.from("tenant_settings").update(payload).eq("tenant_id", tenantId);
+      error = res.error;
+      if (!error) break;
+      const msg = error.message;
+      const missing = (["list_page_size", "show_district_province_on_bill"] as const).find(
+        (col) => msg.includes(col) && col in payload,
+      );
+      if (!missing) break;
+      skipped.add(missing);
+      const next = { ...payload };
+      delete next[missing];
+      payload = next;
+    }
+
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
     void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
-    toast.success("Settings saved.");
+    if (skipped.size > 0) {
+      const parts: string[] = [];
+      if (skipped.has("list_page_size")) parts.push("rows per page needs migration 0022");
+      if (skipped.has("show_district_province_on_bill")) parts.push("district on bill needs migration 0023");
+      toast.success("Settings saved.", {
+        description: `${parts.join("; ")}. Run SQL in app/supabase/README.txt until then.`,
+        duration: 8000,
+      });
+    } else {
+      toast.success("Settings saved.");
+    }
   };
 
   return (
     <PageShell stickyBar>
       <h1 className="mb-1 text-lg font-bold text-foreground">Settings</h1>
-      <p className="mb-5 text-sm text-muted">Business profile &amp; invoice configuration</p>
+      <p className="mb-4 text-sm text-muted">Business profile, stock, and data export</p>
+
+      <div className="mb-5 flex gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
+        {SETTINGS_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "shrink-0 rounded-md px-3 py-2 text-xs font-semibold transition-colors",
+              tab === t.id ? "bg-white text-teal-700 shadow-sm" : "text-muted",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       {loadError && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{loadError}</div>
@@ -183,8 +266,38 @@ export function SettingsPage() {
 
       {!loaded && !loadError && <p className="text-sm text-muted">Loading…</p>}
 
-      {loaded && (
+      {loaded && tab === "export" && <ExportSection />}
+
+      {loaded && tab !== "export" && (
         <>
+          {tab === "business" && (
+            <>
+          <SectionTitle icon={SlidersHorizontal} label="Lists &amp; display" />
+          <div className="mb-6 space-y-4">
+            <FormField label="Rows per page">
+              <Select
+                className="h-10"
+                value={String(listPageSize)}
+                onChange={(e) => setListPageSize(parseListPageSize(Number(e.target.value)))}
+                aria-label="Rows per page"
+              >
+                {LIST_PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n} rows
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
+
+          <SectionTitle icon={Building2} label="Product categories" />
+          <div className="mb-6">
+            <ProductCategoriesSection
+              categories={productCategories}
+              onChange={setProductCategories}
+            />
+          </div>
+
           <SectionTitle icon={Building2} label="Business identity" />
           <div className="space-y-4">
             <FormField label="Trading name" hint="Shown on app header and invoices">
@@ -215,24 +328,42 @@ export function SettingsPage() {
           <div className="space-y-4">
             <FormField
               label="Address line 1"
-              hint="Street and city (e.g. Birgunj). Avoid putting district or country here if you use the fields below."
+              hint="Shown on printed sales and purchase invoices. Example: Ward 5, Main Road, Kathmandu."
             >
               <Input value={addr1} onChange={(e) => setAddr1(e.target.value)} />
             </FormField>
-            <FormField label="Address line 2" hint="Optional — ward, landmark, etc.">
+            <FormField
+              label="Address line 2"
+              hint="Optional second line on invoices. Example: Industrial Area, Ring Road."
+            >
               <Input value={addr2} onChange={(e) => setAddr2(e.target.value)} />
             </FormField>
-            <FormField label="District">
+            <FormField label="District" hint="Stored for your business profile. Not shown on invoices unless enabled below.">
               <Input value={district} onChange={(e) => setDistrict(e.target.value)} />
             </FormField>
-            <FormField
-              label="Province"
-              hint="Province name (e.g. Madhesh, Bagmati). Do not enter Nepal — country is added on bills automatically."
-            >
+            <FormField label="Province" hint="Stored for your business profile. Example: Bagmati, Madhesh.">
               <Input value={province} onChange={(e) => setProvince(e.target.value)} />
             </FormField>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border-subtle bg-surface-card px-3 py-3">
+              <input
+                type="checkbox"
+                checked={showDistrictOnBill}
+                onChange={(e) => setShowDistrictOnBill(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600"
+              />
+              <span className="text-sm text-gray-800">
+                <span className="font-medium">Include district and province on invoices</span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  When enabled, district and province appear below address line 1 and 2.
+                </span>
+              </span>
+            </label>
           </div>
+            </>
+          )}
 
+          {tab === "bills" && (
+            <>
           <SectionTitle icon={FileText} label="Tax &amp; registration" />
           <div className="space-y-4">
             <FormField
@@ -295,6 +426,33 @@ export function SettingsPage() {
               />
             </FormField>
           </div>
+            </>
+          )}
+
+          {tab === "stock" && (
+            <>
+          <SectionTitle icon={SlidersHorizontal} label="Stock adjustment" />
+          <div className="mb-6 space-y-3">
+            <label className="flex items-center gap-3 rounded-lg border border-border-subtle bg-white px-4 py-3">
+              <input
+                type="checkbox"
+                checked={allowStockAdjustment}
+                onChange={(e) => setAllowStockAdjustment(e.target.checked)}
+                className="h-4 w-4 rounded border-border-subtle text-teal-600"
+              />
+              <span className="text-sm">
+                Allow manual stock adjustment (+/− without purchase)
+              </span>
+            </label>
+            {allowStockAdjustment && (
+              <Link
+                to="/app/stock-adjustment/new"
+                className="block text-sm font-medium text-teal-600 hover:underline"
+              >
+                New stock adjustment →
+              </Link>
+            )}
+          </div>
 
           <SectionTitle icon={SlidersHorizontal} label="Alerts & thresholds" />
           <div className="space-y-3">
@@ -332,18 +490,21 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
+            </>
+          )}
 
-          {/* Spacer so content clears sticky Save + bottom tabs */}
           <div className="h-4" />
         </>
       )}
 
+      {tab !== "export" && (
       <StickyBar
         action="Save settings"
         onAction={() => void handleSave()}
         loading={saving}
         disabled={!loaded || !tenantId || !!loadError}
       />
+      )}
 
       {loaded && (
         <div className="mt-4 border-t border-border-subtle pt-4 pb-6">

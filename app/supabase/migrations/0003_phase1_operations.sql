@@ -1,5 +1,5 @@
 -- =============================================================================
--- Havmor DMS - Migration 0003: Phase 1 — richer sales + operational RPCs
+-- BikriKhata - Migration 0003: Phase 1 — richer sales + operational RPCs
 -- Run after 0002. Safe to re-run: DROP/CREATE OR REPLACE where applicable.
 -- =============================================================================
 

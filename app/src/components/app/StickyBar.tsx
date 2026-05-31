@@ -3,12 +3,19 @@
  * Uses a compact layout when there are multiple totals or extra actions.
  */
 import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import { ChevronDown, ChevronUp, Eye, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
   rows?: [label: string, value: string][];
   action: string;
+  /** Icon on primary action (e.g. Save on invoice forms). */
+  actionIcon?: LucideIcon;
+  /** Screen-reader / tooltip when compact label differs from `action`. */
+  actionAriaLabel?: string;
+  /** Compact-bar button text; defaults to smart shorten of `action`. */
+  actionCompactLabel?: string;
   onAction: () => void;
   secondaryAction?: string;
   onSecondaryAction?: () => void;
@@ -24,9 +31,19 @@ function isPrimaryTotalLabel(label: string) {
   return /grand total|^total$|amount received|received/i.test(label.trim());
 }
 
+function compactActionLabel(action: string, override?: string) {
+  if (override) return override;
+  const stripped = action.replace(/^Save /, "").replace(/^Update /, "");
+  if (!stripped.includes(" ") && stripped.length < 12) return action;
+  return stripped;
+}
+
 export const StickyBar = ({
   rows,
   action,
+  actionIcon: ActionIcon,
+  actionAriaLabel,
+  actionCompactLabel,
   onAction,
   secondaryAction,
   onSecondaryAction,
@@ -62,11 +79,13 @@ export const StickyBar = ({
           )}
           <Button
             size="md"
-            className="shrink-0"
+            className="shrink-0 gap-1.5"
             onClick={onAction}
             loading={loading}
             disabled={disabled}
+            aria-label={actionAriaLabel ?? action}
           >
+            {ActionIcon ? <ActionIcon size={16} className="shrink-0" /> : null}
             {action}
           </Button>
         </div>
@@ -87,7 +106,7 @@ export const StickyBar = ({
   const detailRows = dueRow ? rest.filter((r) => r !== dueRow) : rest;
   const hasDetails = detailRows.length > 0;
 
-  const shortAction = action.replace(/^Save /, "").replace(/^Update /, "");
+  const shortAction = compactActionLabel(action, actionCompactLabel);
   const shortSecondary = secondaryAction
     ?.replace(/^Save & /, "")
     .replace(/^Update & /, "");
@@ -170,9 +189,12 @@ export const StickyBar = ({
               onClick={onAction}
               loading={loading}
               disabled={disabled}
-              className="min-w-[5.5rem] px-3 sm:min-w-[7rem]"
+              className="min-w-[5.25rem] gap-1.5 px-3 sm:min-w-[8.5rem]"
+              aria-label={actionAriaLabel ?? action}
+              title={actionAriaLabel ?? action}
             >
-              {shortAction || action}
+              {ActionIcon ? <ActionIcon size={16} className="shrink-0" /> : null}
+              <span className="text-sm font-semibold">{shortAction || action}</span>
             </Button>
           </div>
         </div>

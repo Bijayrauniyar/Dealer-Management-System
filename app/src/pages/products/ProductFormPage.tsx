@@ -3,7 +3,7 @@
  *
  * Pricing model:
  *   MRP          = price on product label (shown on bill, reference only)
- *   Buy price    = cost from Havmor excl. VAT (stored incl. in DB for purchase prefill)
+ *   Buy price    = supplier cost excl. VAT (stored incl. in DB for purchase prefill)
  *   Markup %     = configurable % over buy price → auto-calculates sell price
  *   Sell price   = buy price × (1 + markup/100) — what we charge on bills
  *   VAT on bills = from tenant Settings (not per product)
@@ -15,17 +15,18 @@
  *   - markup %     → optional; empty = unset (hint shows Settings default); refresh applies default
  *   - low stock    → BUSINESS.defaultMinQty
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Info, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
+import { ProductCategoryField } from "@/components/app/ProductCategoryField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
-import { numericMoneyProps, numericPercentProps, roundMoney, roundPercent } from "@/lib/money";
+import { numericMoneyProps, numericPercentProps, numericQtyProps, roundMoney, roundPercent } from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { useBusinessSettings, useProducts, upsertProductLive } from "@/store/domain";
 import { supabase } from "@/lib/supabase";
@@ -45,7 +46,6 @@ import { effectiveMinQtyPcs, isLowStock, minStockLabel } from "@/lib/stockAlert"
 import { Button } from "@/components/ui/button";
 
 type ExtraUomRow = { id: number; uom: string; mrp: number; sellingPrice: number };
-const CAT_OPTIONS = ["Ice Cream", "Bar", "Party", "Candy", "Cone", "Other"];
 
 const Section = ({ label }: { label: string }) => (
   <p className="mb-3 mt-6 text-xs font-bold uppercase tracking-wider text-teal-600 first:mt-0">{label}</p>
@@ -61,7 +61,30 @@ export const ProductFormPage = () => {
 
   // ── Basic info ────────────────────────────────────────────────────────────
   const [name,        setName]        = useState(existing?.name        ?? "");
-  const [category,    setCategory]    = useState(existing?.category    ?? "Ice Cream");
+  const baseCategories = business.productCategories?.length ? business.productCategories : ["General"];
+  const [categories, setCategories] = useState<string[]>(() => {
+    const list = [...baseCategories];
+    if (existing?.category && !list.includes(existing.category)) list.push(existing.category);
+    return list;
+  });
+  const [category, setCategory] = useState(
+    existing?.category && categories.includes(existing.category)
+      ? existing.category
+      : categories[0] ?? "General",
+  );
+
+  useEffect(() => {
+    const list = business.productCategories?.length ? [...business.productCategories] : ["General"];
+    setCategories((prev) => {
+      const merged = [...list];
+      for (const c of prev) {
+        if (!merged.includes(c)) merged.push(c);
+      }
+      if (existing?.category && !merged.includes(existing.category)) merged.push(existing.category);
+      return merged;
+    });
+  }, [business.productCategories, existing?.category]);
+  const [openingStock, setOpeningStock] = useState(existing?.openingStock ?? 0);
   const [uom,         setUom]         = useState(existing?.uom         ?? "PCS");
   const [description, setDescription] = useState(existing?.description ?? "");
 
@@ -224,6 +247,7 @@ export const ProductFormPage = () => {
         vat_applicable: false,
         min_qty: minQty,
         min_qty_pack: uomConversion && minQtyPack > 0 ? minQtyPack : null,
+        opening_stock: isEdit ? (existing?.openingStock ?? 0) : openingStock,
       });
       toast.success(isEdit ? `${name} updated.` : `${name} added.`);
       navigate("/app/products");
@@ -250,29 +274,28 @@ export const ProductFormPage = () => {
         <Section label="Basic info" />
         <div className="space-y-4">
           <FormField label="Product name" required>
-            <Input placeholder="e.g. Havmor Vanilla 500ml" value={name}
+            <Input placeholder="e.g. Vanilla 500ml tub" value={name}
               onChange={(e) => setName(e.target.value)} />
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Category">
-              <Select value={category} onChange={(e) => setCategory(e.target.value)}>
-                {CAT_OPTIONS.map((c) => <option key={c}>{c}</option>)}
-              </Select>
-            </FormField>
-            <FormField label="Base unit" hint="Stock counted in this unit (e.g. PCS, Pkt)">
-              <Select
-                value={uom}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setUom(next);
-                  if (packUom === next) setPackUom("");
-                  setExtraUomRows((rows) => rows.filter((r) => r.uom !== next));
-                }}
-              >
-                {UOM_OPTIONS.map((u) => <option key={u}>{u}</option>)}
-              </Select>
-            </FormField>
-          </div>
+          <ProductCategoryField
+            categories={categories}
+            value={category}
+            onChange={setCategory}
+            onCategoriesChange={setCategories}
+          />
+          <FormField label="Base unit">
+            <Select
+              value={uom}
+              onChange={(e) => {
+                const next = e.target.value;
+                setUom(next);
+                if (packUom === next) setPackUom("");
+                setExtraUomRows((rows) => rows.filter((r) => r.uom !== next));
+              }}
+            >
+              {UOM_OPTIONS.map((u) => <option key={u}>{u}</option>)}
+            </Select>
+          </FormField>
 
           <Section label="Pack / conversion" />
           <p className="mb-3 text-xs text-muted">
@@ -339,7 +362,7 @@ export const ProductFormPage = () => {
           <Info size={14} className="mt-0.5 shrink-0 text-teal-600" />
           <div className="text-xs text-teal-700 space-y-1">
             <p><strong>MRP</strong> — printed on product. Shown on bill as reference only.</p>
-            <p><strong>Buy price</strong> — what you pay Havmor, before VAT. With-VAT amount is calculated from Settings.</p>
+            <p><strong>Buy price</strong> — supplier cost before VAT. With-VAT amount is calculated from Settings.</p>
             <p>
               <strong>Markup %</strong> — leave blank for no markup, or use ↻ on sell price to apply Settings default (
               {defaultMarkup}%).
@@ -391,7 +414,16 @@ export const ProductFormPage = () => {
               />
             </FormField>
 
-            <FormField label="Sell price excl. VAT (NPR)">
+            <FormField
+              label="Sell price excl. VAT (NPR)"
+              hint={
+                sellPrice > 0 && vatPct > 0
+                  ? `With VAT (${vatPct}%): ${nprNum(addVatToExcl(sellPrice, vatPct))}`
+                  : vatPct > 0
+                    ? `VAT ${vatPct}% from Settings`
+                    : undefined
+              }
+            >
               <div className="relative">
                 <NumericInput
                   {...numericMoneyProps}
@@ -541,6 +573,35 @@ export const ProductFormPage = () => {
             >
               Profit {npr(marginNpr)} ({margin}%)
             </span>
+          </div>
+        )}
+
+        {!isEdit ? (
+          <>
+            <Section label="Opening stock" />
+            <div className="mb-4 flex items-start gap-2 rounded-xl bg-slate-50 border border-border-subtle px-3 py-3">
+              <Info size={14} className="mt-0.5 shrink-0 text-teal-600" />
+              <p className="text-xs text-muted leading-snug">
+                One-time godown count when you add this SKU. After save, stock changes via{" "}
+                <strong>Purchase invoice</strong> and sales
+                {business.allowStockAdjustment
+                  ? ", or Stock adjustment in More (when enabled in Settings)."
+                  : "."}
+              </p>
+            </div>
+            <FormField label={`Opening qty (${uom})`} hint="Count in hand today before any purchase in the app">
+              <NumericInput {...numericQtyProps} min={0} value={openingStock} onChange={setOpeningStock} />
+            </FormField>
+          </>
+        ) : (
+          <div className="mb-4 rounded-xl border border-border-subtle bg-slate-50 px-3 py-3 text-xs text-muted leading-snug">
+            <p>
+              <strong>Opening qty:</strong> {existing?.openingStock ?? 0} {uom} (set when product was created).
+            </p>
+            <p className="mt-1">
+              On hand now: <strong>{existing?.onHand ?? 0}</strong> {uom}. To fix counts, use Purchase invoice
+              {business.allowStockAdjustment ? " or Stock adjustment (Settings → enable first)." : "."}
+            </p>
           </div>
         )}
 

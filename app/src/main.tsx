@@ -7,7 +7,10 @@ import { AppRouter } from "@/routes/AppRouter";
 import { AuthProvider } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { MissingSupabaseEnv } from "@/components/MissingSupabaseEnv";
+import { BRAND_HTML_TITLE } from "@/config/productBrand";
 import "./index.css";
+
+document.title = BRAND_HTML_TITLE;
 
 const root = (
   <QueryClientProvider client={queryClient}>

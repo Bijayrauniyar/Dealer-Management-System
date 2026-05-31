@@ -1,13 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  ChevronRight,
-  FilePlus,
-  Package,
-  Pencil,
-  ShoppingCart,
-  Tag,
-} from "lucide-react";
+import { ArrowLeft, FilePlus, Package, Pencil, ShoppingCart, Tag } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +15,11 @@ import {
   schemeSummaryLabel,
 } from "@/lib/schemeApply";
 import { conversionLabel } from "@/lib/uom";
+import { DetailActions } from "@/components/app/DetailActions";
+import {
+  PURCHASE_INVOICE_LABEL,
+  salesInvoiceWithProductLabel,
+} from "@/lib/actionLabels";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
 
 const TODAY = toDateInput();
@@ -176,37 +173,28 @@ export const ProductDetailPage = () => {
         </Card>
       )}
 
-      <div className="space-y-2">
-        <Button
-          className="w-full justify-between"
-          onClick={() => navigate("/app/sales/new")}
-        >
-          <span className="flex items-center gap-2">
-            <FilePlus size={16} /> New bill with this product
-          </span>
-          <ChevronRight size={16} />
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-between"
-          onClick={() => navigate("/app/purchases/new")}
-        >
-          <span className="flex items-center gap-2">
-            <ShoppingCart size={16} /> Record purchase
-          </span>
-          <ChevronRight size={16} />
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-between"
-          onClick={() => navigate(`/app/products/edit/${product.id}`)}
-        >
-          <span className="flex items-center gap-2">
-            <Pencil size={16} /> Edit product
-          </span>
-          <ChevronRight size={16} />
-        </Button>
-      </div>
+      <DetailActions
+        actions={[
+          {
+            label: salesInvoiceWithProductLabel(),
+            icon: FilePlus,
+            variant: "primary",
+            onClick: () => navigate("/app/sales/new"),
+          },
+          {
+            label: PURCHASE_INVOICE_LABEL,
+            icon: ShoppingCart,
+            variant: "outline",
+            onClick: () => navigate("/app/purchases/new"),
+          },
+          {
+            label: "Edit product",
+            icon: Pencil,
+            variant: "outline",
+            onClick: () => navigate(`/app/products/edit/${product.id}`),
+          },
+        ]}
+      />
 
       {product.description && (
         <Card className="mt-4">

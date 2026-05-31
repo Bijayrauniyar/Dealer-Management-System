@@ -98,6 +98,27 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Adds Settings → Default VAT %; purchase lines store excl + VAT split.
    - UI details: docs/PURCHASE_REFERENCE_NUMBERS.md
 
+20. Migration 0019 (tenant product categories — Settings list for product form)
+   - Open: app/supabase/migrations/0019_tenant_product_categories.sql
+   - Copy entire file → Paste → Run → Success.
+
+21. Migration 0020 (stock_adjustments table + v_stock adjusted qty + RPC)
+   - Open: app/supabase/migrations/0020_stock_adjustments.sql
+   - Copy entire file → Paste → Run → Success.
+
+22. Migration 0021 (Settings toggle allow_stock_adjustment)
+   - Open: app/supabase/migrations/0021_tenant_allow_stock_adjustment.sql
+   - Copy entire file → Paste → Run → Success.
+
+23. Migration 0022 (Settings list_page_size — rows per page on browse lists)
+   - Open: app/supabase/migrations/0022_tenant_list_page_size.sql
+   - Copy entire file → Paste → Run → Success.
+
+24. Migration 0023 (Settings show_district_province_on_bill — optional district line on printed bills)
+   - Open: app/supabase/migrations/0023_tenant_show_district_on_bill.sql
+   - Copy entire file → Paste → Run → Success.
+   - Default off: bills show only address lines 1–2 from Settings.
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 
@@ -128,7 +149,7 @@ METHOD B — Supabase CLI (optional; tracks migrations in Dashboard)
 Prerequisites: Terminal, Node/npm, database password from
   Dashboard → Project Settings → Database → Database password
 
-  cd /path/to/havmor/app
+  cd /path/to/bikrikhata/app
 
   # One-time: install CLI and log in
   npx supabase login

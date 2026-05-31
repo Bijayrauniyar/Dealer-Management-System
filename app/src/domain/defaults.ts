@@ -41,4 +41,8 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   defaultMarkupPct: 15,
   defaultMinQty: 20,
   defaultMinPackQty: 2,
+  productCategories: ["General"],
+  allowStockAdjustment: false,
+  listPageSize: 10,
+  showDistrictProvinceOnBill: false,
 };

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/app/KpiCard";
 import { useExpensesList, usePayments, usePnlTotals, usePurchasesList, useSales, useSuppliers } from "@/store/domain";
 import { purchaseDisplayTitle, purchaseDisplaySubtitle } from "@/lib/purchaseDisplay";
+import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr, fmtDate } from "@/lib/utils";
 
 const CONFIG: Record<string, { title: string; description: string }> = {
@@ -65,14 +66,18 @@ export const PeriodListPage = () => {
       {(type === "sales" || type === "today-sales") && (
         <Card>
           <CardContent className="p-0 px-4">
-            {SALES.map((s) => (
-              <ListRow
-                key={s.id}
-                left={s.customerName}
-                right={npr(s.total)}
-                sub={`${fmtDate(s.date)} · ${s.billNo}`}
-              />
-            ))}
+            <PaginatedListSection
+              items={SALES}
+              resetKey={type}
+              renderItem={(s) => (
+                <ListRow
+                  key={s.id}
+                  left={s.customerName}
+                  right={npr(s.total)}
+                  sub={`${fmtDate(s.date)} · ${s.billNo}`}
+                />
+              )}
+            />
           </CardContent>
         </Card>
       )}
@@ -80,14 +85,18 @@ export const PeriodListPage = () => {
       {type === "today-collection" && (
         <Card>
           <CardContent className="p-0 px-4">
-            {PAYMENTS.map((p) => (
-              <ListRow
-                key={p.id}
-                left={p.customerName}
-                right={npr(p.amount)}
-                sub={`${fmtDate(p.date)} · ${p.mode}`}
-              />
-            ))}
+            <PaginatedListSection
+              items={PAYMENTS}
+              resetKey={type}
+              renderItem={(p) => (
+                <ListRow
+                  key={p.id}
+                  left={p.customerName}
+                  right={npr(p.amount)}
+                  sub={`${fmtDate(p.date)} · ${p.mode}`}
+                />
+              )}
+            />
           </CardContent>
         </Card>
       )}
@@ -95,14 +104,18 @@ export const PeriodListPage = () => {
       {type === "expenses" && (
         <Card>
           <CardContent className="p-0 px-4">
-            {expenses.map((e) => (
-              <ListRow
-                key={e.id}
-                left={e.category}
-                right={npr(e.amount)}
-                sub={`${fmtDate(e.date)}${e.notes ? " · " + e.notes : ""}`}
-              />
-            ))}
+            <PaginatedListSection
+              items={expenses}
+              resetKey={type}
+              renderItem={(e) => (
+                <ListRow
+                  key={e.id}
+                  left={e.category}
+                  right={npr(e.amount)}
+                  sub={`${fmtDate(e.date)}${e.notes ? " · " + e.notes : ""}`}
+                />
+              )}
+            />
           </CardContent>
         </Card>
       )}
@@ -110,14 +123,18 @@ export const PeriodListPage = () => {
       {type === "purchases" && (
         <Card>
           <CardContent className="p-0 px-4">
-            {purchases.map((p) => (
-              <ListRow
-                key={p.id}
-                left={purchaseDisplayTitle(p)}
-                right={npr(p.total)}
-                sub={purchaseDisplaySubtitle(p)}
-              />
-            ))}
+            <PaginatedListSection
+              items={purchases}
+              resetKey={type}
+              renderItem={(p) => (
+                <ListRow
+                  key={p.id}
+                  left={purchaseDisplayTitle(p)}
+                  right={npr(p.total)}
+                  sub={purchaseDisplaySubtitle(p)}
+                />
+              )}
+            />
           </CardContent>
         </Card>
       )}
@@ -128,15 +145,19 @@ export const PeriodListPage = () => {
             {suppliersOwing.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted">No supplier balances · you&apos;re all caught up.</p>
             ) : (
-              suppliersOwing.map((s) => (
-                <ListRow
-                  key={s.id}
-                  left={s.name}
-                  right={npr(s.outstanding)}
-                  sub="Tap to record a supplier payment"
-                  onClick={() => navigate("/app/supplier-payments/new")}
-                />
-              ))
+              <PaginatedListSection
+                items={suppliersOwing}
+                resetKey={type}
+                renderItem={(s) => (
+                  <ListRow
+                    key={s.id}
+                    left={s.name}
+                    right={npr(s.outstanding)}
+                    sub="Tap to record a supplier payment"
+                    onClick={() => navigate("/app/supplier-payments/new")}
+                  />
+                )}
+              />
             )}
           </CardContent>
         </Card>

@@ -59,9 +59,15 @@ One row per tenant — stores the full business profile that appears on invoices
 | default_markup_pct | numeric(5,2) DEFAULT 15 (`0018`) | Default % markup over buy price (decimals OK, e.g. 4.5). Auto-calculates sell on new products; overridable per product. |
 | default_vat_pct | numeric DEFAULT 13 | Default VAT % for purchase bills and sales when tenant is VAT registered (`0017`). |
 | default_min_qty | integer DEFAULT 20 | Default low-stock threshold applied when creating a new product. Overridable per product. |
+| product_categories | jsonb DEFAULT `["General"]` | Category dropdown options; appended from **product form** Add category (`0019`). |
+| allow_stock_adjustment | boolean DEFAULT false | Enables `/app/stock-adjustment/new` (`0021`). |
+| list_page_size | integer DEFAULT 10 | Rows per page on browse lists; Settings → Business tab (`0022`). Allowed: 10, 20, 50, 100. |
+| show_district_province_on_bill | boolean DEFAULT false | When true, bill letterhead adds district · province · country after address lines (`0023`). |
 | updated_at | timestamptz | |
 
 > **FE note:** Loaded via `useBusinessSettings()` (React Query); invalidate `DOMAIN_QUERY_KEY` on save from Settings page.
+>
+> **Bill letterhead (IRD):** `address_line1` / `address_line2` print on bills by default; `district` / `province` / `country` only when `show_district_province_on_bill`. VAT/PAN + phone right; **Tax Invoice** when VAT registered. See [IRD_BILL_LETTERHEAD.md](../IRD_BILL_LETTERHEAD.md).
 
 ---
 
@@ -294,6 +300,22 @@ One row per bill this payment touches (FIFO):
 
 ---
 
+### `stock_adjustments` (`0020`)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | |
+| product_id | uuid FK → products | |
+| adjustment_date | date | |
+| qty_delta | numeric | Positive = add stock; negative = remove |
+| reason | text | e.g. Physical count, Shrinkage |
+| notes | text | |
+| created_at | timestamptz | |
+
+RPC: `record_stock_adjustment`. UI: `StockAdjustmentPage` when `tenant_settings.allow_stock_adjustment`. Included in `v_stock.adjusted` and closing formula.
+
+---
+
 ### `purchases` *(implemented — see also [Purchase reference numbers](../PURCHASE_REFERENCE_NUMBERS.md))*
 
 | Column | Type | Notes |
@@ -349,8 +371,10 @@ RPCs: `record_purchase`, `update_purchase` (from `0013`+). UI: `PurchasePage`, `
 - Backend: add a `short_receives` table (or a partial-receive view) to track pending short amounts per supplier.
 
 **Side effects (stock):**
-- Stock on-hand comes from view `v_stock`: `opening_stock + purchased − sold − damaged + returned` (purchased = sum of `purchase_items.qty`).
-- **Normal stock IN = purchase**, not a separate stock-entry document. Opening qty uses `products.opening_stock`; count correction without supplier is **not in app UI yet** — see [GTM_NEPAL.md § Stock model](../GTM_NEPAL.md#stock-model-purchase-vs-stock-entry).
+- Stock on-hand comes from view `v_stock`: `opening_stock + purchased + adjusted − sold − damaged + returned` (`0020`; purchased = sum of `purchase_items.qty`).
+- **Normal stock IN = purchase**. Opening qty on product form (`products.opening_stock`). Manual correction: **Stock adjustment** when enabled in Settings (`0021`).
+- **Client export:** `app/src/lib/export/*` — CSV registers + ZIP backup; Settings → Export tab. Spec: [DATA_EXPORT_SPEC.md](../DATA_EXPORT_SPEC.md).
+- **PERF-0:** `fetchDomainBundle()` loads `fetchSalesHeadersLive()` (no line items); bill detail/edit uses `fetchSaleByBillNoLive(billNo)`.
 - Supplier payable follows purchase total (credit purchases).
 
 ---
@@ -703,7 +727,7 @@ Surface actionable alerts inside the app (bell icon) and optionally deliver them
 #### Optional SMS / WhatsApp delivery
 - Add per-type toggle columns to `tenant_settings` (e.g. `notify_overdue_sms boolean DEFAULT false`).
 - On insert of an urgent notification, trigger an Edge Function `send-sms-alert` that calls **Sparrow SMS** (Nepal) or Twilio.
-- Message template: `"[Havmor] Bill HB-128 for Ghantaghar Stores is overdue by 3 days. Balance: NPR 8,491. Reply STOP to opt out."`
+- Message template: `"[ShopName] Bill HB-128 for Ghantaghar Stores is overdue by 3 days. Balance: NPR 8,491. Reply STOP to opt out."` (prefix from tenant settings, not product brand)
 
 #### FE changes (Phase 2-A)
 - Replace static `buildNotifications()` in `NotificationPanel.tsx` with a Supabase `select` query on the `notifications` table.
@@ -715,7 +739,7 @@ Surface actionable alerts inside the app (bell icon) and optionally deliver them
 ### Phase 2-B — Bill / invoice image capture
 
 #### Goal
-Allow the dealer to photograph a physical Havmor delivery challan or supplier invoice and have it:
+Allow the dealer to photograph a physical supplier delivery challan or invoice and have it:
 1. Stored for reference (audit trail, dispute resolution)
 2. Auto-extracted into structured data to pre-fill purchase / sale entry forms
 

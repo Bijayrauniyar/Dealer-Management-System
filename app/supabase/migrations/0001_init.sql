@@ -1,5 +1,5 @@
 -- =============================================================================
--- Havmor DMS - Supabase schema v1
+-- BikriKhata - Supabase schema v1
 -- =============================================================================
 -- Paste this ENTIRE file into Supabase SQL editor and click Run.
 -- Safe to re-run: uses "create table if not exists" / "drop ... if exists".

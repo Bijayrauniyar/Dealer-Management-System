@@ -12,8 +12,7 @@ import {
   billShowsFooterDiscount,
   billShowsLineDiscColumn,
   billSubtotalForDisplay,
-  sellerContactLine,
-  sellerTaxId,
+  sellerLetterheadFromBusiness,
 } from "@/lib/billDisplay";
 import { roundMoney } from "@/lib/money";
 import { billLineAmount } from "@/lib/saleLineMath";
@@ -34,12 +33,6 @@ const TEAL: [number, number, number] = [13, 148, 136];
 
 function rs(n: number): string {
   return `Rs. ${nprNum(n)}`;
-}
-
-function sellerBillName(b: BusinessSettings): string {
-  const legal = b.legalName.trim();
-  const trading = b.name.trim();
-  return legal || trading || "—";
 }
 
 function lineDiscPct(line: SaleLine): number {
@@ -145,35 +138,42 @@ export function createBillPdf({ sale, customer, business }: BillPdfInput): jsPDF
   const cols = buildCols(lines, sale);
   let y = MARGIN;
 
-  const sellerTax = sellerTaxId(business);
-  const sellerContact = sellerContactLine(business);
+  const head = sellerLetterheadFromBusiness(business);
 
-  // ── Letterhead: shop+address left, VAT/PAN right, title centered on own line ──
+  // ── Letterhead: name + address (left), VAT/PAN + Ph (right) — docs/IRD_BILL_LETTERHEAD.md ──
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
   pdf.setTextColor(20, 20, 20);
-  pdf.text(sellerBillName(business), MARGIN, y);
-  if (sellerTax) {
+  pdf.text(head.name, MARGIN, y);
+  if (head.tax) {
     pdf.setFontSize(9);
-    const taxStr = `${sellerTax.label} ${sellerTax.number}`;
+    const taxStr = `${head.tax.label} ${head.tax.number}`;
     const tw = pdf.getTextWidth(taxStr);
     pdf.text(taxStr, RIGHT - tw, y);
   }
   y += 5;
 
-  if (sellerContact) {
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8);
-    pdf.setTextColor(80, 80, 80);
-    const contactLines = pdf.splitTextToSize(sellerContact, CONTENT_W * 0.7);
-    pdf.text(contactLines, MARGIN, y);
-    y += contactLines.length * 3.2 + 1;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(8);
+  pdf.setTextColor(80, 80, 80);
+  let leftY = y;
+  for (const addrLine of head.addressLines) {
+    pdf.text(addrLine, MARGIN, leftY);
+    leftY += 3.2;
   }
+  let rightY = y;
+  if (head.phone) {
+    const phStr = `Ph ${head.phone}`;
+    const phW = pdf.getTextWidth(phStr);
+    pdf.text(phStr, RIGHT - phW, rightY);
+    rightY += 3.2;
+  }
+  y = Math.max(leftY, rightY) + 1;
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);
   pdf.setTextColor(30, 30, 30);
-  const title = billDocumentTitleDisplay();
+  const title = billDocumentTitleDisplay(business);
   const titleW = pdf.getTextWidth(title);
   pdf.text(title, (PAGE_W - titleW) / 2, y);
   y += 6;

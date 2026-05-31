@@ -8,7 +8,9 @@ import { SectionHeader } from "@/components/app/SectionHeader";
 import { ListRow } from "@/components/app/ListRow";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { fetchDashboardPeriodTotalsLive } from "@/lib/live/domainLive";
+import { fetchDashboardPeriodTotalsLive, fetchTopProductsInPeriodLive } from "@/lib/live/domainLive";
+import { useQuery } from "@tanstack/react-query";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import {
   useBusinessSettings,
   useCustomers,
@@ -95,21 +97,13 @@ export const DashboardPage = () => {
       .map(([customerId, v]) => ({ customerId, ...v }));
   }, [salesInPeriod]);
 
-  const topProducts = useMemo(() => {
-    const m = new Map<string, { name: string; qty: number; revenue: number }>();
-    for (const s of salesInPeriod) {
-      for (const l of s.lines) {
-        const cur = m.get(l.productId) ?? { name: l.productName, qty: 0, revenue: 0 };
-        cur.qty += l.qty;
-        cur.revenue += l.qty * l.rate;
-        m.set(l.productId, cur);
-      }
-    }
-    return [...m.entries()]
-      .sort((a, b) => b[1].qty - a[1].qty)
-      .slice(0, 5)
-      .map(([productId, v]) => ({ productId, ...v }));
-  }, [salesInPeriod]);
+  const topProductsQ = useQuery({
+    queryKey: ["dashboard-top-products", period.from, period.to],
+    queryFn: () => fetchTopProductsInPeriodLive(period.from, period.to),
+    enabled: isSupabaseConfigured,
+    staleTime: 30_000,
+  });
+  const topProducts = topProductsQ.data ?? [];
 
   const overdue = useMemo(
     () =>

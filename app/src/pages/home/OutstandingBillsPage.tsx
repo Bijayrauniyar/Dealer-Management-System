@@ -5,6 +5,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/app/EmptyState";
 import { useCustomers, useOutstandingBills } from "@/store/domain";
+import { PaginatedListSection } from "@/components/app/PaginatedListSection";
 import { npr, fmtDate } from "@/lib/utils";
 
 /** All open bills (balance &gt; 0) with customer names — tap-through to bill detail. */
@@ -45,29 +46,32 @@ export const OutstandingBillsPage = () => {
       ) : (
         <Card>
           <CardContent className="p-0 px-4">
-            {sorted.map((b) => (
-              <button
-                type="button"
-                key={b.id}
-                onClick={() => navigate(`/app/bills/${encodeURIComponent(b.billNo)}`)}
-                className="flex w-full items-center justify-between gap-2 border-b border-border-subtle py-3.5 text-left last:border-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground truncate">{b.billNo}</p>
-                  <p className="text-xs text-muted">
-                    {byCust.get(b.customerId) ?? "Customer"} · {fmtDate(b.billDate)}
-                  </p>
-                  <p className="text-[11px] text-muted">
-                    Total {npr(b.billTotal)} · paid {npr(b.paidAmount)}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className="text-sm font-bold text-warning">{npr(b.balance)}</span>
-                  <span className="text-[10px] uppercase text-muted">{b.status}</span>
-                  <ChevronRight size={14} className="text-muted" />
-                </div>
-              </button>
-            ))}
+            <PaginatedListSection
+              items={sorted}
+              renderItem={(b) => (
+                <button
+                  type="button"
+                  key={b.id}
+                  onClick={() => navigate(`/app/bills/${encodeURIComponent(b.billNo)}`)}
+                  className="flex w-full items-center justify-between gap-2 border-b border-border-subtle py-3.5 text-left last:border-0"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground truncate">{b.billNo}</p>
+                    <p className="text-xs text-muted">
+                      {byCust.get(b.customerId) ?? "Customer"} · {fmtDate(b.billDate)}
+                    </p>
+                    <p className="text-[11px] text-muted">
+                      Total {npr(b.billTotal)} · paid {npr(b.paidAmount)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-sm font-bold text-warning">{npr(b.balance)}</span>
+                    <span className="text-[10px] uppercase text-muted">{b.status}</span>
+                    <ChevronRight size={14} className="text-muted" />
+                  </div>
+                </button>
+              )}
+            />
           </CardContent>
         </Card>
       )}

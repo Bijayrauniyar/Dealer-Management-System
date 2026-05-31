@@ -27,7 +27,7 @@ Sequential `purchase_no` per tenant: stable row identity, RPC returns, support/d
 - **After 0016** — old rows without a number get `INV-001`, `INV-002`, … automatically in the database.
 - **Purchase entry** — line **buy excl. VAT**; incl. per unit from **Settings → Default VAT %**.
 - **Totals** — sticky bar and summary show `VAT (X%)` and `Total (incl. X% VAT)`.
-- **Purchase detail** — compact bill header: **left** = supplier name, address, phone; **right** = invoice no., date, miti, supplier **VAT** or **PAN** when set.
+- **Purchase detail** — seller letterhead per [IRD_BILL_LETTERHEAD.md](IRD_BILL_LETTERHEAD.md); supplier block: name, address, phone; meta: invoice no., date, miti, supplier **VAT** or **PAN**.
 - **Line table** — Rate excl, VAT column, Amount (incl.).
 - **Lists** — title = supplier invoice no. (not PO).
 

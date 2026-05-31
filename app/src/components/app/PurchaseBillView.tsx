@@ -1,9 +1,6 @@
 import type { BusinessSettings, PurchaseDetail, Supplier } from "@/domain/types";
-import {
-  sellerBillName,
-  sellerContactLine,
-  sellerTaxId,
-} from "@/lib/billDisplay";
+import { sellerLetterheadFromBusiness } from "@/lib/billDisplay";
+import { BillLetterhead } from "@/components/app/BillLetterhead";
 import { getVatPct } from "@/lib/tax";
 import { purchaseDisplayTitle } from "@/lib/purchaseDisplay";
 import { fmtDate, npr, toMiti } from "@/lib/utils";
@@ -42,8 +39,7 @@ function supplierTaxId(s: Supplier): { label: "VAT" | "PAN"; number: string } | 
 
 export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
   const vatPct = getVatPct(business);
-  const sellerTax = sellerTaxId(business);
-  const sellerContact = sellerContactLine(business);
+  const letterhead = sellerLetterheadFromBusiness(business);
   const supTax = supplierTaxId(supplier);
   const balance = Math.max(0, purchase.total - purchase.paid);
   const title = purchaseDisplayTitle(purchase);
@@ -63,25 +59,7 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
       className="bill-print-a4 mx-auto w-full min-w-0 max-w-[210mm] overflow-x-hidden rounded-lg border border-gray-200 bg-white text-[10px] leading-tight text-gray-900 shadow-sm print:overflow-visible print:rounded-none print:border-0 print:shadow-none"
     >
       <div className="px-3 py-2 print:px-6 print:pb-3 print:pt-5">
-        <div className="border-b border-gray-200 pb-1.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold leading-tight text-gray-900">{sellerBillName(business)}</p>
-              {sellerContact ? (
-                <p className="mt-0.5 text-[9px] leading-snug text-gray-600">{sellerContact}</p>
-              ) : null}
-            </div>
-            {sellerTax ? (
-              <div className="shrink-0 text-right text-[9px]">
-                <span className="text-gray-500">{sellerTax.label}</span>{" "}
-                <span className="font-bold text-gray-900">{sellerTax.number}</span>
-              </div>
-            ) : null}
-          </div>
-          <p className="mt-1.5 text-center text-[9px] font-bold uppercase tracking-wide text-gray-800">
-            Purchase invoice
-          </p>
-        </div>
+        <BillLetterhead head={letterhead} documentTitle="Purchase invoice" />
 
         <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 border-b border-dashed border-gray-300 py-1.5 text-[9px] leading-snug text-gray-800">
           <div className="min-w-0">

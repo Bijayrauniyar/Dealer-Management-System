@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, FilePlus, Pencil, Wallet } from "lucide-react";
+import { DetailActions } from "@/components/app/DetailActions";
 import { PageShell } from "@/components/app/PageShell";
+import { PURCHASE_INVOICE_LABEL } from "@/lib/actionLabels";
 import { PurchaseBillView } from "@/components/app/PurchaseBillView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,42 +90,37 @@ export const PurchaseDetailPage = () => {
         <Badge variant={cfg.variant}>{cfg.label}</Badge>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          className="flex-1 min-w-[8rem]"
-          type="button"
-          onClick={() => navigate(`/app/purchases/edit/${detail.id}`)}
-        >
-          <Pencil size={14} /> Edit purchase
-        </Button>
-        {balance > 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 min-w-[8rem]"
-            type="button"
-            onClick={() =>
-              navigate("/app/supplier-payments/new", {
-                state: { supplierId: detail.supplierId },
-              })
-            }
-          >
-            <Wallet size={14} /> Record payment
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 min-w-[8rem]"
-          type="button"
-          onClick={() =>
-            navigate("/app/purchases/new", { state: { supplierId: detail.supplierId } })
-          }
-        >
-          <FilePlus size={14} /> New purchase
-        </Button>
-      </div>
+      <DetailActions
+        className="mb-4"
+        actions={[
+          ...(balance > 0
+            ? [
+                {
+                  label: "Record supplier payment",
+                  icon: Wallet,
+                  variant: "primary" as const,
+                  onClick: () =>
+                    navigate("/app/supplier-payments/new", {
+                      state: { supplierId: detail.supplierId },
+                    }),
+                },
+              ]
+            : []),
+          {
+            label: "Edit purchase",
+            icon: Pencil,
+            variant: balance > 0 ? "outline" : "primary",
+            onClick: () => navigate(`/app/purchases/edit/${detail.id}`),
+          },
+          {
+            label: PURCHASE_INVOICE_LABEL,
+            icon: FilePlus,
+            variant: "outline",
+            onClick: () =>
+              navigate("/app/purchases/new", { state: { supplierId: detail.supplierId } }),
+          },
+        ]}
+      />
 
       {supplier ? (
         <PurchaseBillView purchase={detail} supplier={supplier} business={business} />

@@ -1,9 +1,9 @@
 # Data export system — design spec (Phase 2-E)
 
-**Navigate:** [Docs hub](README.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Data model](backend/data-model.md) · [LLM context](LLM_CONTEXT.md)
+**Navigate:** [Launch roadmap Phase 0](../PHASE_ROADMAP.md) · [Docs hub](README.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Data model](backend/data-model.md) · [LLM context](LLM_CONTEXT.md)
 
-**Status:** **Deferred** — spec + backlog only; implement when prioritized (see [BACKEND-TODO § 2-E](backend/BACKEND-TODO.md)).  
-**Last updated:** 2026-05-23
+**Status:** **Partial** — Tier A export shipped (Settings → Export); **full backup + import + restore → Phase 2** ([IMP-0/1/2](DEFERRED_WORK.md)).  
+**Last updated:** 2026-05-26
 
 **Target users:** Small Nepal distributors, warehouse staff, accountants — mobile-first, Excel-friendly, trust-building.
 
@@ -157,9 +157,17 @@ Build registers, not IRD filing XML:
 
 **Into app (onboarding):** Products → opening stock / opening purchase → customers (+ opening balance) → go-live sales. Historical bills often skipped.
 
+**Phase 2 import program ([DEFERRED_WORK.md](DEFERRED_WORK.md)):**
+
+| ID | What |
+|----|------|
+| **IMP-0** | Export **everything** in one ZIP (trust + handoff) |
+| **IMP-1** | Per-entity CSV import (templates + upload + row errors) |
+| **IMP-2** | Optional full restore: masters + open udhar + history (Tier A–C) |
+
 **Out of app:** Full ZIP + README; human registers even if they never re-import elsewhere.
 
-**Known schema gap:** `returns` table has no `bill_id` — `apply_goods_return` uses bill in RPC only. **P1:** add `returns.bill_id` for migration fidelity; document limitation until then.
+**Known schema gap:** `returns` table has no `bill_id` — `apply_goods_return` uses bill in RPC only. Add `returns.bill_id` before **IMP-2** Tier B/C; document limitation until then.
 
 ---
 
@@ -183,9 +191,13 @@ Build registers, not IRD filing XML:
 - [ ] `returns.bill_id` migration
 - [ ] VAT period summary export
 
-### P2
+### P2 → Phase 2 (**IMP-0**, **IMP-1**, **IMP-2**)
 
-- [ ] Import templates (products, customers, opening balances)
+See [DEFERRED_WORK.md](DEFERRED_WORK.md):
+
+- [ ] **IMP-0** — Complete backup ZIP (settings, suppliers, payments, all entities, all-history option)
+- [ ] **IMP-1** — Import hub + templates per entity (products, customers, suppliers, categories, settings, stock)
+- [ ] **IMP-2** — Restore / migration import (resume business from backup; Tier A–C)
 - [ ] Async large export + notification
 - [ ] Incremental backup
 

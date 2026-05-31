@@ -4,6 +4,8 @@
 
 Use this **one document** for everything scripts do **not** fully cover, plus step-by-step manual tests for **every feature**, edge case, and calculation check.
 
+**Phase 0 Tier A (2026-05-26):** Signed off — see [`../YOUR_TURN_PHASE0_TIER_A.md`](../YOUR_TURN_PHASE0_TIER_A.md). Apply migrations **`0019`–`0023`** before §3.2 Settings / Export / stock tests.
+
 **Companion (automated):** [`phase1-use-cases-and-tests.md`](./phase1-use-cases-and-tests.md)  
 **Run scripts first:** `npm run e2e:full` (needs `npm run dev` for UI part)
 
@@ -32,7 +34,7 @@ Check each row after manual testing.
 | # | Area | Scripts cover | You must verify manually |
 |---|------|---------------|---------------------------|
 | G1 | **Bill edit (success)** | Only “blocked” toast in live | Full edit flow when Phase 2-D ships; until then confirm block message is clear |
-| G2 | **Supplier add in UI** | API insert only | No “New supplier” screen — add via Supabase or accept gap |
+| G2 | ~~Supplier add in UI~~ | **Shipped** | Add supplier + **Edit supplier** on list expand / purchase history |
 | G3 | **Every `tenant_settings` field** | Footer, prefix, name, overdue, markup | Phone, address, PAN, VAT flags, due_soon_days, default_min_qty, legal_name, etc. |
 | G4 | **Line-level discount %** on sale | — | Change product discount %; confirm line amount and grand total |
 | G5 | **Bill discount % vs flat** | Flat discount in API matrix | Toggle % vs NPR on sale form; verify sticky totals |
@@ -70,11 +72,11 @@ Check each row after manual testing.
 |--------|-----------|----------------|
 | **Auth** | Login, register, pending tenant, no tenant, sign out | `/login`, `/register`, `/pending-approval`, `/no-tenant` |
 | **Home** | KPIs, quick actions, aging buckets, overdue list, period lists | `/app/home`, `/app/home/overdue`, `/app/home/aging/:bucket`, `/app/home/period/:type` |
-| **Settings** | Business profile, invoice prefix, footer, alerts, product defaults | `/app/settings` |
+| **Settings** | Tabbed: Business, Bills & VAT, Stock, **Export** | `/app/settings` |
 | **Products** | List, search, add, edit, inactive/active | `/app/products`, `/app/products/new`, `.../edit/:id` |
 | **Customers** | List, filter outstanding, add, edit, detail, new bill from customer | `/app/customers`, `.../new`, `.../edit/:id`, `.../:id` |
-| **Suppliers** | List, expandable cards (read-only add in UI) | `/app/suppliers` |
-| **Stock** | On-hand from `v_stock` | `/app/stock` |
+| **Suppliers** | List, add/edit, expandable actions | `/app/suppliers`, `…/new`, `…/edit/:id` |
+| **Stock** | On-hand, opening, purchased; optional adjustment | `/app/stock`, `/app/stock-adjustment/new` |
 | **Sale** | New bill, edit existing (`update_sales_bill`), preview, print | `/app/sales/new`, `/app/sales/edit/:billNo` |
 | **Bill detail** | View, print, return, pay, edit pencil | `/app/bills/:billNo` |
 | **Payment** | Customer payment, bill allocation | `/app/payments/new` |
@@ -111,7 +113,20 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 
 ---
 
-### 3.2 Settings — all fields (MAN-SET)
+### 3.2 Settings — tabs (MAN-SET)
+
+| # | Step | Pass |
+|---|------|------|
+| STab1 | Header **Settings** icon → `/app/settings` | |
+| STab2 | **Export** tab → download Products CSV; open in Excel (UTF-8 header row) | |
+| STab3 | **Business** → **Rows per page** (e.g. 20) → Save | Applies to customers, products, stock, suppliers — not stock-only |
+| STab3b | **New product** → category **Add** (e.g. “Beverages”) | Category in dropdown + filters; no Settings step |
+| STab4 | **Stock** tab → stock adjustment toggle → Save | More menu shows Stock adjustment when enabled |
+| STab5 | VAT registered + VAT number → print sales bill title **TAX INVOICE** | |
+| STab5b | Bill letterhead: **Address line 1** only by default; **VAT/PAN** + **Ph** right | Toggle “Include district and province on invoices” to add admin line |
+| STab5c | Address line 1 on bill matches Settings; district not on bill until toggle | |
+
+### 3.2b Settings — all fields (MAN-SET)
 
 | ID | Steps | Expected |
 |----|-------|----------|
@@ -132,7 +147,8 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| P1 | More → Products → New: name, buy **excl. VAT**, MRP, category, min qty; sell optional | Saves; buy stored incl. in DB; hint shows with-VAT |
+| P1 | More → Products → New: name, buy **excl. VAT**, MRP, category, min qty; **opening qty** optional | Saves; opening qty editable only on create |
+| P1b | Edit same product | Opening qty read-only summary; on-hand shown; corrections via Purchase or Stock adjustment (if enabled) |
 | P2 | Edit product: change sell price | List and sale picker show new price |
 | P3 | Search product by name | Filters list |
 | P4 | **Edge:** Sell price 0 or &lt; buy excl. | Sell optional; margin preview when both &gt; 0 |
@@ -145,10 +161,10 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 | ID | Steps | Expected |
 |----|-------|----------|
 | C1 | Customers → New: name, phone, area, address, credit limit | Saves; list shows customer |
-| C2 | Edit customer name | Detail page and sale picker updated |
+| C2 | Customer detail → **Edit** → change name | Saves; detail and sale picker updated |
 | C3 | Filter “with balance” if available | Only outstanding &gt; 0 |
 | C4 | Customer detail → outstanding, bill history | Matches Supabase `v_customer_balance` / bills |
-| C5 | From detail → **New bill** | Sale opens with customer pre-selected |
+| C5 | From detail → **Sales invoice** | Sale opens with customer pre-selected; **Edit customer** on same actions block |
 | C6 | **Edge:** Credit limit 0 vs high limit | Note behaviour on large credit sale |
 
 ---
@@ -158,7 +174,7 @@ Use **Pass / Fail / N/A** and notes. Verify in **Supabase** where indicated.
 | ID | Steps | Expected |
 |----|-------|----------|
 | SP1 | Open Suppliers list | Shows seeded/live suppliers |
-| SP2 | **Gap G2:** Look for “New supplier” button | Document if missing; add supplier in Supabase Table Editor |
+| SP2 | Add supplier · expand card → **Edit supplier** | Name/phone/address save; opening payable only on create |
 | SP3 | After manual/API supplier add | Appears on Purchase picker |
 | SP4 | Supplier payable on Company overview | Roughly matches sum of unpaid purchases |
 
@@ -306,7 +322,10 @@ open     = total − paid
 | H1 | Home KPIs load | No infinite loading |
 | H2 | Tap overdue / aging bucket | Correct list of customers/bills |
 | H3 | Notification bell | Panel opens; tap item navigates (if link exists) |
-| H4 | Quick “New bill” | Opens sale |
+| H4 | Quick **Sales invoice** | Opens sale entry |
+| H5 | **Export all (N)** on browse card | CSV has every **filtered** row, not only current page; N = match count |
+| H5b | Settings → **Business** → **Rows per page** 20 → Home customers | List shows 20 per page; export still all filtered |
+| H5c | Stock low-stock banner **Show list** | Not comma name wall |
 
 ---
 

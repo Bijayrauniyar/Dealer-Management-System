@@ -15,6 +15,7 @@ export {
   useSchemes,
   useOutstandingBills,
   useSaleByBill,
+  useSaleByBillQuery,
   getNextBillNo,
   useNextBillNo,
   commitSale,
@@ -23,10 +24,12 @@ export {
   commitPurchase,
   commitPurchaseUpdate,
   commitSupplierPayment,
+  commitSupplier,
   commitNewSupplier,
   commitDailyCashClose,
   useDailyCashBreakdown,
   commitDamageEntry,
+  commitStockAdjustment,
   commitSchemeEntry,
   commitExpenseEntry,
   commitCustomer,
@@ -40,4 +43,5 @@ export type {
   CommitReturnOpts,
   CommitSupplierPaymentOpts,
 } from "./commitTypes";
-export { upsertProductLive } from "@/lib/live/domainLive";
+export { upsertProductLive, appendProductCategoryLive } from "@/lib/live/domainLive";
+export { commitAppendProductCategory, commitRemoveProductCategory } from "./domainHooks";

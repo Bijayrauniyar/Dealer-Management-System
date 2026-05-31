@@ -96,7 +96,7 @@ export const CapitalEntryPage = () => {
             placeholder={
               category === "fixed_asset"   ? "e.g. Deep freezer Haier 500L" :
               category === "inventory"     ? "e.g. Initial stock order May 2024" :
-              category === "deposit"       ? "e.g. Havmor security deposit" :
+              category === "deposit"       ? "e.g. Supplier security deposit" :
               category === "owner_capital" ? "e.g. Owner capital injection" :
               "e.g. NMB bank business loan"
             }

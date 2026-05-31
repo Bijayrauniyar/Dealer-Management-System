@@ -1,6 +1,10 @@
-# Havmor — Dealer Management System (DMS)
+# BikriKhata
 
-Multi-tenant dealer & distribution management platform built for Nepal FMCG workflows.
+**[bikrikhata.com](https://bikrikhata.com)** — wholesaler & distributor management for Nepal: stock, sales bills, customer credit, purchases, and IRD-ready tax invoices.
+
+*Manage Stock, Sales, Credit & Customers in One Place.*
+
+Multi-tenant web app (React PWA + Supabase).
 
 The UI is a **Progressive Web App** built with React; persistence is **Supabase** (Postgres + Auth + Row Level Security) with **security-definer RPCs** for transactions.
 
@@ -71,8 +75,8 @@ If you are new to the codebase, read this file first, then follow the **numbered
 ## Repository layout
 
 ```
-havmor/
-├── app/                    # Main application (npm package: havmor-dms)
+bikrikhata/                 # repo root (local folder name may still be legacy)
+├── app/                    # Main application (npm package: bikrikhata)
 │   ├── src/
 │   │   ├── components/     # Shared UI (layout, forms, primitives)
 │   │   ├── pages/          # Route-level screens
@@ -199,4 +203,6 @@ cd app && npm run deploy:check   # lint + production build before you push
 
 ## License / product
 
-Private project (`"private": true` in `app/package.json`). Internal use unless otherwise stated by the owners.
+Private project (`"private": true` in `app/package.json`). Product brand: **BikriKhata**. Each tenant’s shop name on printed bills is configured in **Settings**, not the product name.
+
+**Domain (production):** [bikrikhata.com](https://bikrikhata.com) — when going live, add the URL to Supabase Auth redirect allowlist ([`docs/deployment.md`](docs/deployment.md)); that step is separate from this repo rename.

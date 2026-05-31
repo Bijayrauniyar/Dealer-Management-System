@@ -10,7 +10,7 @@ import { BillPrintView } from "@/components/app/BillPrintView";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  useSaleByBill,
+  useSaleByBillQuery,
   useOutstandingBills,
   usePayments,
   useCustomers,
@@ -53,7 +53,8 @@ export const BillDetailPage = () => {
   const location       = useLocation();
 
   // Reactive store lookups — update automatically after commitSale/commitPayment
-  const storeSale         = useSaleByBill(billNo ?? "");
+  const saleQuery         = useSaleByBillQuery(billNo ?? "");
+  const fetchedSale       = saleQuery.data;
   const OUTSTANDING_BILLS = useOutstandingBills();
   const PAYMENTS          = usePayments();
   const CUSTOMERS         = useCustomers();
@@ -62,7 +63,8 @@ export const BillDetailPage = () => {
 
   const stateSaleRaw = (location.state as { sale?: unknown } | null)?.sale;
   const stateSale = saleFromLocationState(stateSaleRaw, billNo);
-  const sale      = stateSale ?? storeSale;
+  const sale =
+    stateSale && stateSale.lines.length > 0 ? stateSale : fetchedSale;
   const obEntry   = OUTSTANDING_BILLS.find((b) => b.billNo === billNo);
   const payments  = PAYMENTS.filter((p) => p.billNo === billNo);
   const customer  = sale ? CUSTOMERS.find((c) => c.id === sale.customerId) : undefined;
@@ -107,7 +109,7 @@ export const BillDetailPage = () => {
     }
   }, [searchParams, sale?.billNo]);
 
-  if (loadState === "loading") {
+  if (loadState === "loading" || saleQuery.isLoading) {
     return (
       <PageShell>
         <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
@@ -129,29 +131,41 @@ export const BillDetailPage = () => {
     );
   }
 
-  if (!sale) return (
-    <PageShell>
-      <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
-        <ArrowLeft size={16} /> Back
-      </button>
-      <div className="mx-auto mt-16 max-w-sm space-y-3 px-4 text-center">
-        <p className="text-sm text-slate-700">
-          No bill <span className="font-mono font-semibold text-slate-900">{billNo ? decodeURIComponent(billNo) : "—"}</span>{" "}
-          for this shop.
-        </p>
-        <p className="text-xs text-slate-500">
-          It may have been removed (for example after a data reset), or the link is outdated.
-        </p>
-        <button
-          type="button"
-          onClick={() => navigate("/app/home")}
-          className="text-sm font-semibold text-teal-600 underline underline-offset-2"
-        >
-          Go to home
+  if (!sale) {
+    if (!saleQuery.isFetched) {
+      return (
+        <PageShell>
+          <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
+            <ArrowLeft size={16} /> Back
+          </button>
+          <p className="mt-16 text-center text-sm text-slate-600">Loading bill…</p>
+        </PageShell>
+      );
+    }
+    return (
+      <PageShell>
+        <button type="button" onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm font-medium text-teal-600">
+          <ArrowLeft size={16} /> Back
         </button>
-      </div>
-    </PageShell>
-  );
+        <div className="mx-auto mt-16 max-w-sm space-y-3 px-4 text-center">
+          <p className="text-sm text-slate-700">
+            No bill <span className="font-mono font-semibold text-slate-900">{billNo ? decodeURIComponent(billNo) : "—"}</span>{" "}
+            for this shop.
+          </p>
+          <p className="text-xs text-slate-500">
+            It may have been removed (for example after a data reset), or the link is outdated.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate("/app/home")}
+            className="text-sm font-semibold text-teal-600 underline underline-offset-2"
+          >
+            Go to home
+          </button>
+        </div>
+      </PageShell>
+    );
+  }
 
   const status = (obEntry?.status ?? (sale.balance === 0 ? "paid" : "current")) as BillStatus;
   const cfg    = STATUS_CONFIG[status];

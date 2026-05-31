@@ -201,7 +201,7 @@ try {
 
   await page.goto(`${BASE_URL}/app/products/new`, { waitUntil: "networkidle" });
   const uiProdName = `UI Form ${stamp}`;
-  await page.getByPlaceholder(/Havmor Vanilla/i).fill(uiProdName);
+  await page.getByPlaceholder(/Vanilla/i).fill(uiProdName);
   await page.locator("label").filter({ hasText: "Buy price" }).locator("..").locator("input").fill("80");
   await page.locator("label").filter({ hasText: "Sell price excl" }).locator("..").locator("input").fill("100");
   await sticky(page, "Add product");

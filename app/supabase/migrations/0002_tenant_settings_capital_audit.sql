@@ -1,5 +1,5 @@
 -- =============================================================================
--- Havmor DMS - Migration 0002
+-- BikriKhata - Migration 0002
 -- tenant_settings (1:1 tenants) + capital_entries + append-only audit
 -- Safe to re-run: IF NOT EXISTS / DROP IF EXISTS where appropriate.
 -- =============================================================================

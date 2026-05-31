@@ -43,11 +43,63 @@ export function formatSellerAddressSegments(fields: SellerAddressFields): string
   return compactAddressParts(raw);
 }
 
+/** Address only (no phone). Phone is on letterhead right column per IRD layout. */
 export function buildSellerContactLine(
   segments: string[],
-  contact: { mobile?: string | null; phone?: string | null },
+  _contact?: { mobile?: string | null; phone?: string | null },
 ): string {
-  const addr = segments.join(" · ");
-  const phone = ((contact.mobile ?? "") || (contact.phone ?? "")).trim();
-  return [addr, phone ? `Ph ${phone}` : ""].filter(Boolean).join(" · ");
+  return segments.join(" · ");
+}
+
+function trim(s: string | null | undefined): string {
+  return (s ?? "").trim();
+}
+
+/** Primary phone for letterhead (mobile preferred). IRD layout: right column under VAT/PAN. */
+export function sellerPhoneNumber(contact: {
+  mobile?: string | null;
+  phone?: string | null;
+}): string | null {
+  const n = trim(contact.mobile) || trim(contact.phone);
+  return n || null;
+}
+
+export type FormatSellerAddressOptions = {
+  /** When true, append district · province · country after address lines (Settings toggle). */
+  includeDistrictProvince?: boolean;
+};
+
+/**
+ * Printed bill address: address line 1 (and line 2 if set) from Settings.
+ * District/province/country only when `includeDistrictProvince` is true (off by default).
+ */
+export function formatSellerAddressLines(
+  fields: SellerAddressFields,
+  options?: FormatSellerAddressOptions,
+): string[] {
+  const billLines = compactAddressParts(
+    [fields.addressLine1, fields.addressLine2].map(trim).filter(Boolean),
+  );
+
+  if (!options?.includeDistrictProvince) return billLines;
+
+  const adminSegments = formatSellerAddressSegments({
+    addressLine1: "",
+    addressLine2: "",
+    district: fields.district,
+    province: fields.province,
+    country: fields.country,
+  });
+
+  const printed = billLines.join(" ").toLowerCase();
+  const adminFiltered = adminSegments.filter((seg) => {
+    const s = seg.toLowerCase();
+    if (!printed) return true;
+    if (printed.includes(s) || s.includes(printed)) return false;
+    return true;
+  });
+
+  const adminLine = adminFiltered.join(" · ");
+  if (adminLine) return [...billLines, adminLine];
+  return billLines;
 }

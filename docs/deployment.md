@@ -94,12 +94,12 @@ Template: [`app/.env.example`](../app/.env.example). Details: [Env & MCP](backen
 ## 1. GitHub repository
 
 ```bash
-cd /path/to/havmor
+cd /path/to/bikrikhata
 git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin https://github.com/YOUR_ORG/havmor.git
+git remote add origin https://github.com/YOUR_ORG/bikrikhata.git
 git push -u origin main
 ```
 
@@ -127,7 +127,7 @@ Confirm `.gitignore` excludes `app/.env.local`, `app/.e2e-credentials.local`, `a
 ### Import site
 
 1. [app.netlify.com](https://app.netlify.com) → sign in with **GitHub**.
-2. **Add new site** → **Import an existing project** → **GitHub** → select **havmor**.
+2. **Add new site** → **Import an existing project** → **GitHub** → select your repo.
 3. Netlify reads root [`netlify.toml`](../netlify.toml):
 
    | Setting | Value |
@@ -212,12 +212,27 @@ Create a smoke test user: `cd app && node scripts/create-e2e-user-and-test.mjs`.
 
 ---
 
+## Custom domain (bikrikhata.com)
+
+**Safe to do after Netlify site works on `*.netlify.app`.** Wrong Auth URLs are the main breakage risk.
+
+1. Netlify → **Domain management** → add **bikrikhata.com** (and `www` if used) → follow DNS at your registrar.
+2. Supabase → **Authentication** → **URL configuration**:
+   - **Site URL:** `https://bikrikhata.com` (or your primary host)
+   - **Redirect URLs:** include `https://bikrikhata.com/**`, `https://www.bikrikhata.com/**`, and keep existing Netlify preview URL if you still use it for staging.
+3. Redeploy Netlify (no code change required if env vars unchanged).
+4. Test sign-in, sign-up, and password reset on the custom domain.
+
+Repo folder name on your laptop can stay legacy; only DNS + Supabase URLs must match the live host.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
 | MissingSupabaseEnv on Netlify | Set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`; **redeploy** |
-| Auth redirect error | Exact Netlify URL in Supabase redirect list |
+| Auth redirect error | Add **exact** site URL(s) in Supabase → Authentication → URL configuration (see [Custom domain](#custom-domain-bikrikhata.com) below) |
 | `signup_tenant` / empty tables | Run migrations ([`README.txt`](../app/supabase/README.txt)) |
 | CI build fails | Node 20; `cd app && npm ci && npm run build` locally |
 | Smoke fails | Wrong secrets or migrations on that project |
