@@ -1,0 +1,5 @@
+# Supabase local / deploy config (Edge Functions)
+# Docs: docs/CONTACT_FORM_EMAIL_SETUP.md
+
+[functions.notify-platform-inquiry]
+verify_jwt = false

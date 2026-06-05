@@ -109,7 +109,7 @@ export const NoTenantPage = () => {
         <div className="text-center space-y-2">
           <h1 className="text-lg font-bold text-foreground">Link your workspace</h1>
           <p className="text-sm text-muted">
-            Signed in as <strong>{user.email}</strong>. If you see &quot;User already belongs to a tenant&quot;, your
+            Logged in as <strong>{user.email}</strong>. If you see &quot;User already belongs to a tenant&quot;, your
             workspace already exists — use <strong>Continue to app</strong> below.
           </p>
         </div>
@@ -141,7 +141,7 @@ export const NoTenantPage = () => {
         </form>
 
         <Button variant="secondary" size="full" onClick={handleSignOut}>
-          Sign out
+          Log out
         </Button>
       </div>
     </div>

@@ -1,0 +1,33 @@
+---
+description: Never break tenant-scoped dealer data (customers, stock, bills) or money/stock RPC flows
+alwaysApply: true
+---
+
+# Tenant data integrity (non-negotiable)
+
+Pilot shops depend on **accurate customers, products, stock, and bills** for one workspace only. Do **not** change data behavior unless the user explicitly asks for a data/RPC fix.
+
+## Never do (without explicit approval + tests)
+
+- Remove or skip `.eq("tenant_id", tenantId)` on domain reads in `app/src/lib/live/domainLive.ts`.
+- Change `DOMAIN_QUERY_KEY` from `["domain", "v2"]` without re-scoping every fetch in the bundle.
+- Change `pickTenantUserRow` / `getTenantIdForCurrentUser` logic without matching SQL `current_tenant_id()`.
+- Rely on RLS alone for `super_admin` — RLS can return **all tenants**; the app must filter by the signed-in workspace.
+- “Fix” bill totals, stock, or balances **only in React** — use existing Supabase RPCs with correct payloads.
+- Run `seed:demo`, `e2e:*`, or `tenant:reset-data` against a **production pilot** tenant.
+- License/activation SQL (`approve_tenant`, `set_tenant_subscription`) does **not** touch business rows — do not add DELETE/TRUNCATE there.
+
+## Safe changes (usual work)
+
+- Marketing, license gates, settings UI, pricing in `app/src/config/launchPricing.ts`.
+- `tenants` row only (status, plan, dates) via documented SQL in `docs/TENANT_ACTIVATION.md`.
+
+## When touching `domainLive.ts` or `domainHooks.ts`
+
+1. Every list/read for products, customers, suppliers, sales, payments, purchases, expenses, schemes, `tenant_settings` must use `getTenantIdForCurrentUser()` then `.eq("tenant_id", tenantId)`.
+2. Run `npm run e2e:p0` (tenant scope checks) and relevant `e2e:phase1` / `e2e:live` if RPCs or writes changed.
+3. Note in `docs/LLM_CONTEXT.md` changelog only if behavior changed.
+
+## If dealer sees wrong counts
+
+See `docs/TENANT_ACTIVATION.md` § data troubleshooting — compare SQL `tenant_id` to login email before changing code.

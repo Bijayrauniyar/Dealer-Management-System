@@ -1,6 +1,6 @@
 # Product naming — BikriKhata (shipped)
 
-**Status:** **Locked for Phase 0+** — product **BikriKhata**, site **[bikrikhata.com](https://bikrikhata.com)**. Config: `app/src/config/productBrand.ts`. Historical name research: [BRAND_NAME_OPTIONS.md](BRAND_NAME_OPTIONS.md).
+**Status:** **Locked for Phase 0+** — product **BikriKhata**, site **[bikrikhata.com](https://bikrikhata.com)**. Config: `app/src/config/productBrand.ts`. Historical name research: [archive/BRAND_NAME_OPTIONS.md](archive/BRAND_NAME_OPTIONS.md).
 
 | Place | Value |
 |-------|--------|

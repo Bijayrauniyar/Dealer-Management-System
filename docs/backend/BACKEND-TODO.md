@@ -10,7 +10,7 @@
 
 ## Now — client pain points (priority over new features)
 
-> **Phase 0 Tier A + Tier B — signed off (2026-05-26).** Tier B: [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md). Tier A: [`../YOUR_TURN_PHASE0_TIER_A.md`](../YOUR_TURN_PHASE0_TIER_A.md).  
+> **Phase 0 complete (2026-05-26)** — [`../PHASE0_SIGNOFF.md`](../PHASE0_SIGNOFF.md).  
 > Full pain → action mapping: [`../PRODUCT_EVOLUTION.md`](../PRODUCT_EVOLUTION.md). **Next:** Tier C or Phase 1.
 
 - [x] **Scheme page** — persists buy-X-get-Y to `scheme_tracker` (`insertSchemeLive` / `commitSchemeEntry`).

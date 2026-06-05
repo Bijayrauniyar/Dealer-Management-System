@@ -15,7 +15,7 @@
 | **Market** | Nepal — small & medium **dealers, distributors, wholesalers** |
 | **Origin** | Built for **ice-cream dealer** pilot; selling to **generic FMCG-style** wholesalers |
 | **Model** | **Monthly SaaS** (per company, not per salesman) |
-| **Price band** | **NPR 2,000–5,000 / month** (founding → standard tiers) |
+| **Price band (launch)** | **NPR 3,000 / year** per company (one package); monthly tiers later |
 | **Team** | Solo founder — prioritize revenue features over enterprise scope |
 | **Not competing on (yet)** | Van/route ERP, offline-first hills, brand-mandated SFA (Bizom), full Tally replacement |
 
@@ -25,11 +25,11 @@
 
 ### One-line pitch
 
-> **Nepal wholesaler SaaS** — bill with VAT, track stock and customer udhar, record supplier purchases with real invoice numbers — without paying for van-route ERP you do not use.
+> **Nepal wholesaler SaaS** — bill with VAT, track stock and customer credit, record supplier purchases with real invoice numbers — without paying for van-route ERP you do not use.
 
 ### Website-style line
 
-> Stop running your wholesale business on notebooks. Bill with VAT, track stock and customer udhar, record supplier invoices — from NPR 2,500/month.
+> Stop running your wholesale business on notebooks. Bill with VAT, track stock and customer credit, record supplier invoices — from **NPR 3,000/year**.
 
 ### Who we are
 
@@ -37,7 +37,7 @@
 |--------|------------|
 | Office + warehouse wholesaler (1–10 users) | 20+ field salesmen / van-only operation |
 | Cloud + phone-friendly PWA | Heavy desktop install + local server |
-| End-to-end **bill → stock → udhar → purchase → pay** | Accountant-only Tally substitute |
+| End-to-end **bill → stock → credit → purchase → pay** | Accountant-only Tally substitute |
 | Fair **monthly per company** | Per-salesman lakhs/year (Bizom / FieldAssist) |
 
 ### Closest competitors (Nepal context)
@@ -70,7 +70,7 @@ See also competitor landscape notes from strategy sessions (India/Nepal desktop 
 **Daily pains we solve**
 
 - Wrong stock vs physical
-- Lost **udhar** (who owes what)
+- Lost **credit** (who owes what)
 - Slow or messy **VAT bills**
 - Supplier purchase vs **supplier invoice number** mismatch
 - Accountant wants **Excel** for VAT month
@@ -97,7 +97,7 @@ See also competitor landscape notes from strategy sessions (India/Nepal desktop 
 ```text
 Supplier purchase (+ invoice no., VAT excl) → stock ↑
   → Sale bill (VAT, schemes, print/PDF) → stock ↓
-  → Customer payment (udhar) / Return / Damage
+  → Customer payment (credit) / Return / Damage
   → Supplier payment
   → Home: outstanding, overdue, stock
 ```
@@ -105,7 +105,7 @@ Supplier purchase (+ invoice no., VAT excl) → stock ↑
 | Capability | Status | Notes |
 |------------|--------|-------|
 | Sales bill + print/PDF | Strong | MRP, discount, VAT from settings |
-| Customer udhar + payments | Yes | FIFO payments |
+| Customer credit + payments | Yes | FIFO payments |
 | Purchase + supplier invoice no. | Yes | Immutable after save; bill view |
 | Purchase VAT (excl + %) | Yes | Migration 0017 |
 | Supplier payments | Yes | |
@@ -189,7 +189,7 @@ Details: [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) §8 (registers, not IRD XML)
 
 **Positioning (do not over-promise):**
 
-> BikriKhata issues VAT-style sales and purchase documents and keeps stock and udhar in sync. Export **sales and purchase registers** for your accountant. It is **not** a replacement for IRD-certified e-billing until integrated.
+> BikriKhata issues VAT-style sales and purchase documents and keeps stock and credit in sync. Export **sales and purchase registers** for your accountant. It is **not** a replacement for IRD-certified e-billing until integrated.
 
 ### Sales tax invoice — field audit
 
@@ -208,7 +208,7 @@ Implemented in `app/src/components/app/BillPrintView.tsx`, `app/src/lib/billDisp
 | Buyer **VAT** number | **No** | P1 — add optional `customers.vat_number` for B2B |
 | Line: description, qty, UOM | Yes | Particulars, qty, unit |
 | Line: taxable amount | Yes | Line amount column |
-| **HSN / commodity code** | No | Rare for small FMCG wholesaler; defer |
+| **HSN / commodity code** | **P1 (HSN-1)** | Optional on product form; **Settings** toggle — off by default |
 | Subtotal (taxable) | Yes | Subtotal row |
 | Bill discount / terms | Yes | When used |
 | **VAT % and VAT amount** | Yes | When VAT registered (`sale.vatRate`, `vatAmount`) |
@@ -303,8 +303,8 @@ Sell **concrete assistants** on **tenant data**, not “AI ERP”.
 
 | Feature | Description | Tier |
 |---------|-------------|------|
-| **Daily owner brief** | Today: collected, new udhar, top overdue, low stock SKUs | Growth |
-| **Udhar risk list** | Rank customers by overdue days × amount | Growth |
+| **Daily owner brief** | Today: collected, new credit, top overdue, low stock SKUs | Growth |
+| **Credit risk list** | Rank customers by overdue days × amount | Growth |
 | **Stock mismatch helper** | Plain-language: purchases vs sales vs returns for one SKU | Growth |
 | **Voice → product search** (optional) | Faster sale line entry | Later |
 | **Photo → draft purchase** (optional) | OCR supplier bill → lines for review | Phase 2-B in data-model; **after export stable** |
@@ -340,7 +340,7 @@ Aligned with [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md) — **pain-first**, no
 | B5 | Delivery note from bill |
 | B6 | Customer price tier |
 | B7 | Bill edit history UI |
-| B8 | **AI: daily brief + udhar risk** (rules/aggregates first) |
+| B8 | **AI: daily brief + credit risk** (rules/aggregates first) |
 
 ### Phase C — only when a client prepays or churn risk
 
@@ -348,19 +348,19 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ---
 
-## 9. Pricing (draft — NPR / month)
+## 9. Pricing (launch — locked for first ads)
 
-**Principle:** Per **company**, not per salesman. Annual optional (~2 months free).
+**Principle:** Per **company**, not per salesman.
 
-| Plan | NPR/mo (draft) | Users | Includes |
-|------|----------------|-------|----------|
-| **Founding** | 2,000 | 1 | Core loop, print, support (limited slots) |
-| **Business** | 3,500 | up to 3 | + CSV export, import (when shipped) |
-| **Growth** | 5,000 | up to 5 | + AI brief, udhar risk, priority support |
+| Launch (now) | NPR/year | Notes |
+|--------------|----------|--------|
+| **One package** | **3,000** | Full Phase 0 loop: sales/purchase, stock, credit, export, print/Share |
+
+**Later (after 10–20 paying shops):** optional monthly tiers (e.g. Business / Growth) — decide from pilot feedback; do not promise on website until set.
 
 **Add-ons (later):** extra users, onboarding visit, data migration from Swastik/Excel.
 
-**Compare to market:** Swastik/MrSolution often **higher upfront + AMC**; Tally rental ~₹750/mo India but weak DMS; position as **all-in wholesaler loop** at **2–5k**.
+**Compare to market:** Swastik/MrSolution often **higher upfront + AMC**; Tally rental ~₹750/mo India but weak DMS; position as **all-in wholesaler loop** at **low annual cost** (~NPR 250/mo equivalent).
 
 ---
 
@@ -380,7 +380,7 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 | Channel | Action |
 |---------|--------|
-| **Pilot case study** | One ice-cream dealer: stock + udhar + bills (before/after) |
+| **Pilot case study** | One ice-cream dealer: stock + credit + bills (before/after) |
 | **Look-alikes** | 10 wholesalers same city, similar SKU count |
 | **Accountants** | One CA firm: “we give CSV for VAT month” → referrals |
 | **Avoid** | Head-on “van + offline” vs MrSolution until built |
@@ -391,7 +391,7 @@ Van stock, offline sync, beat planning, barcode, Tally bridge, multi-branch, pha
 
 ## 12. Changes needed in existing product (checklist)
 
-> **Canonical launch checklist:** [PHASE_ROADMAP.md](PHASE_ROADMAP.md). **Tier A + Tier B complete (2026-05-26)** — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md), [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md). **Next: Tier C / Phase 1.**
+> **Canonical launch checklist:** [FIRST_LAUNCH.md](FIRST_LAUNCH.md). **Phase 0 complete (2026-05-26)** — [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md). **Next:** P0 in FIRST_LAUNCH, then [BACKLOG.md](BACKLOG.md).
 
 Before heavy AI or van modules:
 

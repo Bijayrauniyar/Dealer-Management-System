@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { NotificationPanel, buildNotifications } from "@/components/app/NotificationPanel";
+import { NotificationPanel } from "@/components/app/NotificationPanel";
 import { AppNavDrawer } from "@/components/layout/AppNavDrawer";
 import {
   QUICK_ENTRY_ACTIONS,
@@ -21,6 +21,10 @@ import {
   isInventoryTabActive,
   isReportsTabActive,
 } from "@/config/appNavigation";
+import { LicenseRenewalBanner } from "@/components/app/LicenseRenewalBanner";
+import { LicenseRenewalDailyReminder } from "@/components/app/LicenseRenewalDailyReminder";
+import { buildLicenseRenewalNotif, buildNotifications } from "@/components/app/NotificationPanel";
+import { useAuth } from "@/lib/auth";
 import { useBusinessSettings, useProducts, useSales } from "@/store/domain";
 
 export const AppShell = () => {
@@ -29,13 +33,31 @@ export const AppShell = () => {
   const [sheet, setSheet] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [notifs, setNotifs] = useState(false);
+  const auth = useAuth();
   const business = useBusinessSettings();
   const sales = useSales();
   const products = useProducts();
-  const notifList = useMemo(
-    () => buildNotifications(sales, products, business.overdueDays, business.dueSoonDays),
-    [sales, products, business.overdueDays, business.dueSoonDays],
-  );
+  const notifList = useMemo(() => {
+    const base = buildNotifications(sales, products, business.overdueDays, business.dueSoonDays);
+    const license = buildLicenseRenewalNotif({
+      tenantPlan: auth.tenantPlan,
+      trialEndsAt: auth.trialEndsAt,
+      subscriptionEndsAt: auth.subscriptionEndsAt,
+      tenantStatus: auth.tenantStatus,
+      licenseValid: auth.licenseValid,
+    });
+    return license ? [license, ...base] : base;
+  }, [
+    sales,
+    products,
+    business.overdueDays,
+    business.dueSoonDays,
+    auth.tenantPlan,
+    auth.trialEndsAt,
+    auth.subscriptionEndsAt,
+    auth.tenantStatus,
+    auth.licenseValid,
+  ]);
   const total = notifList.length;
   const urgent = notifList.filter((n) => n.urgent).length;
 
@@ -68,6 +90,8 @@ export const AppShell = () => {
 
   return (
     <div className="min-h-screen bg-surface-page">
+      <LicenseRenewalBanner />
+      <LicenseRenewalDailyReminder />
       <header className="sticky top-0 z-20 border-b border-border-subtle bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-xl items-start justify-between gap-2 px-3 py-3 sm:px-4">
           <button

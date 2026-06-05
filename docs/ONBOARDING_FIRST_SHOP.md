@@ -30,7 +30,7 @@
 
 1. Bottom tab **Customers →** **+** (or **New customer**).
 2. Add shop name, phone, area; optional **PAN / VAT** for B2B bills.
-3. Set **credit limit** if you track udhar caps.
+3. Set **credit limit** if you cap how much credit you give a customer.
 
 **Check:** Customer list shows zero outstanding until you sell on credit.
 

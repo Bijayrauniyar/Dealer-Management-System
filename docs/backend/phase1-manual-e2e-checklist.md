@@ -4,14 +4,14 @@
 
 Use this **one document** for everything scripts do **not** fully cover, plus step-by-step manual tests for **every feature**, edge case, and calculation check.
 
-**Phase 0 Tier A (2026-05-26):** Signed off — see [`../YOUR_TURN_PHASE0_TIER_A.md`](../YOUR_TURN_PHASE0_TIER_A.md). Apply migrations **`0019`–`0023`** before §3.2 Settings / Export / stock tests.
+**Phase 0 Tier A (2026-05-26):** Signed off — [`../PHASE0_SIGNOFF.md`](../PHASE0_SIGNOFF.md). Apply migrations **`0019`–`0023`** before §3.2 Settings / Export / stock tests.
 
-**Phase 0 Tier B (2026-05-26):** Signed off — migration **`0024`**, deploy — [`../YOUR_TURN_PHASE0_TIER_B.md`](../YOUR_TURN_PHASE0_TIER_B.md).
+**Phase 0 Tier B (2026-05-26):** Signed off — migration **`0024`**, deploy — [`../PHASE0_SIGNOFF.md`](../PHASE0_SIGNOFF.md).
 
 **Companion (automated):** [`phase1-use-cases-and-tests.md`](./phase1-use-cases-and-tests.md)  
 **Run scripts first:** `npm run e2e:phase0` (Tier A+B+C source) then `e2e:phase0:live` if DB touched; full regression: `e2e:full` (needs `npm run dev` for UI part)
 
-**Phase 0 Tier C:** Sign-off checklist also in [`../YOUR_TURN_PHASE0_TIER_C.md`](../YOUR_TURN_PHASE0_TIER_C.md) — **this doc is the master** for all manual rows.
+**Phase 0 Tier C:** Signed off — [`../PHASE0_SIGNOFF.md`](../PHASE0_SIGNOFF.md). **This doc is the master** for all manual rows.
 
 ---
 
@@ -24,7 +24,7 @@ When you **add, change, or remove** a user-facing feature, update **this file in
 | 1 | Add or edit a row in **§2 Feature catalog** (module + routes). |
 | 2 | Add step-by-step rows under the right **§3.x** section (or create `§3.xx` for a new module). |
 | 3 | If scripts cannot cover it, add a **§1 Gaps** row (G#). Remove obsolete G# when automated. |
-| 4 | For Phase 0 tiers, use **§3.0a–c** below; mirror short lists in `YOUR_TURN_PHASE0_TIER_*.md` if helpful. |
+| 4 | For Phase 0 tiers, use **§3.0a–c** below; historical tier lists in `docs/archive/YOUR_TURN_*.md`. |
 | 5 | Note new migrations in **§0** and [supabase README](../../app/supabase/README.txt). |
 | 6 | On release, tick **§6 Sign-off** (automated + manual suites). |
 
@@ -91,7 +91,7 @@ Check each row after manual testing.
 | G25 | **Register + pending approval** | — | New signup → pending → activate → login |
 | G26 | **Offline / PWA** | — | Refresh mid-form; install PWA if used |
 | G27 | **Mobile layout** | UI script uses mobile width | Real phone: sticky bar, pickers, bottom nav |
-| G28 | **Sign out + re-login** | Live script | Data still correct; no stale header name |
+| G28 | **Log out + re-login** | Live script | Data still correct; no stale header name |
 | G29 | **MissingSupabaseEnv** (`VITE_*` unset) | — | App shows setup screen; no data access |
 | G30 | **Performance** | — | Customer/product lists with 100+ rows; search |
 
@@ -101,7 +101,7 @@ Check each row after manual testing.
 
 | Module | Use cases | Route / entry |
 |--------|-----------|----------------|
-| **Auth** | Login, register, pending tenant, no tenant, sign out | `/login`, `/register`, `/pending-approval`, `/no-tenant` |
+| **Auth** | Log in, register, pending tenant, no tenant, log out | `/login`, `/register`, `/pending-approval`, `/no-tenant` |
 | **Home** | Date + Sales invoice; **Customers / Stock** tabs; browse lists; aging/overdue via drawer | `/app/home`, `/app/home?tab=customers`, `/app/home?tab=stock`, `/app/home/overdue`, … |
 | **Settings** | Tabbed: Business, Bills & VAT, Stock, **Export** | `/app/settings` |
 | **Products** | List, search, add, edit, inactive/active | `/app/products`, `/app/products/new`, `.../edit/:id` |
@@ -188,6 +188,22 @@ Migrations **0025** (optional), **0026** (customer tax). Automated: `npm run e2e
 
 ---
 
+### 3.0e P0 marketing (MAN-P0) — pre-ads
+
+Automated: `npm run e2e:p0-public` (included in `e2e:phase0`). Runbook: [P0_LAUNCH_RUNBOOK.md](../P0_LAUNCH_RUNBOOK.md).
+
+| # | Step | Pass |
+|---|------|------|
+| P0M1 | `/` landing: hero **bill** (fits frame), **3 mobile screens**, distributor section, pricing checklist, CTAs | |
+| P0M2 | `/privacy` and `/terms` readable; footer links from landing | |
+| P0M3 | `/register` → creates pending workspace → `/pending-approval` (call/contact); after `approve_tenant` in SQL → `/app/home` + trial banner | |
+| P0M4 | Signed in: visit `/` → redirects to `/app/home` | |
+| P0M5 | Unknown URL → `/` (not forced to login) | |
+| P0M6 | **`/#faq`** or **`/faq`** — expand **What is BikriKhata?** and **Can I sign up on the website by myself?**; trial/pricing match `#pricing`; no IRD e-file claims | |
+| P0M7 | Footer **FAQ** link scrolls to section | |
+
+---
+
 ### 3.0d Navigation & shell (MAN-NAV) — cross-tier
 
 | # | Step | Pass |
@@ -204,7 +220,7 @@ Migrations **0025** (optional), **0026** (customer tax). Automated: `npm run e2e
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| A1 | Open `/login` with valid E2E credentials → Sign in | Lands on `/app/home`; header shows shop name from settings |
+| A1 | Open `/login` with valid E2E credentials → Log in | Lands on `/app/home`; header shows shop name from settings |
 | A2 | Wrong password | Error message; stay on login |
 | A3 | Sign out from Settings | Redirect to `/login`; cannot open `/app/home` without login |
 | A4 | **(Live)** Register new business on `/register` | Success or email-confirm message per Supabase config |
@@ -224,6 +240,9 @@ Migrations **0025** (optional), **0026** (customer tax). Automated: `npm run e2e
 | STab4 | **Stock** tab → stock adjustment toggle → Save | Menu → Masters shows Stock adjustment when enabled |
 | STab6 | Menu → **Help & support** (`/app/support`) | Phone, email, WhatsApp from `PLATFORM_SUPPORT` in app config |
 | STab7 | Settings tabs: **no Support tab** (Tier C) | Only Business, Bills & VAT, Stock, Export |
+| STab8 | **Subscription** card (bottom, above Log out) | Plan label, valid-until date, days remaining; warn styling when ≤30 days |
+| STab9 | Tenant with ≤30 days on trial or paid plan | Amber header banner; bell → **Other** shows subscription alert; first open of day → renewal bottom sheet |
+| STab10 | Tenant with &gt;30 days on annual plan | No renewal popup on open; Settings still shows subscription days |
 | STab5 | VAT registered + VAT number → print sales bill title **TAX INVOICE** | |
 | STab5b | PAN only (not VAT) → print sales bill title **SALES INVOICE** | |
 | STab5b | Bill letterhead: **Address line 1** only by default; **VAT/PAN** + **Ph** right | Toggle “Include district and province on invoices” to add admin line |
@@ -474,7 +493,7 @@ open     = total − paid
 | 9 | Supplier payment |
 | 10 | Expense + damage |
 | 11 | Capital entry |
-| 12 | Sign out |
+| 12 | Log out |
 
 ---
 
@@ -526,7 +545,7 @@ After manual flows, spot-check in **Table Editor**:
 | Phase 0 `e2e:phase0:live` | ☐ | — | | |
 | §3.0a Tier A (T0A1–T0A10) | — | ☐ | | |
 | §3.0b Tier B (T0B1–T0B8) | — | ☐ | | |
-| §3.0c Tier C (T0C1–T0C10) | — | ☐ | | |
+| §3.0c Tier C (T0C1–T0C10) | — | ☑ | 2026-05-26 prod + deploy | |
 | API matrix (`e2e:matrix`) | ☐ | — | | |
 | UI script (`e2e:ui`) | ☐ | — | | |
 | Gaps G1–G30 | — | ☐ | | |

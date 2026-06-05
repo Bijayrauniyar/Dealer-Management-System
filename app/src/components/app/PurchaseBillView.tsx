@@ -81,7 +81,7 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
         </div>
 
         <div className="mt-1 overflow-x-auto">
-          <table className="w-full min-w-[280px] border-collapse text-[9px]">
+          <table className="w-full min-w-0 border-collapse text-[9px] sm:min-w-[280px]">
             <thead>
               <tr className="border-b border-gray-300 bg-gray-50 text-gray-600">
                 <th className="px-1 py-1 text-left font-semibold">Item</th>
@@ -126,7 +126,7 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
         </div>
 
         <div className="mt-2 border-t border-gray-300 pt-2 text-[9px]">
-          <div className="ml-auto w-full max-w-[12rem] space-y-0.5">
+          <div className="ml-auto w-full max-w-full space-y-0.5 sm:max-w-[14rem]">
             <div className="flex justify-between gap-2">
               <span className="text-gray-600">Subtotal (excl. VAT)</span>
               <span className="font-semibold tabular-nums">{npr(purchase.subtotalExcl)}</span>

@@ -1,10 +1,10 @@
 # BikriKhata — context for local AI (Gemma, Codex, Claude, etc.)
 
-**Navigate:** [Docs hub](README.md) · [Gemma 4 system prompt](GEMMA_SYSTEM_PROMPT.md) · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
+**Navigate:** [Docs hub](README.md) · **[FIRST_LAUNCH](FIRST_LAUNCH.md)** · **[BACKLOG](BACKLOG.md)** · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
 
-**Last updated:** 2026-05-26 (Phase 0 Tier A + B complete; Tier C in app)
+**Last updated:** 2026-05-26 (Phase 0 **A + B + C** complete — prod sign-off; launch docs consolidated)
 
-**Gemma 4 26B:** paste **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** into System instructions, then attach this file each session.
+**Gemma 4 26B:** paste **[archive/GEMMA_SYSTEM_PROMPT.md](archive/GEMMA_SYSTEM_PROMPT.md)** into System instructions, then attach this file each session.
 
 Use this file as the **full handbook** when working offline. It is a snapshot of the repo — not your chat history. Refresh it after big changes (see [§ Maintenance](#maintenance-update-this-file)).
 
@@ -58,7 +58,9 @@ bikrikhata/                      # repo root (local clone path may differ)
 
 | Route | Page | Purpose |
 |-------|------|---------|
-| `/login`, `/register` | Login, Register | Auth; register calls `signup_tenant` |
+| `/` | Landing (via `PublicHomeGate`) | Marketing for all; signed-in with **valid license** → `/app/home`; expired/pending can browse site |
+| `/privacy`, `/terms`, `/faq` | Privacy, Terms, FAQ | P0 public (`pages/marketing/`) |
+| `/login`, `/register` | Login, Register | Auth; register calls `signup_tenant` + links to legal |
 | `/pending-approval`, `/no-tenant` | Pending, NoTenant | Tenant gate |
 | `/app/home` | HomePage | Dashboard, KPIs, quick links |
 | `/app/home/aging/:bucket` | AgingDetailPage | Receivables aging |
@@ -136,12 +138,13 @@ bikrikhata/                      # repo root (local clone path may differ)
 ## 3. Architecture rules (do not break these)
 
 1. **Money and stock** → Supabase **RPCs** (`create_sales_bill`, `update_sales_bill`, `apply_customer_payment`, `record_purchase`, …). Never “fix” totals only in the UI without matching the RPC payload.
-2. **Data layer** → `domainLive.ts` for DB; pages use `domainHooks.ts`. Avoid new raw `supabase.from()` calls in pages unless following an existing pattern.
-3. **Forms** → mostly `useState` on pages (not react-hook-form in practice).
-4. **Styling** → Tailwind; run `npm run lint:tailwind` — invalid semantic classes fail CI.
-5. **Scope** → smallest correct diff; match naming and style of surrounding code.
-6. **Secrets** → never commit `.env.local`, service role keys, or client Excel workbooks with real business data.
-7. **Git** → commit only when the user asks; focus commit message on **why**.
+2. **Dealer data accuracy** → One workspace per login. All domain reads in `domainLive.ts` must filter `.eq("tenant_id", …)` from `getTenantIdForCurrentUser()` (bundle key `["domain", "v2"]`). Never remove tenant filters for `super_admin`. License SQL only updates `tenants` — not customers/products/stock. Full guardrail: `.cursor/rules/tenant-data-integrity.mdc` · troubleshooting: [TENANT_ACTIVATION.md](TENANT_ACTIVATION.md).
+3. **Data layer** → `domainLive.ts` for DB; pages use `domainHooks.ts`. Avoid new raw `supabase.from()` calls in pages unless following an existing pattern.
+4. **Forms** → mostly `useState` on pages (not react-hook-form in practice).
+5. **Styling** → Tailwind; run `npm run lint:tailwind` — invalid semantic classes fail CI.
+6. **Scope** → smallest correct diff; match naming and style of surrounding code.
+7. **Secrets** → never commit `.env.local`, service role keys, or client Excel workbooks with real business data.
+8. **Git** → commit only when the user asks; focus commit message on **why**.
 
 ---
 
@@ -265,7 +268,7 @@ Full schema: `docs/backend/data-model.md`
 ### Setup (once)
 
 1. Clone repo: `/path/to/bikrikhata` (or your local folder name)
-2. **Gemma 4 26B:** copy system text from **[GEMMA_SYSTEM_PROMPT.md](GEMMA_SYSTEM_PROMPT.md)** (the fenced block).
+2. **Gemma 4 26B:** copy system text from **[archive/GEMMA_SYSTEM_PROMPT.md](archive/GEMMA_SYSTEM_PROMPT.md)** (the fenced block).
 3. Attach **`docs/LLM_CONTEXT.md`** every session (this handbook).
 4. Other models (Codex, Claude): use GEMMA prompt + this file, or GEMMA prompt alone for small tasks.
 
@@ -365,18 +368,20 @@ Add one line under **Changelog** yourself:
 | [PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md) | **Pain-first roadmap** — what to build for clients now (not feature count) |
 | [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) | Phase 2-E export design (**deferred** — reporting / migration / backup) |
 | [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md) | BikriKhata branding (**shipped**) |
-| [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md) | Tier A sign-off checklist (**complete**) |
-| [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md) | Tier B sign-off checklist (**complete**) |
+| [AI_AGENT.md](AI_AGENT.md) | **Agents: read order** (FIRST_LAUNCH → BACKLOG → this file) |
+| [FIRST_LAUNCH.md](FIRST_LAUNCH.md) | Launch P0/P1/P2 checklist |
+| [BACKLOG.md](BACKLOG.md) | Deferred feature IDs |
+| [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md) | Phase 0 complete (one page) |
 
 ### What to build next (read first)
 
-Use **[PHASE_ROADMAP.md](PHASE_ROADMAP.md)** for launch scope (Phase 0–3). **Tier A + Tier B complete (2026-05-26)** — prod deploy + migrations **0019–0024**. **Next:** Tier C or Phase 1.
+**[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** — P0 before ads. **Phase 0 complete (2026-05-26).**
 
-Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ features. Tier A shipped: export, BikriKhata, categories, stock adjustment, PERF-0, Tax Invoice letterhead. Schemes: save + auto-apply on sales (`schemeApply.ts`); test with `npm run seed:schemes`.
+**[PHASE_ROADMAP.md](PHASE_ROADMAP.md)** — strategy Phase 1–3. **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** — pain-first why.
 
 ### Deferred backlog (address later)
 
-**Deferred register** — [DEFERRED_WORK.md](DEFERRED_WORK.md): **INV-2**, **SUP-1**, **IMP-0/1/2** (full backup/import). **INV-1**, **CRED-0** (warn-only), **VAT-0b**, **UI-0.9** done Tier B. **EXP-1** and **BRAND-1** done Tier A.
+**[BACKLOG.md](BACKLOG.md)** — **INV-2**, **SUP-1**, **IMP-0/1/2**, UI-1, ORD-*, etc. Historical tier checklists: `docs/archive/YOUR_TURN_*.md` only.
 
 **Data export** — Tier A shipped (`lib/export/*`, Settings → Export); **IMP-0** = full tenant ZIP (Phase 2): [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md).
 
@@ -386,22 +391,105 @@ Use **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** before adding Phase 2+ feat
 
 ## Changelog (newest first)
 
-- **2026-05-26** — **Phase 0 Tier B signed off** (0024 dev+prod, QA, `e2e:stock:live`, production deploy) — [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md).
+- **2026-05-26** — Marketing logo/home: scroll to hero on logo click (`useMarketingHomeNav`) and when landing on `/` without hash.
+- **2026-05-26** — Marketing copy: hero/features use **tax invoices** (not “PAN/VAT bills”); PAN/VAT kept in FAQ and feature bullets for registration types.
+- **2026-05-26** — Landing hero: Distributo-style eyebrow (`PRODUCT_HERO_EYEBROW`), audience-first H1 (distributors/dealers/stockists), PAN/VAT + godown + credit subline; features subtitle de-duplicated.
+- **2026-05-26** — Landing: removed `#why-switch` comparison section; positioning stays in hero, features, FAQ. USP detail in `BIKRIKHATA_USPS_vs_COMPETITORS.md`.
+- **2026-05-26** — Landing P0 polish: honest salesman copy (not in `PLAN_INCLUDES`); pain + how-it-works dealer copy.
+- **2026-05-26** — Contact form success: **Send on WhatsApp** with pre-filled inquiry (`inquiryWhatsappPrefill`); renewal-specific thank-you copy; gate pages show WhatsApp number.
+- **2026-05-26** — L8 contact email: migration `0033` + `npm run setup:contact-email` (optional inbox alert alongside form + WhatsApp button).
+- **2026-05-26** — Landing: 6 feature cards (added **Reports and analytics**); `PLAN_INCLUDES` adds salesman + dashboard/analytics line.
+- **2026-05-26** — Landing Features footer: **See pricing** link only (NPR amount stays on `#pricing` block).
+- **2026-05-26** — Landing copy pass: B2B once in hero; removed Who/Roadmap band and How-it-works trial box; phone-first wording (`productBrand`, `marketingAudience`, FAQ).
+- **2026-05-26** — Landing restructure: outcome pillars (`ProductModuleGrid`), generic B2B/units/audit copy; `PLAN_INCLUDES` + `launchPricing.ts` value prop; removed `KeyFeaturesSection` from page.
+- **2026-05-26** — Marketing layout: tighter section spacing, centered FAQ/contact columns, `scroll-padding-top` + hash scroll fix for nav jumps.
+- **2026-05-26** — Landing pain cards: full-sentence copy, **customers** not dealers/pasal; section eyebrow “Why teams switch”.
+- **2026-05-26** — Auth copy unified: **Log in** / **Log out** everywhere (login, register, marketing, license gate, settings); FAQ updated.
+- **2026-05-26** — Marketing + license footer: `MarketingSessionControl` shows **Log out** when session exists; `/login` shows “Already signed in” + log out.
+- **2026-05-26** — `PublicHomeGate`: expired/pending logins can browse `/`, `/privacy`, `/faq` without `?landing=1`; app routes still blocked at `/license-expired`.
+- **2026-05-26** — Tenant data integrity guardrail: `.cursor/rules/tenant-data-integrity.mdc`, TENANT_ACTIVATION §, `e2e:p0` checks `domainLive` tenant_id filters — do not change dealer data scope without explicit need.
+- **2026-05-26** — Launch price configurable in `app/src/config/launchPricing.ts` (`LAUNCH_PRICE_NPR_PER_YEAR`, currently **2999**); marketing, FAQ, legal, license gate use same helpers.
+- **2026-05-26** — `/license-expired` and `/pending-approval`: compact sign-in-style gate (one screen), professional copy, WhatsApp + Call/Email/Contact row.
+- **2026-05-26** — `/contact` route for signed-in renew/trial; `/?landing=1` shows marketing when logged in.
+- **2026-05-26** — Domain reads scoped by `tenant_id` in app (fixes `super_admin` seeing merged E2E + Freshment Zone lists); `DOMAIN_QUERY_KEY` v2.
+- **2026-05-26** — TENANT_ACTIVATION: “demo / test names” troubleshooting (tenant_id vs login, seed/e2e data, reset-data).
+- **2026-05-26** — Fix empty Home lists when data exists in DB: `tenant_settings` fetch scoped by tenant (fixes `super_admin` breaking domain bundle); shared `tenantUser.ts`; customer select fallback without 0026 columns; Home shows load error + retry.
+- **2026-05-26** — In-app subscription: Settings **Subscription** card (plan, end date, days left); banner for trial (always) and paid (≤30 days); bell notification + once-per-day popup when ≤30 days (`LICENSE_RENEWAL_WARN_DAYS`).
+- **2026-05-26** — `/license-expired`: trial vs subscription message; Call/WhatsApp/email/contact (`PlatformSupportGateActions`); trial banner urgent links ≤3 days.
+- **2026-05-26** — [TENANT_ACTIVATION.md](TENANT_ACTIVATION.md): copy-paste SQL blocks (pending list, approve, monthly/annual, extend).
+- **2026-05-26** — `0032_license_ops_sql_editor.sql`: `can_manage_tenant_license()` — `approve_tenant` works in Dashboard SQL (postgres); app still needs `super_admin`.
+- **2026-05-26** — `0031_tenant_license_days.sql`: `approve_tenant(id, days)`, `set_tenant_subscription(id, plan, days)`, `extend_tenant_license(id, extra_days)`.
+- **2026-05-26** — LIC-1: `0030_tenant_license.sql`, self-signup on (`PUBLIC_SIGNUP_ENABLED`), trial starts on `approve_tenant` (7 days), `/pending-approval` + `/license-expired`, `set_tenant_subscription`; docs `TENANT_ACTIVATION.md`.
+- **2026-05-26** — Terms, Privacy, FAQ aligned to pilot onboarding (contact form, 7-day trial, annual price from `launchPricing.ts`); FAQ adds self-signup Q.
+- **2026-05-26** — Marketing mobile pass: hero uses `mobile-dashboard.png` below `md`, responsive tokens/safe-area, shorter trial CTA on small screens, `HeroMarketingScreenshot`.
+- **2026-05-26** — Landing: no figcaption under hero dashboard; `#why` pain cards are linked tiles (icons, hover, “See features” → `#product`).
+- **2026-05-26** — Pricing `PLAN_INCLUDES` checklist reviewed against shipped app (sales/purchase edit, schemes, stock adjustment, exports); clearer professional wording.
+- **2026-05-26** — Marketing hero: no logo lockup (nav only); dashboard frame URL `bikrikhata.com/app/dashboard`; capture targets `/app/dashboard`.
+- **2026-05-26** — `desktop-dashboard.png` capture: menu open (all nav features), period sales seeded above purchases, Shree Bajrang Traders branding; 1440×900 viewport.
+- **2026-05-26** — Marketing hero layout: headline + CTAs, full-width `desktop-dashboard.png`, pain cards in `#why`; `DesktopScreenshotFrame`.
+- **2026-05-26** — Marketing hero screenshot: `mobile-dashboard.png` (Business Dashboard); capture script seeds today/period sales + `Shree Bajrang Traders` branding; bill PNG stays on key-features row 1.
+- **2026-05-26** — `PublicSignupCta` merges `marketingBtnPrimary` with custom classes (hero trial was unstyled text); nav menu: Book a demo + Log in only (no Free trial / Request access header button).
+- **2026-05-26** — Trial CTA consolidated: full headline button on hero + pricing only; footer “Free trial” → `/?intent=trial#contact`; `TrialContactLink` for inline links.
+- **2026-05-26** — Contact trial purpose `Start Your FREE 1-Week Trial Today` (`LAUNCH_TRIAL_CTA_HEADLINE`, `/?intent=trial#contact`).
+- **2026-05-26** — Self-service `/register` enabled; pending until `approve_tenant`; marketing may still use contact CTAs.
+- **2026-05-26** — Marketing landing: SaaS-style nav (Product · Pricing · FAQ), `PLAN_INCLUDES` + module grid, mobile phone frames (`mobile-*.svg` with screen labels).
+- **2026-05-26** — Marketing copy: `MARKETING_NEPAL_ICP` (distributors, dealers & stockists); hero VAT+bill discount bill; 2 screens (stock, purchase); mobile-first callout; removed credit showcase.
+- **2026-05-26** — Landing Phase 0: MeroDokan-style 3 key features + 4-step how-it-work; 1-week trial copy (`LAUNCH_TRIAL_DAYS`); dropped duplicate screen/distributor sections. Trial enforcement: BACKLOG LIC-1.
+- **2026-05-26** — Hero pain cards: natural Nepali problem titles + English answers (not literal translation).
+- **2026-05-26** — Hero bill caption + capture: bill detail with Share/Print/PDF (`HERO_BILL_CAPTION`).
+- **2026-05-26** — Screenshot row plan: billing / stock / purchase / customers+credit + one-line captions (`MARKETING_SCREENSHOTS_PLAN.md`).
+- **2026-05-26** — Landing Features: workflow steps 1–4, outcome headlines, bullet proof points, links to #screens / #how-it-works.
+- **2026-05-26** — Marketing landing: removed “route” jargon; credit copy says customer credit & aging.
+- **2026-05-26** — Hero pain #3: PAN/VAT tax invoices + schemes, returns & damage.
+- **2026-05-26** — Landing hero back to English (`productBrand.ts` taglines); removed `marketingHero.ts`.
+- **2026-05-26** — Marketing screenshots: tax invoice print + return/damage (not empty sales-new); labels Tax invoice / Return & damage.
+- **2026-05-26** — Landing: hero Nepali only; pain #3 schemes/pack; screenshot section titles in English (`ESSENTIAL_SCREENS_SECTION`).
+- **2026-05-26** — Landing hero Nepali (`marketingHero.ts`); 4 app screenshots (sale, stock, purchase, credit); pain card VAT not CA; short labels only.
+- **2026-05-26** — Marketing landing: 3 mobile screens only (`EssentialAppScreens`), `DistributorOfferSection`, hero bill `object-contain`; capture script applies demo shop branding; removed desktop/export showcase blocks.
+- **2026-05-26** — Marketing: real app screenshots (`public/marketing/*.png`, `npm run capture:marketing`); landing uses PNG not wireframe SVGs.
+- **2026-05-26** — Export: `customer_outstanding.csv` in backup ZIP; landing/FAQ copy aligned to Settings → Export (CSV + ZIP, not IRD filing).
+- **2026-05-26** — Landing pricing: restored `PlanIncludesList` two-column checklist (always visible, no dropdown).
+- **2026-05-26** — Landing features: 4 outcome pillars (`FEATURE_PILLARS` + `highlights` for pricing).
+- **2026-05-26** — Landing hash links: `useMarketingHashScroll` + nav `navigate` for `#contact` / `#pricing` (React Router did not scroll on `/?intent=demo#contact`).
+- **2026-05-26** — Contact email **deferred**: L8 `deferred` in FIRST_LAUNCH; copy-paste checklist in BACKLOG § L8; banner on `CONTACT_FORM_EMAIL_SETUP.md`.
+- **2026-05-26** — Contact email handoff: `CONTACT_FORM_EMAIL_SETUP.md` “What you need to do” checklist; FIRST_LAUNCH **L8**; `notify-platform-inquiry` GET health + bare-record webhook payload; `.gitignore` `functions/.env`.
+- **2026-05-31** — Contact email: `notify-platform-inquiry` Edge Function, `supabase/config.toml`, `npm run deploy:contact-email`; setup `docs/CONTACT_FORM_EMAIL_SETUP.md` (Supabase Auth email ≠ contact alerts).
+- **2026-05-31** — `NumericInput`: live onChange for linked pricing; plain digits while focused; comma-safe parse (product form buy/markup/sell).
+- **2026-05-31** — Contact form fix doc: `RUN_ONCE_contact_form.sql` + `npm run test:contact-form` (table missing on Supabase until SQL run).
+- **2026-05-31** — FAQ UI (support-center layout, plus accordions, bullet answers) on landing + `/faq`; nav links `/#sections` and `/faq`.
+- **2026-05-31** — Landing: How it works, pain hero, distributor FAQ/examples, Book a demo (`?intent=demo`), pricing only in `#pricing`, contact RPC+`0029`; docs `MARKETING_HERO_IMAGE_BRIEF.md`, `CONTACT_FORM_LEADS.md`.
+- **2026-05-31** — Marketing nav uses full `logo-lockup.png` (no cropped mark); `icon-mark.png` only for favicon/PWA.
+- **2026-05-31** — Marketing site UI pass: responsive layout tokens (`marketingUi.ts`), nav blur + mobile menu, section/pricing/FAQ/footer polish, clean mobile SVG previews.
+- **2026-05-31** — Marketing logos: `logo-lockup.png` (hero/login, 1254px), `icon-mark.png` (nav crop); larger hero sizing.
+- **2026-05-31** — Landing **Contact** section shows phone, WhatsApp, and email (`ContactSupportChannels` from `PLATFORM_SUPPORT`).
+- **2026-05-31** — Marketing copy pass: crisp customer-facing text; no launch/phase/partial jargon (see `.cursor/rules/marketing-copy.mdc`).
+- **2026-05-31** — Contact form uses direct `platform_inquiries` insert (**0028** policy); larger hero logo; run **0027+0028** on Supabase if form fails.
+- **2026-05-31** — Copy: replaced user-facing **udhar** with **credit** (marketing + docs).
+- **2026-05-31** — Landing **Contact** form (`/#contact`) → `submit_platform_inquiry` RPC + `platform_inquiries` (**0027**). Nav icon crop; pricing “your whole team”.
+- **2026-05-31** — Brand icon: `bikrikhata-icon.png` → `app/public/icons/icon.png` (+ `icon-192.png` PWA); `BRAND_LOGO_SRC` updated.
+- **2026-05-26** — Landing **FAQ** (`/#faq`, `landingFaq.ts`) — lead Q: *Built for Nepal wholesalers only?*; hero screenshot still optional in `public/marketing/`.
+- **2026-05-26** — **P0 marketing SPA:** public routes `/`, `/privacy`, `/terms` (`LandingPage`, legal copy, NPR 3k/year on `#pricing`); unknown paths → `/`; `e2e:p0-public` in `e2e:phase0`; [P0_LAUNCH_RUNBOOK.md](P0_LAUNCH_RUNBOOK.md).
+- **2026-05-26** — Backlog **HSN-1** (P1): optional **HSN Code** on product create/edit; enabled via Settings toggle — [BACKLOG.md](BACKLOG.md), [FIRST_LAUNCH.md](FIRST_LAUNCH.md).
+- **2026-05-26** — GTM pricing: **NPR 3,000/year** per company (one package) for first launch — [GTM_NEPAL.md](GTM_NEPAL.md) §9, [FIRST_LAUNCH.md](FIRST_LAUNCH.md).
+- **2026-05-26** — Docs simplified: **[AI_AGENT.md](AI_AGENT.md)** read order; moved YOUR_TURN tier sign-offs + PHASE1 stub + delegation/brand/gemma to **`docs/archive/`** (archive first, delete later); hub = FIRST_LAUNCH + BACKLOG + PHASE0_SIGNOFF.
+- **2026-05-26** — Docs: **[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** + **[BACKLOG.md](BACKLOG.md)** + **[DELETE_POLICY.md](DELETE_POLICY.md)**; archived delegation/brand/gemma prompts under `docs/archive/`.
+- **2026-05-26** — **Phase 0 Tier C signed off** — prod migrations **0025–0026**, manual QA §3.0c, deploy; **Phase 0 (A+B+C) complete** — [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md).
+- **2026-05-26** — **Phase 0 Tier B signed off** (0024 dev+prod, QA, `e2e:stock:live`, production deploy) — [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md).
 - **2026-05-26** — Home: shop name only in AppShell header; date `fmtDateDual` (AD + BS in parentheses); outstanding card without name pills; `ListBrowsePanel` 2-row filters (Status|Area, Sort full width); shorter filter labels.
 - **2026-05-26** — Print title **SALES INVOICE** when tenant has PAN (non-VAT); **TAX INVOICE** unchanged for VAT shops (`billDocumentTitle`).
 - **2026-05-26** — **Phase 0 Tier B:** `PageBackLink` (UI-0.9); Settings VAT validation (VAT-0b); credit-limit warning on sale (CRED-0 warn-only); notification due-soon boundary fix; migration **0024** oversell guard + `e2e:stock` live oversell test. Apply **0024** in Supabase before live stock e2e.
 - **2026-05-26** — Docs: **Tier A complete / Tier B next** in PHASE_ROADMAP, BACKEND-TODO, PRODUCT_EVOLUTION, DEFERRED_WORK (EXP-1, BRAND-1 done).
-- **2026-05-26** — **Phase 0 Tier A signed off** (migrations 0019–0023, export e2e, manual QA) — see [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md).
+- **2026-05-26** — **Phase 0 Tier A signed off** (migrations 0019–0023, export e2e, manual QA) — [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md).
 - **2026-05-26** — **Copy pass:** Removed dev/Supabase/migration wording from user-facing screens; shortened Help, Settings, Reports, Export, and form hints.
 - **2026-05-26** — **Support UX:** Help via menu only (`/app/support`, `PLATFORM_SUPPORT`); removed Settings Support tab.
 - **2026-05-26** — Manual E2E master checklist: Phase 0 §3.0a–c (Tier A/B/C), maintenance policy, sign-off table; links from YOUR_TURN tier docs.
 - **2026-05-26** — Policy: Phase 0 / UI changes must update matching `e2e-tier-*.mjs` + manual checklist (docs-on-change + phase1-use-cases § Keeping tests in sync).
 - **2026-05-26** — E2E Phase 0: `e2e:tier-a|b|c`, `e2e:phase0` (+ `:live`) for Tier A/B/C gates.
 - **2026-05-26** — Bill detail: Share/Print/PDF/Return **secondary**; **Collect** only **primary** green when balance due.
-- **2026-05-26** — **UI-1 (Phase 1):** `patterns.tsx` (`ListPageHeader`, `FormPageHeader`, `SegmentedTabs`, `InfoCallout`, …); migrated Home/Products/Suppliers/Support/Customer form/Sale entry; todo in [PHASE1_TIER_D_SCOPE.md](PHASE1_TIER_D_SCOPE.md).
+- **2026-05-26** — **UI-1 (Phase 1):** `patterns.tsx` (`ListPageHeader`, `FormPageHeader`, `SegmentedTabs`, `InfoCallout`, …); migrated Home/Products/Suppliers/Support/Customer form/Sale entry; todo in [BACKLOG.md](BACKLOG.md).
 - **2026-05-26** — UI consistency plan [UI_CONSISTENCY_PLAN.md](UI_CONSISTENCY_PLAN.md); `PageActionBar` + bill detail uses shared `Button` variants.
 - **2026-05-26** — Bill detail: primary action **Share** (system share sheet + PDF; not WhatsApp-only label).
-- **2026-05-26** — **Phase 0 Tier C:** App shell — bottom tabs Home · Customers · Inventory · Reports + centre **+**; **☰** drawer (`appNavigation.ts`, `AppNavDrawer.tsx`); Reports hub; `/app/support`; migrations **0026** (customer PAN/VAT); slim Home; bill **WhatsApp** primary; [ONBOARDING_FIRST_SHOP.md](ONBOARDING_FIRST_SHOP.md); Tier D scope [PHASE1_TIER_D_SCOPE.md](PHASE1_TIER_D_SCOPE.md).
+- **2026-05-26** — **Phase 0 Tier C:** App shell — bottom tabs Home · Customers · Inventory · Reports + centre **+**; **☰** drawer (`appNavigation.ts`, `AppNavDrawer.tsx`); Reports hub; `/app/support`; migrations **0026** (customer PAN/VAT); slim Home; bill **Share**; [ONBOARDING_FIRST_SHOP.md](ONBOARDING_FIRST_SHOP.md); backlog [BACKLOG.md](BACKLOG.md).
 - **2026-05-26** — App header: removed unused **Online** status pill (`AppShell.tsx`).
 - **2026-05-26** — **Docs/README/npm** safe rebrand sweep: BikriKhata, package `bikrikhata`; removed legacy product names from docs (domain [bikrikhata.com](https://bikrikhata.com) deploy steps in `deployment.md` — Auth URLs not changed in repo).
 - **2026-05-26** — Login/register `AuthBrandHeader`: logo, BikriKhata, tagline “Manage Stock, Sales, Credit & Customers…”, distributor description in `productBrand.ts`.

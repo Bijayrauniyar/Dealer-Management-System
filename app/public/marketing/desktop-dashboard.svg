@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Desktop dashboard preview">
+  <rect width="800" height="500" fill="#f1f5f9"/>
+  <rect x="0" y="0" width="800" height="48" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="24" y="14" width="120" height="20" rx="4" fill="#0d9488" opacity="0.35"/>
+  <rect x="640" y="12" width="136" height="24" rx="8" fill="#e2e8f0"/>
+  <rect x="0" y="48" width="200" height="452" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="24" y="72" width="152" height="28" rx="8" fill="#0d9488" opacity="0.15"/>
+  <rect x="24" y="112" width="152" height="12" rx="3" fill="#e2e8f0"/>
+  <rect x="24" y="132" width="152" height="12" rx="3" fill="#e2e8f0"/>
+  <rect x="24" y="152" width="152" height="12" rx="3" fill="#e2e8f0"/>
+  <rect x="220" y="72" width="160" height="80" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="396" y="72" width="160" height="80" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="572" y="72" width="204" height="80" rx="12" fill="#ccfbf1" stroke="#99f6e4"/>
+  <text x="674" y="118" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#0f766e" font-weight="600">Today sales</text>
+  <rect x="220" y="168" width="556" height="300" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="498" y="200" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#64748b">Stock � Customers � Reports</text>
+  <rect x="244" y="224" width="508" height="10" rx="3" fill="#e2e8f0"/>
+  <rect x="244" y="248" width="460" height="10" rx="3" fill="#e2e8f0"/>
+  <rect x="244" y="272" width="480" height="10" rx="3" fill="#e2e8f0"/>
+  <rect x="244" y="296" width="420" height="10" rx="3" fill="#e2e8f0"/>
+</svg>

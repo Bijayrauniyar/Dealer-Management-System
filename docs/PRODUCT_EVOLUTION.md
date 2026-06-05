@@ -6,7 +6,7 @@
 
 **Rule for prioritization:** If it does not fix daily ops, trust, or go-live for the **current or next dealer**, it waits.
 
-**Last updated:** 2026-05-26 · **Tier A + Tier B signed off** — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md), [YOUR_TURN_PHASE0_TIER_B.md](YOUR_TURN_PHASE0_TIER_B.md)
+**Last updated:** 2026-05-26 · **Phase 0 complete** — [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md)
 
 ---
 
@@ -14,7 +14,7 @@
 
 | Persona | Daily job | What “good” looks like |
 |---------|-----------|-------------------------|
-| **Dealer owner** | Bill, buy stock, chase udhar | Fast bill, correct print, stock roughly right, see who owes |
+| **Dealer owner** | Bill, buy stock, chase credit | Fast bill, correct print, stock roughly right, see who owes |
 | **Accountant** | Registers, VAT, reconciliation | Export to Excel, bill dates correct, payments match bills |
 | **Warehouse** | Receive goods, pick for orders | Purchase date saved, stock visible, damage recorded |
 | **Salesman** (later) | Route sales, collections | Not primary in pilot — do not block v1 on van/beat |
@@ -54,7 +54,7 @@ Verticals later (grocery, hardware, pharma-lite) share the **same core loop**; o
 | **Product categories = ice cream** | Hardcoded list | **Done** | CAT-0: tenant categories (`0019`) |
 | **Login branding** | **Done** — BikriKhata + taglines | — | `productBrand.ts` |
 | **No bulk import** | Every SKU/customer typed | **P1** | Import templates (after export column spec) |
-| **Opening stock / opening udhar** | Manual product + purchase + bills | **P1** | Import: products + opening balances doc |
+| **Opening stock / opening credit** | Manual product + purchase + bills | **P1** | Import: products + opening balances doc |
 | **Supplier add clunky** | Form exists but called “incremental” in checklist | **P1** | Finish supplier CRUD polish if dealers ask |
 
 ### D. Money & reporting
@@ -135,7 +135,7 @@ Only items that **remove lies**, **restore trust**, or **unblock second dealer**
 | 19 | **Stock adjustment** (opening / count correction, no supplier) + Settings toggle | **Phase 0** — [PHASE_ROADMAP.md](PHASE_ROADMAP.md) STK-0d–0f (~3–7 days); see [GTM stock model](GTM_NEPAL.md#stock-model-purchase-vs-stock-entry) |
 | 20 | **Parent/child product categories** (**CAT-1**, 2-level) | **Phase 1** — tenant has 30+ groups or wants sales/stock by main category — [DEFERRED_WORK.md](DEFERRED_WORK.md) |
 | 21 | **Category tree UI** (**CAT-2**, ERP-style sidebar) | **Phase 2** — after CAT-1 if power users need deep hierarchy |
-| 22 | **Full tenant backup** (**IMP-0**) — settings, suppliers, payments, all invoices, udhar in ZIP | **Phase 2** — trust + disaster recovery |
+| 22 | **Full tenant backup** (**IMP-0**) — settings, suppliers, payments, all invoices, credit in ZIP | **Phase 2** — trust + disaster recovery |
 | 23 | **CSV import hub** (**IMP-1**) — products, customers, suppliers, categories, settings, stock | **Phase 2** — onboarding without retyping |
 | 24 | **Restore from backup** (**IMP-2**) — resume business from export | **Phase 2** — after IMP-0/1; Tier A masters first |
 

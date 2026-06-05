@@ -65,6 +65,8 @@ function runExportChecks() {
   const brand = readSrc("config/productBrand.ts");
   if (brand.includes("PRODUCT_DISPLAY_NAME")) r.pass("productBrand config");
   else r.fail("productBrand", "missing");
+  if (brand.includes('BRAND_LOGO_SRC = "/icons/icon.png"')) r.pass("productBrand icon.png");
+  else r.fail("productBrand icon", "expected /icons/icon.png");
 }
 
 function runTierASourceChecks() {

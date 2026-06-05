@@ -9,7 +9,7 @@
 
 ## Live app — client persistence
 
-The React app is **Supabase-only**. Reads and writes go through [`app/src/lib/live/domainLive.ts`](../../app/src/lib/live/domainLive.ts); UI hooks in [`app/src/store/domainHooks.ts`](../../app/src/store/domainHooks.ts) (TanStack Query, key `["domain", "v1"]`).
+The React app is **Supabase-only**. Reads and writes go through [`app/src/lib/live/domainLive.ts`](../../app/src/lib/live/domainLive.ts); UI hooks in [`app/src/store/domainHooks.ts`](../../app/src/store/domainHooks.ts) (TanStack Query, key `["domain", "v2"]` — scoped by workspace `tenant_id`, including for `super_admin`).
 
 | Concern | Behaviour |
 |---|---|
@@ -27,6 +27,43 @@ Without `VITE_SUPABASE_*`, the app shows **`MissingSupabaseEnv`** (no offline de
 
 Every table has a `tenant_id uuid NOT NULL` column.  
 All queries are filtered by `tenant_id` via RLS policies (`auth.uid()` → `users.id` → `users.tenant_id`).
+
+---
+
+## `platform_inquiries` (marketing — not tenant-scoped)
+
+> **Migration:** `app/supabase/migrations/0027_platform_inquiries.sql`
+
+Inbound leads from the public landing **Contact** form (`/#contact`). **No `tenant_id`** — BikriKhata platform team only.
+
+| Column | Notes |
+|--------|--------|
+| `full_name`, `email`, `phone` | Required |
+| `business_name`, `business_type` | Required (e.g. Distributor, Wholesaler) |
+| `message` | Optional |
+| `inquiry_purpose` | e.g. `Start Your FREE 1-Week Trial Today`, `Book a demo` (**0029**) |
+| `status` | `new` · `contacted` · `closed` |
+| `source` | `landing`, `demo`, … |
+
+**Write:** RPC `submit_platform_inquiry` (preferred), else PostgREST `insert` (**0027**–**0028**).  
+**Read:** Supabase → Table Editor. **Email alerts:** migration **0033** + Edge Function `notify-platform-inquiry` + Resend — [CONTACT_FORM_EMAIL_SETUP.md](../CONTACT_FORM_EMAIL_SETUP.md) (`npm run setup:contact-email`). Trigger table: `platform_system_config` key `supabase_project_url`.
+
+---
+
+## `tenants` (workspace + license)
+
+> **Migration:** `0001_init.sql` (core); **`0030_tenant_license.sql`** (trial / paid dates).
+
+| Column | Notes |
+|--------|--------|
+| `business_name`, `owner_name`, `phone`, `city` | From register / onboarding |
+| `status` | `pending` (new signup) · `active` · `suspended` · `rejected` |
+| `plan` | `trial` · `monthly` · `annual` (set on activation / payment) |
+| `trial_ends_at` | Free trial end — set when **`approve_tenant`** runs (7 days from activation) |
+| `subscription_ends_at` | Paid period end — set via **`set_tenant_subscription`** |
+| `activated_at` | First activation timestamp |
+
+**RPCs (super_admin, after 0031):** `approve_tenant(uuid, days default 7)`; `set_tenant_subscription(uuid, plan, days default null)`; `extend_tenant_license(uuid, extra_days)`. See [TENANT_ACTIVATION.md](../TENANT_ACTIVATION.md).
 
 ---
 

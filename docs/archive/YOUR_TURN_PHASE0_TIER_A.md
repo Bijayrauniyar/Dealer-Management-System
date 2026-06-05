@@ -1,10 +1,10 @@
 # Your turn — Phase 0 Tier A (manual + commands)
 
-**Status:** **Tier A sign-off complete** (migrations 0019–0023, `deploy:check`, `e2e:export`, manual UI). Next: merge **dev → main**, deploy, optional accountant export sample (§5).
+> **Archived** — Phase 0 complete. Use [PHASE0_SIGNOFF.md](../PHASE0_SIGNOFF.md) · [FIRST_LAUNCH.md](../FIRST_LAUNCH.md).
 
-Code for Tier A is in the repo. Paste errors back to Cursor if a regression appears.
+**Status:** **Tier A sign-off complete** (migrations 0019–0023, `deploy:check`, `e2e:export`, manual UI).
 
-**Navigate:** [phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.md) · [supabase README](../app/supabase/README.txt) · [PHASE0_TIER_A_RESEARCH.md](PHASE0_TIER_A_RESEARCH.md)
+**Navigate:** [phase1-manual-e2e-checklist.md](../backend/phase1-manual-e2e-checklist.md) · [supabase README](../../app/supabase/README.txt) · [DATA_EXPORT_SPEC.md](../DATA_EXPORT_SPEC.md)
 
 ---
 
@@ -85,7 +85,7 @@ Full rows: [phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.
 
 ## 4. Product name (WS0.3)
 
-**Interim:** **BikriKhata** in `app/src/config/productBrand.ts` (build syncs PWA/`index.html`). Final name review after Phase 0 — [BRAND_NAME_OPTIONS.md](BRAND_NAME_OPTIONS.md).
+**Brand:** **BikriKhata** in `app/src/config/productBrand.ts` — [PRODUCT_NAMING_BRIEF.md](PRODUCT_NAMING_BRIEF.md).
 
 ---
 

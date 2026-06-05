@@ -26,6 +26,7 @@ import { LIST_PAGE_SIZE_OPTIONS, parseListPageSize } from "@/lib/listPageSize";
 import { Select } from "@/components/ui/select";
 import { ProductCategoriesSection } from "@/components/app/ProductCategoriesSection";
 import { PageBackLink } from "@/components/app/PageBackLink";
+import { SubscriptionSection } from "@/pages/settings/SubscriptionSection";
 
 const SectionTitle = ({ icon: Icon, label }: { icon: React.ElementType; label: string }) => (
   <div className="mb-3 mt-6 flex items-center gap-2 first:mt-0">
@@ -522,6 +523,7 @@ export function SettingsPage() {
 
       {loaded && (
         <div className="mt-4 border-t border-border-subtle pt-4 pb-6">
+          <SubscriptionSection />
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Account</p>
           <Button
             variant="secondary"
@@ -534,7 +536,7 @@ export function SettingsPage() {
             }}
             className="text-danger border-danger/30 hover:bg-red-50"
           >
-            Sign out
+            Log out
           </Button>
         </div>
       )}
