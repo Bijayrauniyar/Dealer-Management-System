@@ -391,6 +391,11 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
+- **2026-05-26** — Marketing logo/home: scroll to hero on logo click (`useMarketingHomeNav`) and when landing on `/` without hash.
+- **2026-05-26** — Marketing copy: hero/features use **tax invoices** (not “PAN/VAT bills”); PAN/VAT kept in FAQ and feature bullets for registration types.
+- **2026-05-26** — Landing hero: Distributo-style eyebrow (`PRODUCT_HERO_EYEBROW`), audience-first H1 (distributors/dealers/stockists), PAN/VAT + godown + credit subline; features subtitle de-duplicated.
+- **2026-05-26** — Landing: removed `#why-switch` comparison section; positioning stays in hero, features, FAQ. USP detail in `BIKRIKHATA_USPS_vs_COMPETITORS.md`.
+- **2026-05-26** — Landing P0 polish: honest salesman copy (not in `PLAN_INCLUDES`); pain + how-it-works dealer copy.
 - **2026-05-26** — Contact form success: **Send on WhatsApp** with pre-filled inquiry (`inquiryWhatsappPrefill`); renewal-specific thank-you copy; gate pages show WhatsApp number.
 - **2026-05-26** — L8 contact email: migration `0033` + `npm run setup:contact-email` (optional inbox alert alongside form + WhatsApp button).
 - **2026-05-26** — Landing: 6 feature cards (added **Reports and analytics**); `PLAN_INCLUDES` adds salesman + dashboard/analytics line.

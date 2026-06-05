@@ -127,12 +127,17 @@ if (landing) {
     r.fail("landingContent", "missing FEATURE_PILLARS, salesman, or analytics pillar");
   }
   if (
-    landingContent.includes("Salesman & field orders — salesman on bills") &&
-    landingContent.includes("Dashboard & analytics")
+    landingContent.includes("Dashboard & analytics") &&
+    !landingContent.includes("Salesman & field orders — salesman on bills")
   ) {
-    r.pass("PLAN_INCLUDES salesman + analytics lines");
+    r.pass("PLAN_INCLUDES live features only (salesman not in pricing checklist)");
   } else {
-    r.fail("PLAN_INCLUDES", "missing salesman or dashboard/analytics in pricing checklist");
+    r.fail("PLAN_INCLUDES", "salesman must not be in pricing checklist until shipped");
+  }
+  if (!landing.includes("LandingCompetitiveSection") && !landing.includes('id="why-switch"')) {
+    r.pass("Landing without separate why-switch comparison section");
+  } else {
+    r.fail("Landing", "remove LandingCompetitiveSection / #why-switch");
   }
   if (!landing.includes("EssentialAppScreens") && !landing.includes("DistributorOfferSection")) {
     r.pass("Landing without duplicate screen/distributor sections");

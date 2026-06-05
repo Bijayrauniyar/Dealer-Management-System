@@ -47,7 +47,7 @@ export const LANDING_FAQ: LandingFaqItem[] = [
   {
     question: "Can salesmen take orders on the phone?",
     answer:
-      "Yes — salesman on bills, field orders, and sales by salesman are part of BikriKhata. Contact us if you want help setting up salesman logins on phone.",
+      "Salesman tracking and field orders are rolling out in the next update. Core billing, stock, and credit work today. Contact us if you need field sales first.",
   },
   {
     question: "How does stock and customer credit work?",
@@ -57,7 +57,7 @@ export const LANDING_FAQ: LandingFaqItem[] = [
   {
     question: "Can I customize tax invoices and bill layout?",
     answer:
-      "Yes. In Settings you set your business name, address, PAN, and VAT details on bills. Choose tax or sales invoice layout. Customer tax IDs can print on B2B invoices where required.",
+      "Yes. Works for PAN-only and VAT-registered businesses. In Settings you set your business name, address, and tax registration (PAN or VAT). Choose tax or sales invoice layout. Customer tax IDs can print on B2B invoices where required.",
   },
   {
     question: "Do I need a computer?",

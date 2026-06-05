@@ -1,6 +1,34 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, type MouseEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { marketingHashScrollOffsetPx } from "@/pages/marketing/marketingUi";
+
+/** Scroll to page top (hero). */
+export function scrollMarketingToTop(behavior: ScrollBehavior = "smooth") {
+  window.scrollTo({ top: 0, left: 0, behavior });
+}
+
+/** Logo / “home” — SPA keeps scroll position unless we reset it. */
+export function useMarketingHomeNav() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  return (e: MouseEvent<HTMLAnchorElement>) => {
+    const onLanding = location.pathname === "/";
+
+    if (onLanding && !location.hash && !location.search) {
+      e.preventDefault();
+      scrollMarketingToTop();
+      return;
+    }
+
+    if (onLanding) {
+      e.preventDefault();
+      navigate({ pathname: "/" });
+      requestAnimationFrame(() => scrollMarketingToTop());
+    }
+    // From /faq etc.: default <Link> navigation; useMarketingHashScroll scrolls on paint.
+  };
+}
 
 /** Scroll to a landing section id (sticky nav offset). */
 export function scrollMarketingToId(id: string, behavior: ScrollBehavior = "smooth"): boolean {
@@ -22,6 +50,11 @@ export function scrollMarketingToHash(hash: string, behavior: ScrollBehavior = "
  */
 export function useMarketingHashScroll() {
   const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (pathname !== "/" || hash) return;
+    scrollMarketingToTop("auto");
+  }, [pathname, hash]);
 
   useEffect(() => {
     if (pathname !== "/" || !hash) return;

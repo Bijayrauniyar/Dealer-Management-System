@@ -5,6 +5,7 @@ import {
   BRAND_LOGO_LOCKUP_SRC,
   PRODUCT_DISPLAY_NAME,
 } from "@/config/productBrand";
+import { useMarketingHomeNav } from "@/pages/marketing/useMarketingHashScroll";
 
 type Props = {
   /** Nav/footer: full logo image. Hero: larger lockup (legacy marketing pages). */
@@ -12,6 +13,8 @@ type Props = {
 };
 
 export function MarketingBrandLogo({ variant = "nav" }: Props) {
+  const onHomeNav = useMarketingHomeNav();
+
   if (variant === "hero") {
     return (
       <div className="mb-4 flex w-full justify-center sm:mb-5 lg:mb-6 lg:justify-start">
@@ -33,6 +36,7 @@ export function MarketingBrandLogo({ variant = "nav" }: Props) {
     return (
       <Link
         to="/"
+        onClick={onHomeNav}
         className="inline-flex shrink-0 items-center gap-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-600"
         aria-label={PRODUCT_DISPLAY_NAME}
       >
@@ -55,6 +59,7 @@ export function MarketingBrandLogo({ variant = "nav" }: Props) {
   return (
     <Link
       to="/"
+      onClick={onHomeNav}
       className="inline-flex shrink-0 items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-600 rounded-lg"
       aria-label={PRODUCT_DISPLAY_NAME}
     >

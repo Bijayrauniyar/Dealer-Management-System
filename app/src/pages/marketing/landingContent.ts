@@ -25,21 +25,21 @@ export const LANDING_PAIN_POINTS: {
   {
     title: "गोदाम र हिसाब मिल्दैन",
     detail:
-      "Your godown count stays in one place. Every sale, purchase, return, and damage updates the same stock automatically.",
+      "One godown count for the whole business. Every sale, purchase, return, and damage updates it — no counting twice.",
     icon: Package,
     href: "#product",
   },
   {
     title: "कुन ग्राहकको कति बाँकी?",
     detail:
-      "See every customer’s balance and overdue days in one list, so you know who to follow up before the next dispatch.",
+      "See who owes what and who is overdue — before you load the van. No more calling around.",
     icon: Users,
     href: "#product",
   },
   {
     title: "बिल बन्यो, स्टक मिलेन",
     detail:
-      "Issue PAN/VAT bills from the app. When you save a bill, stock, schemes, and returns stay matched without extra entry.",
+      "Issue tax invoices from your phone. When you save, stock and customer credit update together — no extra reconciliation.",
     icon: Receipt,
     href: "#product",
   },
@@ -55,22 +55,22 @@ export const HOW_IT_WORKS_STEPS: { step: string; title: string; detail: string }
   {
     step: "1",
     title: "Start your free week",
-    detail: "Open Pricing and send the contact form — we set up your shop and send login details.",
+    detail: "Send the contact form from Pricing — we activate your workspace and send login details within one business day.",
   },
   {
     step: "2",
-    title: "Set up shop",
+    title: "Add your data",
     detail: "Add products, customers, suppliers, and opening godown stock.",
   },
   {
     step: "3",
     title: "Manage daily",
-    detail: "Record sales, purchases, customer payments, returns, and damage.",
+    detail: "Bill customers, record purchases and payments, returns, and damage. Stock updates automatically.",
   },
   {
     step: "4",
-    title: "Review & grow",
-    detail: "Check overdue customers and download registers from Settings when you close the month or need figures for audit.",
+    title: "Review & close month",
+    detail: "Check overdue customers and download registers from Settings for your books or audit.",
   },
 ];
 
@@ -97,7 +97,7 @@ export const KEY_FEATURES: KeyFeatureRow[] = [
     id: "sales",
     title: "Effortless sales and purchase tracking",
     detail:
-      "Log every sale and supplier bill in seconds. Generate PAN/VAT tax invoices, track dealer orders, and keep supplier details in one place.",
+      "Log every sale and supplier bill in seconds. Generate tax invoices, track dealer orders, and keep supplier details in one place.",
     bullets: [
       "Quickly record sales and purchases",
       "Tax invoices — print, PDF, or share",
@@ -155,7 +155,7 @@ export const DISTRIBUTOR_OFFERS: { title: string; detail: string }[] = [
   },
   {
     title: "B2B tax invoices",
-    detail: "PAN/VAT on bills, printable tax invoice layout, and share with the buyer.",
+    detail: "Printable tax invoice layout — PAN or VAT registration in Settings — plus share with the buyer.",
   },
   {
     title: "Works on phone & laptop",
@@ -234,7 +234,7 @@ export const FEATURE_SECTION = {
   eyebrow: "Features",
   title: "What BikriKhata does for your business",
   subtitle:
-    "Purchase, stock, billing, and customer credit in one place. Fits any business that buys stock, generates bills, gives credit, and works with salesmen — especially distributors and dealers.",
+    "Purchase, stock, billing, and customer credit in one workspace — bill a customer and stock updates automatically.",
 } as const;
 
 /** Feature cards (#product) — not sequential steps; onboarding steps live under How it works. */
@@ -244,9 +244,9 @@ export const FEATURE_PILLARS: FeaturePillar[] = [
     icon: Receipt,
     name: "Issue tax invoices",
     detail:
-      "Turn godown and counter sales into PAN/VAT bills with discounts and schemes — print, PDF, or share from your phone.",
+      "Turn godown and counter sales into tax invoices with discounts and schemes — print, PDF, or share from your phone.",
     highlights: [
-      "Tax and sales invoice layouts",
+      "PAN or VAT registration — tax and sales invoice layouts",
       "Line discounts, schemes, credit-limit warning",
       "Print, PDF, or share with the buyer",
     ],
@@ -292,12 +292,11 @@ export const FEATURE_PILLARS: FeaturePillar[] = [
     icon: UserRound,
     name: "Salesman & field orders",
     detail:
-      "For businesses with salesmen who take orders in the field. Owner sees who sold what and which bills were created.",
+      "Rolling out in the next update — field orders and sales by salesman. Contact us if you need this first.",
     highlights: [
-      "Salesman on each sales invoice",
-      "Sales orders before billing",
-      "Sales by salesman and open orders",
-      "Each salesman signs in on their phone",
+      "Salesman on sales invoices (planned)",
+      "Field orders before billing (planned)",
+      "Reports by salesman (planned)",
     ],
   },
   {
@@ -328,7 +327,6 @@ export const PLAN_INCLUDES: string[] = [
   "Schemes — buy-X-get-Y tracker linked to products",
   "Expenses & cash book — shop expenses, daily cash, capital entries",
   "Dashboard & analytics — today KPIs, outstanding bills, company overview, top products",
-  "Salesman & field orders — salesman on bills, orders before billing, sales by salesman",
   "Bill output — print, PDF download, and Share on sales invoices",
   "Settings export — period registers, stock, outstanding, VAT summary, backup ZIP for audit & accounts",
   "Phone-first — same login on laptop; one company account",

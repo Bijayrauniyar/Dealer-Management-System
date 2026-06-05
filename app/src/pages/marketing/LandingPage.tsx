@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
 import { useMarketingHashScroll } from "@/pages/marketing/useMarketingHashScroll";
-import { PRODUCT_TAGLINE, PRODUCT_TAGLINE_DETAIL } from "@/config/productBrand";
+import {
+  PRODUCT_HERO_EYEBROW,
+  PRODUCT_TAGLINE,
+  PRODUCT_TAGLINE_DETAIL,
+} from "@/config/productBrand";
 import { ContactInquiryForm } from "@/pages/marketing/ContactInquiryForm";
 import { ContactSupportChannels } from "@/pages/marketing/ContactSupportChannels";
 import { HeroMarketingScreenshot } from "@/pages/marketing/HeroMarketingScreenshot";
@@ -18,6 +22,7 @@ import {
   marketingBtnOutline,
   marketingBtnPrimary,
   marketingContainer,
+  marketingEyebrow,
   marketingLead,
   marketingScrollMt,
   marketingSectionYAnchor,
@@ -35,7 +40,8 @@ export function LandingPage() {
         />
         <div className={`${marketingContainer} relative py-8 sm:py-14 lg:py-16`}>
           <div className="mx-auto flex max-w-3xl min-w-0 flex-col items-center text-center">
-            <h1 className="max-w-xl text-[1.65rem] font-bold leading-tight tracking-tight text-slate-900 min-[380px]:text-3xl sm:text-4xl sm:leading-[1.2] lg:text-[2.65rem] lg:leading-[1.15]">
+            <p className={marketingEyebrow}>{PRODUCT_HERO_EYEBROW}</p>
+            <h1 className="mt-3 max-w-xl text-[1.65rem] font-bold leading-tight tracking-tight text-slate-900 min-[380px]:text-3xl sm:mt-4 sm:text-4xl sm:leading-[1.2] lg:text-[2.65rem] lg:leading-[1.15]">
               {PRODUCT_TAGLINE}
             </h1>
             <p className={`${marketingLead} mx-auto mt-4 max-w-lg lg:mt-5`}>{PRODUCT_TAGLINE_DETAIL}</p>
