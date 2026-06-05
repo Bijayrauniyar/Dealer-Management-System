@@ -48,6 +48,11 @@ if (exportUi.includes("downloadCsv") && exportUi.includes("buildProductsExport")
   r.pass("ExportSection UI");
 } else r.fail("ExportSection", "missing");
 
+const backup = read("lib/export/backupZip.ts");
+if (backup.includes("customer_outstanding.csv") && backup.includes("vat_period_summary.csv")) {
+  r.pass("Backup ZIP includes outstanding + VAT");
+} else r.fail("backupZip", "missing outstanding or VAT in ZIP");
+
 const brand = read("config/productBrand.ts");
 if (brand.includes("PRODUCT_DISPLAY_NAME")) r.pass("productBrand config");
 else r.fail("productBrand", "missing");

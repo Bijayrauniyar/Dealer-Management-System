@@ -328,6 +328,26 @@ body {
   min-height: 100vh;
 }
 
+/* Public marketing site (landing, privacy, terms) */
+.marketing-site {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (min-width: 640px) {
+  .marketing-site {
+    scroll-padding-top: 4.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-site {
+    scroll-behavior: auto;
+  }
+}
+
 .page {
   @apply mx-auto w-full max-w-6xl px-4 pb-24 pt-4;
 }

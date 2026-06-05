@@ -19,7 +19,7 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: "autoUpdate",
-            includeAssets: ["icons/icon.svg"],
+            includeAssets: ["icons/icon.png", "icons/icon-192.png"],
             manifest: {
                 name: PRODUCT_DISPLAY_NAME,
                 short_name: PRODUCT_SHORT_NAME,
@@ -30,9 +30,15 @@ export default defineConfig({
                 start_url: "/",
                 icons: [
                     {
-                        src: "/icons/icon.svg",
+                        src: "/icons/icon-192.png",
+                        sizes: "192x192",
+                        type: "image/png",
+                        purpose: "any",
+                    },
+                    {
+                        src: "/icons/icon.png",
                         sizes: "512x512",
-                        type: "image/svg+xml",
+                        type: "image/png",
                         purpose: "any maskable",
                     },
                 ],

@@ -21,6 +21,7 @@ const suites = [
   { name: "Tier A", script: "e2e-tier-a.mjs" },
   { name: "Tier B", script: "e2e-tier-b.mjs" },
   { name: "Tier C", script: "e2e-tier-c.mjs" },
+  { name: "P0 public", script: "e2e-p0-public.mjs" },
 ];
 
 console.log(`\n=== Phase 0 (${wantLive ? "source + live" : "source only"}) ===\n`);

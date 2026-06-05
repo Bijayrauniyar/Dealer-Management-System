@@ -177,7 +177,7 @@ try {
   await page.goto(`${BASE_URL}/login`, { waitUntil: "networkidle" });
   await page.getByPlaceholder("you@company.com").fill(email);
   await page.getByPlaceholder("Password", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
   await page.waitForURL(/\/app\/home/, { timeout: 20000 });
   ok("1. login");
 

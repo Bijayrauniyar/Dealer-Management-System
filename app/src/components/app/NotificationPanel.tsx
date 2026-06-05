@@ -16,16 +16,24 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Product, Sale } from "@/domain/types";
+import { useAuth } from "@/lib/auth";
 import { useBusinessSettings, useProducts, useSales } from "@/store/domain";
 import { isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { npr, fmtDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import type { TenantPlan } from "@/lib/tenantLicense";
+import {
+  formatTenantPlanLabel,
+  shouldWarnLicenseRenewal,
+  tenantLicenseDaysRemaining,
+  tenantLicenseEndAt,
+} from "@/lib/tenantLicense";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type Notif = {
   id:      string;
-  type:    "overdue" | "due_soon" | "low_stock" | "advance" | "short_receive" | "cash_open";
+  type:    "overdue" | "due_soon" | "low_stock" | "advance" | "short_receive" | "cash_open" | "license_renewal";
   tab:     "bills" | "stock" | "other";
   title:   string;
   body:    string;
@@ -98,6 +106,39 @@ export function buildNotifications(
   return ns;
 }
 
+type LicenseNotifInput = {
+  tenantPlan: TenantPlan;
+  trialEndsAt: string | null;
+  subscriptionEndsAt: string | null;
+  tenantStatus: "pending" | "active" | "suspended" | "rejected" | null;
+  licenseValid: boolean;
+};
+
+/** Subscription / trial ending within LICENSE_RENEWAL_WARN_DAYS (30). */
+export function buildLicenseRenewalNotif(input: LicenseNotifInput): Notif | null {
+  if (input.tenantStatus !== "active" || !input.licenseValid) return null;
+  const profile = {
+    plan: input.tenantPlan,
+    trialEndsAt: input.trialEndsAt,
+    subscriptionEndsAt: input.subscriptionEndsAt,
+  };
+  const days = tenantLicenseDaysRemaining(profile);
+  if (!shouldWarnLicenseRenewal(days)) return null;
+  const endIso = tenantLicenseEndAt(profile);
+  const planLabel = formatTenantPlanLabel(input.tenantPlan);
+  const when = endIso ? fmtDate(endIso) : "";
+  const urgent = days !== null && days <= 3;
+  return {
+    id: "license-renewal",
+    type: "license_renewal",
+    tab: "other",
+    title: input.tenantPlan === "trial" ? "Trial ending soon" : "Subscription ending soon",
+    body: `${planLabel} · ${days} day${days === 1 ? "" : "s"} left${when ? ` (ends ${when})` : ""}`,
+    linkTo: "/app/settings",
+    urgent,
+  };
+}
+
 // ── Visual config ─────────────────────────────────────────────────────────────
 const TYPE_META: Record<Notif["type"], {
   icon: React.ElementType;
@@ -112,6 +153,7 @@ const TYPE_META: Record<Notif["type"], {
   advance:       { icon: CreditCard,    iconBg: "bg-teal-100",   iconColor: "text-teal-600",   badge: "bg-teal-100 text-teal-700",    label: "Credit" },
   short_receive: { icon: Truck,         iconBg: "bg-purple-100", iconColor: "text-purple-600", badge: "bg-purple-100 text-purple-700",label: "Short receive" },
   cash_open:     { icon: BookOpen,      iconBg: "bg-slate-100",  iconColor: "text-slate-500",  badge: "bg-slate-100 text-slate-600",  label: "Cash" },
+  license_renewal: { icon: Clock,       iconBg: "bg-amber-100",  iconColor: "text-amber-600",  badge: "bg-amber-100 text-amber-800",  label: "Subscription" },
 };
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -128,13 +170,31 @@ type Props = { onClose: () => void };
 
 export const NotificationPanel = ({ onClose }: Props) => {
   const [activeTab, setActiveTab] = useState<TabId>("all");
+  const auth = useAuth();
   const business = useBusinessSettings();
   const sales = useSales();
   const products = useProducts();
-  const all = useMemo(
-    () => buildNotifications(sales, products, business.overdueDays, business.dueSoonDays),
-    [sales, products, business.overdueDays, business.dueSoonDays],
-  );
+  const all = useMemo(() => {
+    const base = buildNotifications(sales, products, business.overdueDays, business.dueSoonDays);
+    const license = buildLicenseRenewalNotif({
+      tenantPlan: auth.tenantPlan,
+      trialEndsAt: auth.trialEndsAt,
+      subscriptionEndsAt: auth.subscriptionEndsAt,
+      tenantStatus: auth.tenantStatus,
+      licenseValid: auth.licenseValid,
+    });
+    return license ? [license, ...base] : base;
+  }, [
+    sales,
+    products,
+    business.overdueDays,
+    business.dueSoonDays,
+    auth.tenantPlan,
+    auth.trialEndsAt,
+    auth.subscriptionEndsAt,
+    auth.tenantStatus,
+    auth.licenseValid,
+  ]);
 
   const filtered = activeTab === "all" ? all : all.filter((n) => n.tab === activeTab);
   const urgent   = filtered.filter((n) => n.urgent);

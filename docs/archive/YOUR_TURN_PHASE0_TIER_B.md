@@ -2,7 +2,9 @@
 
 **Status:** **Tier B sign-off complete** (migrations 0019–**0024**, QA, `e2e:stock:live`, deploy to production). **Next:** Tier C or Phase 1 per [PHASE_ROADMAP.md](PHASE_ROADMAP.md).
 
-**Navigate:** [Docs hub](README.md) · [Tier A sign-off](YOUR_TURN_PHASE0_TIER_A.md) · [Delegation prompts](PHASE0_TIER_B_DELEGATION.md) · [Migrations runbook](../app/supabase/README.txt)
+**Navigate:** [Docs hub](../README.md) · [Tier A sign-off](YOUR_TURN_PHASE0_TIER_A.md) · [Delegation](PHASE0_TIER_B_DELEGATION.md) · [Migrations runbook](../../app/supabase/README.txt)
+
+> **Archived** — Phase 0 complete. Use [PHASE0_SIGNOFF.md](../PHASE0_SIGNOFF.md) · [FIRST_LAUNCH.md](../FIRST_LAUNCH.md).
 
 ---
 

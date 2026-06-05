@@ -1,0 +1,36 @@
+---
+description: Customer-facing copy — website and app UI text
+globs:
+  - app/src/pages/marketing/**
+  - app/src/components/app/AuthBrandHeader.tsx
+  - app/src/pages/**/LoginPage.tsx
+  - app/src/pages/**/RegisterPage.tsx
+alwaysApply: false
+---
+
+# Marketing and UI copy
+
+Write like a **finished product**, not a build log or internal doc.
+
+## Do
+
+- Short, clear sentences. State what the user **gets** or **does**.
+- Professional SaaS tone (Stripe, FreshBooks style).
+- Nepal wholesaler context where relevant (godown, VAT, accountant export).
+
+## Do not (in user-visible text)
+
+- Phase 0 / P1 / first launch / second launch / deferred / roadmap
+- “Partial”, “optional feature”, “if enabled”, “per tenant”, “shipped today”
+- “Not part of launch”, “coming soon”, migration numbers, schema cache, RPC names
+- “We built…”, “Modules shipped…”, “Replace placeholder…”, file paths
+- Long negatives listing what the product is **not** (retail POS, pharma, etc.)
+
+## FAQ / pricing
+
+- Say what **is included** or **how it works**.
+- For gaps (e.g. IRD e-filing): one calm line — e.g. “not included in the app today” — not “not part of first launch”.
+
+## Errors
+
+- User message: plain English + phone/WhatsApp if needed. No README or migration IDs.

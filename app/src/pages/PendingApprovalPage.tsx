@@ -1,34 +1,57 @@
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Mail, MessageCircle, Phone } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { DEFAULT_TRIAL_DAYS } from "@/lib/tenantLicense";
+import { routeForTenantProfile } from "@/lib/tenantRouting";
 import { Button } from "@/components/ui/button";
+import {
+  BRAND_LOGO_LOCKUP_SRC,
+  PRODUCT_DISPLAY_NAME,
+} from "@/config/productBrand";
+import { MARKETING_HOME_PATH } from "@/lib/marketingRoutes";
+import { MarketingSessionControl } from "@/pages/marketing/MarketingSessionControl";
+import {
+  platformSupportContacts,
+  telUrl,
+  whatsappUrl,
+  mailtoUrl,
+} from "@/config/supportContacts";
 
-/** Shown while `tenants.status` is pending / suspended (not active). */
-export const PendingApprovalPage = () => {
+const btnOutline =
+  "inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-white px-3 text-sm font-semibold text-foreground hover:bg-slate-50";
+
+/** Pending workspace — trial starts after BikriKhata activates the account. */
+export function PendingApprovalPage() {
   const navigate = useNavigate();
   const { signOut, tenantStatus, user, loading, refreshProfile } = useAuth();
-
-  const handleSignOut = () => {
-    void signOut().then(() => navigate("/login", { replace: true }));
-  };
+  const support = platformSupportContacts();
+  const tel = telUrl(support.phone);
+  const wa = whatsappUrl(
+    support.whatsappDigits,
+    `Hello, I registered on ${PRODUCT_DISPLAY_NAME} and would like to activate my ${DEFAULT_TRIAL_DAYS}-day trial.`,
+  );
+  const mail = mailtoUrl(support.email);
 
   const handleCheckAgain = () => {
     void refreshProfile().then((profile) => {
-      if (profile.status === "active") {
-        navigate("/app/home", { replace: true });
+      const to = routeForTenantProfile(profile);
+      if (to === "/app/home") {
+        toast.success("Your workspace is active.");
+        navigate(to, { replace: true });
         return;
       }
-      toast.message(
-        profile.status
-          ? "Your workspace is not active yet. Contact support when approved."
-          : "No workspace linked to this account yet.",
-      );
+      if (to === "/license-expired") {
+        navigate(to, { replace: true });
+        return;
+      }
+      toast.message("Your workspace is not active yet. Contact BikriKhata to continue.");
     });
   };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-surface-page px-4 text-sm text-muted">
         Loading…
       </div>
     );
@@ -36,26 +59,87 @@ export const PendingApprovalPage = () => {
   if (!user) return <Navigate to="/login" replace />;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-surface-page px-4">
-      <div className="w-full max-w-md rounded-2xl border border-border-subtle bg-white p-8 shadow-card text-center space-y-4">
-        <h1 className="text-lg font-bold text-foreground">Account pending</h1>
-        <p className="text-sm text-muted">
-          Your dealer workspace is <strong>{tenantStatus ?? "unknown"}</strong>. An administrator must approve it
-          before you can use the app.
-        </p>
-        <p className="text-xs text-muted">After approval, tap below to continue.</p>
-        <div className="flex flex-col gap-2 pt-2">
-          <Button variant="primary" size="full" onClick={handleCheckAgain}>
-            I&apos;ve been approved — continue
-          </Button>
-          <Button variant="secondary" size="full" onClick={handleSignOut}>
-            Sign out
-          </Button>
-          <Link to="/login" className="text-sm text-teal-600 hover:underline">
-            Back to sign in
-          </Link>
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-surface-page px-4 py-5">
+      <div className="flex w-full max-w-sm flex-col">
+        <div className="mb-4 flex justify-center">
+          <img
+            src={BRAND_LOGO_LOCKUP_SRC}
+            alt={PRODUCT_DISPLAY_NAME}
+            width={200}
+            height={80}
+            decoding="async"
+            className="h-16 w-auto object-contain sm:h-[4.5rem]"
+          />
         </div>
+
+        <div className="rounded-2xl border border-border-subtle bg-white p-5 shadow-card sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Pending activation</p>
+          <h1 className="mt-1.5 text-xl font-semibold text-foreground">Activate your workspace</h1>
+          <p className="mt-2 text-sm leading-snug text-muted">
+            Your account is registered. We start your {DEFAULT_TRIAL_DAYS}-day trial after we verify your
+            shop — usually within one business day.
+          </p>
+          {tenantStatus && tenantStatus !== "pending" ? (
+            <p className="mt-2 text-xs text-muted">
+              Current status: <span className="font-medium text-foreground">{tenantStatus}</span>
+            </p>
+          ) : null}
+
+          <div className="mt-4 space-y-2.5">
+            {wa ? (
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700"
+              >
+                <MessageCircle size={18} aria-hidden />
+                WhatsApp BikriKhata
+              </a>
+            ) : null}
+
+            <div className="flex gap-2">
+              {tel ? (
+                <a href={tel} className={btnOutline}>
+                  <Phone size={16} aria-hidden />
+                  Call
+                </a>
+              ) : null}
+              {mail ? (
+                <a href={mail} className={btnOutline}>
+                  <Mail size={16} aria-hidden />
+                  Email
+                </a>
+              ) : null}
+              <Link to="/contact?intent=trial" className={btnOutline}>
+                Message us
+              </Link>
+            </div>
+
+            <Button variant="primary" size="full" onClick={handleCheckAgain}>
+              Check activation status
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => void signOut().then(() => navigate("/login", { replace: true }))}
+              className="w-full py-1 text-center text-sm font-medium text-muted hover:text-foreground"
+            >
+              Log out
+            </button>
+          </div>
+        </div>
+
+        <p className="mt-4 text-center text-xs text-muted">
+          <Link to={MARKETING_HOME_PATH} className="font-medium text-teal-600 hover:underline">
+            Website
+          </Link>
+          <span className="mx-1.5" aria-hidden>
+            ·
+          </span>
+          <MarketingSessionControl variant="inline" />
+        </p>
       </div>
     </div>
   );
-};
+}

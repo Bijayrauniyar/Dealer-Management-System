@@ -21,7 +21,7 @@ The UI is a **Progressive Web App** built with React; persistence is **Supabase*
 
 If you are new to the codebase, read this file first, then follow the **numbered reading order** in **[`docs/README.md` → Reading order](docs/README.md#reading-order)** (environment → migrations → live testing → checklist → data model → E2E docs).
 
-**Local AI (Gemma 4, Codex, etc.):** **[`docs/GEMMA_SYSTEM_PROMPT.md`](docs/GEMMA_SYSTEM_PROMPT.md)** (paste into System) + **[`docs/LLM_CONTEXT.md`](docs/LLM_CONTEXT.md)** (attach as handbook). Update after large features (see §10 in LLM_CONTEXT).
+**Docs:** Launch **[`docs/FIRST_LAUNCH.md`](docs/FIRST_LAUNCH.md)** · Backlog **[`docs/BACKLOG.md`](docs/BACKLOG.md)** · Agents **[`docs/AI_AGENT.md`](docs/AI_AGENT.md)** · Handbook **[`docs/LLM_CONTEXT.md`](docs/LLM_CONTEXT.md)**. Old docs: **`docs/archive/`** (archive first, delete later).
 
 ---
 

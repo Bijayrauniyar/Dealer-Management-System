@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 780" role="img" aria-label="Inventory screen preview">
+  <rect width="390" height="780" fill="#f8fafc"/>
+  <rect width="390" height="52" fill="#fff"/>
+  <rect x="20" y="14" width="120" height="12" rx="4" fill="#0d9488" opacity="0.4"/>
+  <rect x="20" y="68" width="350" height="36" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="20" y="120" width="350" height="48" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="195" y="150" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#0f766e" font-weight="600">Stock on hand</text>
+  <rect x="20" y="188" width="350" height="56" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="20" y="256" width="350" height="56" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="20" y="324" width="350" height="56" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="20" y="392" width="350" height="56" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="36" y="208" width="140" height="8" rx="2" fill="#cbd5e1"/>
+  <rect x="280" y="206" width="70" height="12" rx="4" fill="#ccfbf1"/>
+</svg>

@@ -1,6 +1,10 @@
 /**
  * Supabase reads/writes for Phase 1.
  * Maps DB rows ↔ domain types for the UI.
+ *
+ * TENANT SCOPE (do not regress): every read must `.eq("tenant_id", …)` from
+ * `getTenantIdForCurrentUser()` — required for `super_admin` (RLS may return all shops).
+ * Money/stock changes go through RPCs, not UI-only math. See `.cursor/rules/tenant-data-integrity.mdc`.
  */
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
@@ -32,8 +36,10 @@ import { billLineAmount } from "@/lib/saleLineMath";
 import { linePricingForProduct, productFromSalesEmbed } from "@/lib/uom";
 import { saleLineToRpcItem } from "@/lib/uom";
 import { parseUomConversion, parseUomPrices, toDbUomConversion, toDbUomPrices } from "@/lib/uom";
+import { getTenantIdForCurrentUser } from "@/lib/tenantUser";
 
-export const DOMAIN_QUERY_KEY = ["domain", "v1"] as const;
+/** v2: client tenant_id scope on reads (super_admin RLS no longer merges all shops). */
+export const DOMAIN_QUERY_KEY = ["domain", "v2"] as const;
 export const CAPITAL_QUERY_KEY = ["capital", "v1"] as const;
 
 export type DomainBundle = {
@@ -58,20 +64,7 @@ function mapUiPaymentModeToDb(mode: string): "Cash" | "UPI" | "Cheque" | "Bank" 
 }
 
 async function tenantIdForCurrentUser(): Promise<string> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not signed in");
-
-  const { data: tu, error: te } = await supabase
-    .from("tenant_users")
-    .select("tenant_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (te) throw te;
-  const tenantId = tu?.tenant_id as string | undefined;
-  if (!tenantId) throw new Error("No tenant for user");
-  return tenantId;
+  return getTenantIdForCurrentUser();
 }
 
 function billStatus(total: number, paid: number): BillStatus {
@@ -105,12 +98,14 @@ function purchaseRpcError(err: { message?: string } | null, opts?: { settingInvo
 }
 
 export async function fetchProductsLive(): Promise<Product[]> {
+  const tenantId = await tenantIdForCurrentUser();
   let rows: Record<string, unknown>[] | null = null;
   let error: { message?: string } | null = null;
 
   const full = await supabase
     .from("products")
     .select(PRODUCT_SELECT_FULL)
+    .eq("tenant_id", tenantId)
     .eq("is_active", true)
     .order("name");
   rows = full.data;
@@ -125,6 +120,7 @@ export async function fetchProductsLive(): Promise<Product[]> {
     const legacy = await supabase
       .from("products")
       .select(PRODUCT_SELECT_LEGACY)
+      .eq("tenant_id", tenantId)
       .eq("is_active", true)
       .order("name");
     rows = legacy.data;
@@ -137,11 +133,15 @@ export async function fetchProductsLive(): Promise<Product[]> {
   let se: { message?: string } | null = null;
   const stockFull = await supabase
     .from("v_stock")
-    .select("product_id, closing_stock, opening_stock, purchased, adjusted");
+    .select("product_id, closing_stock, opening_stock, purchased, adjusted")
+    .eq("tenant_id", tenantId);
   stockRows = stockFull.data;
   se = stockFull.error;
   if (se && isMissingColumnError(se, "adjusted")) {
-    const stockLegacy = await supabase.from("v_stock").select("product_id, closing_stock, opening_stock, purchased");
+    const stockLegacy = await supabase
+      .from("v_stock")
+      .select("product_id, closing_stock, opening_stock, purchased")
+      .eq("tenant_id", tenantId);
     stockRows = stockLegacy.data;
     se = stockLegacy.error;
   }
@@ -193,24 +193,49 @@ export async function fetchProductsLive(): Promise<Product[]> {
   });
 }
 
+const CUSTOMER_SELECT_FULL =
+  "id, name, phone, area, address, credit_limit, opening_balance, pan_number, vat_number";
+const CUSTOMER_SELECT_LEGACY =
+  "id, name, phone, area, address, credit_limit, opening_balance";
+
 export async function fetchCustomersLive(): Promise<Customer[]> {
-  const { data: cust, error } = await supabase
+  const tenantId = await tenantIdForCurrentUser();
+  let cust: Record<string, unknown>[] | null = null;
+  let error: { message?: string } | null = null;
+  const full = await supabase
     .from("customers")
-    .select("id, name, phone, area, address, credit_limit, opening_balance, pan_number, vat_number")
+    .select(CUSTOMER_SELECT_FULL)
+    .eq("tenant_id", tenantId)
     .eq("is_active", true)
     .order("name");
+  cust = full.data;
+  error = full.error;
+  if (error && (isMissingColumnError(error, "pan_number") || isMissingColumnError(error, "vat_number"))) {
+    const legacy = await supabase
+      .from("customers")
+      .select(CUSTOMER_SELECT_LEGACY)
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .order("name");
+    cust = legacy.data;
+    error = legacy.error;
+  }
   if (error) throw error;
 
   const { data: balRows, error: be } = await supabase
     .from("v_customer_balance")
-    .select("customer_id, balance, last_payment_date");
+    .select("customer_id, balance, last_payment_date")
+    .eq("tenant_id", tenantId);
   if (be) throw be;
   const balMap = new Map<string, { balance: number; last?: string | null }>();
   for (const b of balRows ?? []) {
     balMap.set(b.customer_id as string, { balance: Number(b.balance), last: b.last_payment_date as string | null });
   }
 
-  const { data: salesForAge, error: se } = await supabase.from("sales_bills").select("customer_id, bill_date, total, paid");
+  const { data: salesForAge, error: se } = await supabase
+    .from("sales_bills")
+    .select("customer_id, bill_date, total, paid")
+    .eq("tenant_id", tenantId);
   if (se) throw se;
   const oldestOpen = new Map<string, number>();
   const today = new Date();
@@ -242,9 +267,18 @@ export async function fetchCustomersLive(): Promise<Customer[]> {
 }
 
 export async function fetchSuppliersLive(): Promise<Supplier[]> {
-  const { data: sup, error } = await supabase.from("suppliers").select("*").eq("is_active", true).order("name");
+  const tenantId = await tenantIdForCurrentUser();
+  const { data: sup, error } = await supabase
+    .from("suppliers")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true)
+    .order("name");
   if (error) throw error;
-  const { data: balRows, error: be } = await supabase.from("v_supplier_balance").select("supplier_id, balance");
+  const { data: balRows, error: be } = await supabase
+    .from("v_supplier_balance")
+    .select("supplier_id, balance")
+    .eq("tenant_id", tenantId);
   if (be) throw be;
   const balMap = new Map<string, number>();
   for (const b of balRows ?? []) balMap.set(b.supplier_id as string, Number(b.balance));
@@ -319,9 +353,11 @@ type ItemRow = {
 };
 
 export async function fetchSalesLive(): Promise<Sale[]> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data: bills, error } = await supabase
     .from("sales_bills")
     .select("id, bill_no, bill_date, customer_id, payment_mode, subtotal, discount, total, paid, notes, vat_amount, extra_charges, customers(name)")
+    .eq("tenant_id", tenantId)
     .order("bill_date", { ascending: false });
   if (error) throw error;
 
@@ -486,11 +522,13 @@ function mapBillRowToSaleHeader(b: BillRow): Sale {
 
 /** Recent sales bills without line items (PERF-0 bundle). */
 export async function fetchSalesHeadersLive(): Promise<Sale[]> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data: bills, error } = await supabase
     .from("sales_bills")
     .select(
       "id, bill_no, bill_date, customer_id, payment_mode, subtotal, discount, total, paid, notes, vat_amount, extra_charges, customers(name)",
     )
+    .eq("tenant_id", tenantId)
     .order("bill_date", { ascending: false })
     .limit(SALES_HEADERS_LIMIT);
   if (error) throw error;
@@ -499,11 +537,13 @@ export async function fetchSalesHeadersLive(): Promise<Sale[]> {
 
 /** Full bill + lines for detail, edit, return. */
 export async function fetchSaleByBillNoLive(billNo: string): Promise<Sale | undefined> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data: raw, error } = await supabase
     .from("sales_bills")
     .select(
       "id, bill_no, bill_date, customer_id, payment_mode, subtotal, discount, total, paid, notes, vat_amount, extra_charges, customers(name)",
     )
+    .eq("tenant_id", tenantId)
     .eq("bill_no", billNo)
     .maybeSingle();
   if (error) throw error;
@@ -557,9 +597,11 @@ export function deriveOutstandingBills(sales: Sale[]): OutstandingBill[] {
 }
 
 export async function fetchPaymentsLive(): Promise<Payment[]> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data: rows, error } = await supabase
     .from("payments")
     .select("id, payment_date, customer_id, amount, mode, notes, sales_bills(bill_no), customers(name)")
+    .eq("tenant_id", tenantId)
     .order("payment_date", { ascending: false })
     .limit(200);
   if (error) throw error;
@@ -592,9 +634,18 @@ export async function fetchPaymentsLive(): Promise<Payment[]> {
 }
 
 export async function peekNextBillNoLive(): Promise<string> {
-  const { data: ts } = await supabase.from("tenant_settings").select("invoice_prefix").maybeSingle();
+  const tenantId = await tenantIdForCurrentUser();
+  const { data: ts } = await supabase
+    .from("tenant_settings")
+    .select("invoice_prefix")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
   const prefix = (ts?.invoice_prefix as string)?.trim() || "INV";
-  const { data: bills } = await supabase.from("sales_bills").select("bill_no").like("bill_no", `${prefix}-%`);
+  const { data: bills } = await supabase
+    .from("sales_bills")
+    .select("bill_no")
+    .eq("tenant_id", tenantId)
+    .like("bill_no", `${prefix}-%`);
   let maxN = 0;
   for (const b of bills ?? []) {
     const m = (b.bill_no as string).match(/-(\d+)$/);
@@ -900,19 +951,7 @@ export async function upsertCustomerLive(p: {
   pan_number?: string | null;
   vat_number?: string | null;
 }): Promise<string> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not signed in");
-
-  const { data: tu, error: te } = await supabase
-    .from("tenant_users")
-    .select("tenant_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (te) throw te;
-  const tenantId = tu?.tenant_id as string | undefined;
-  if (!tenantId) throw new Error("No tenant for user");
+  const tenantId = await tenantIdForCurrentUser();
 
   const row: Record<string, unknown> = {
     tenant_id: tenantId,
@@ -959,19 +998,7 @@ export async function upsertProductLive(p: {
   min_qty_pack?: number | null;
   opening_stock?: number;
 }): Promise<void> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not signed in");
-
-  const { data: tu, error: te } = await supabase
-    .from("tenant_users")
-    .select("tenant_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (te) throw te;
-  const tenantId = tu?.tenant_id as string | undefined;
-  if (!tenantId) throw new Error("No tenant for user");
+  const tenantId = await tenantIdForCurrentUser();
 
   const row = {
     tenant_id: tenantId,
@@ -1080,11 +1107,13 @@ function mapSchemeRow(row: Record<string, unknown>): ProductScheme {
 }
 
 export async function fetchSchemesLive(): Promise<ProductScheme[]> {
+  const tenantId = await tenantIdForCurrentUser();
   let data: Record<string, unknown>[] | null = null;
   let error: { message?: string } | null = null;
   const full = await supabase
     .from("scheme_tracker")
     .select(SCHEME_SELECT_FULL)
+    .eq("tenant_id", tenantId)
     .eq("is_active", true)
     .order("end_date", { ascending: false });
   data = full.data as Record<string, unknown>[] | null;
@@ -1093,6 +1122,7 @@ export async function fetchSchemesLive(): Promise<ProductScheme[]> {
     const legacy = await supabase
       .from("scheme_tracker")
       .select(SCHEME_SELECT_LEGACY)
+      .eq("tenant_id", tenantId)
       .eq("is_active", true)
       .order("end_date", { ascending: false });
     data = legacy.data as Record<string, unknown>[] | null;
@@ -1212,7 +1242,12 @@ export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
 }
 
 export async function fetchTenantSettingsLive(): Promise<BusinessSettings> {
-  const { data, error } = await supabase.from("tenant_settings").select("*").maybeSingle();
+  const tenantId = await tenantIdForCurrentUser();
+  const { data, error } = await supabase
+    .from("tenant_settings")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
   if (error) throw error;
   if (!data) return { ...DEFAULT_BUSINESS_SETTINGS };
   return mapTenantSettingsRow(data as TenantSettingsRow);
@@ -1256,10 +1291,11 @@ export async function removeProductCategoryLive(name: string): Promise<string[]>
 }
 
 export async function fetchPnlTotalsLive(): Promise<PnlTotals> {
+  const tenantId = await tenantIdForCurrentUser();
   const [pu, ex, ret] = await Promise.all([
-    supabase.from("purchases").select("total"),
-    supabase.from("expenses").select("amount"),
-    supabase.from("returns").select("credit_note_amount"),
+    supabase.from("purchases").select("total").eq("tenant_id", tenantId),
+    supabase.from("expenses").select("amount").eq("tenant_id", tenantId),
+    supabase.from("returns").select("credit_note_amount").eq("tenant_id", tenantId),
   ]);
   if (pu.error) throw pu.error;
   if (ex.error) throw ex.error;
@@ -1275,9 +1311,11 @@ export async function fetchPnlTotalsLive(): Promise<PnlTotals> {
 }
 
 export async function fetchLatestDailyCashClosingLive(): Promise<number> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data, error } = await supabase
     .from("daily_cash")
     .select("closing_balance")
+    .eq("tenant_id", tenantId)
     .order("cash_date", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -1287,9 +1325,11 @@ export async function fetchLatestDailyCashClosingLive(): Promise<number> {
 
 /** Cash worksheet lines for a single day (opening from last locked close before that date). */
 export async function fetchDailyCashBreakdownLive(cashDate: string): Promise<DailyCashBreakdown> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data: openRow, error: oe } = await supabase
     .from("daily_cash")
     .select("closing_balance")
+    .eq("tenant_id", tenantId)
     .lt("cash_date", cashDate)
     .order("cash_date", { ascending: false })
     .limit(1)
@@ -1297,13 +1337,18 @@ export async function fetchDailyCashBreakdownLive(cashDate: string): Promise<Dai
   if (oe) throw oe;
   const openingBalance = openRow ? Number((openRow as { closing_balance: number }).closing_balance) : 0;
 
-  const { data: billRows, error: be } = await supabase.from("sales_bills").select("id").eq("bill_date", cashDate);
+  const { data: billRows, error: be } = await supabase
+    .from("sales_bills")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("bill_date", cashDate);
   if (be) throw be;
   const billIdsToday = new Set((billRows ?? []).map((b) => (b as { id: string }).id));
 
   const { data: payRows, error: pe } = await supabase
     .from("payments")
     .select("amount, bill_id")
+    .eq("tenant_id", tenantId)
     .eq("payment_date", cashDate)
     .eq("mode", "Cash");
   if (pe) throw pe;
@@ -1321,7 +1366,11 @@ export async function fetchDailyCashBreakdownLive(cashDate: string): Promise<Dai
     else cashReceiptsToday += amt;
   }
 
-  const { data: exRows, error: ee } = await supabase.from("expenses").select("amount, paid_by").eq("expense_date", cashDate);
+  const { data: exRows, error: ee } = await supabase
+    .from("expenses")
+    .select("amount, paid_by")
+    .eq("tenant_id", tenantId)
+    .eq("expense_date", cashDate);
   if (ee) throw ee;
   const expensesCash = (exRows ?? []).reduce((s, r) => {
     const paidBy = String((r as { paid_by: string | null }).paid_by ?? "").toLowerCase();
@@ -1332,6 +1381,7 @@ export async function fetchDailyCashBreakdownLive(cashDate: string): Promise<Dai
   const { data: supRows, error: se } = await supabase
     .from("supplier_payments")
     .select("amount")
+    .eq("tenant_id", tenantId)
     .eq("payment_date", cashDate)
     .eq("mode", "Cash");
   if (se) throw se;
@@ -1369,9 +1419,11 @@ export async function upsertDailyCashLive(p: {
 }
 
 export async function fetchExpensesListLive(): Promise<ExpenseListItem[]> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data, error } = await supabase
     .from("expenses")
     .select("id, expense_date, category, amount, notes")
+    .eq("tenant_id", tenantId)
     .order("expense_date", { ascending: false })
     .limit(500);
   if (error) throw error;
@@ -1425,11 +1477,13 @@ function purchaseSelectWithoutInvoiceCol(select: string): string {
 }
 
 export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
+  const tenantId = await tenantIdForCurrentUser();
   let data: unknown[] | null = null;
   let error: { message?: string } | null = null;
   const full = await supabase
     .from("purchases")
     .select(PURCHASE_LIST_SELECT)
+    .eq("tenant_id", tenantId)
     .order("purchase_date", { ascending: false })
     .limit(200);
   data = full.data;
@@ -1438,6 +1492,7 @@ export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
     const legacy = await supabase
       .from("purchases")
       .select(PURCHASE_LIST_SELECT_LEGACY)
+      .eq("tenant_id", tenantId)
       .order("purchase_date", { ascending: false })
       .limit(200);
     data = legacy.data;
@@ -1556,9 +1611,11 @@ export async function fetchTopProductsInPeriodLive(
   from: string,
   to: string,
 ): Promise<{ productId: string; name: string; qty: number; revenue: number }[]> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data: bills, error: be } = await supabase
     .from("sales_bills")
     .select("id")
+    .eq("tenant_id", tenantId)
     .gte("bill_date", from)
     .lte("bill_date", to);
   if (be) throw be;
@@ -1592,11 +1649,32 @@ export async function fetchTopProductsInPeriodLive(
 
 /** KPIs for dashboard selected period (exclusive end semantics: use inclusive dates in SQL). */
 export async function fetchDashboardPeriodTotalsLive(from: string, to: string): Promise<DashboardPeriodTotals> {
+  const tenantId = await tenantIdForCurrentUser();
   const [pex, eex, rex, dmx] = await Promise.all([
-    supabase.from("purchases").select("total").gte("purchase_date", from).lte("purchase_date", to),
-    supabase.from("expenses").select("amount").gte("expense_date", from).lte("expense_date", to),
-    supabase.from("returns").select("credit_note_amount").gte("return_date", from).lte("return_date", to),
-    supabase.from("damages").select("qty").gte("damage_date", from).lte("damage_date", to),
+    supabase
+      .from("purchases")
+      .select("total")
+      .eq("tenant_id", tenantId)
+      .gte("purchase_date", from)
+      .lte("purchase_date", to),
+    supabase
+      .from("expenses")
+      .select("amount")
+      .eq("tenant_id", tenantId)
+      .gte("expense_date", from)
+      .lte("expense_date", to),
+    supabase
+      .from("returns")
+      .select("credit_note_amount")
+      .eq("tenant_id", tenantId)
+      .gte("return_date", from)
+      .lte("return_date", to),
+    supabase
+      .from("damages")
+      .select("qty")
+      .eq("tenant_id", tenantId)
+      .gte("damage_date", from)
+      .lte("damage_date", to),
   ]);
   if (pex.error) throw pex.error;
   if (eex.error) throw eex.error;
@@ -1655,9 +1733,11 @@ export async function fetchDomainBundle(): Promise<DomainBundle> {
 }
 
 export async function fetchCapitalEntriesLive(): Promise<CapitalEntry[]> {
+  const tenantId = await tenantIdForCurrentUser();
   const { data: rows, error } = await supabase
     .from("capital_entries")
     .select("id, name, category, entry_date, amount, current_value, notes")
+    .eq("tenant_id", tenantId)
     .is("deleted_at", null)
     .order("entry_date", { ascending: false });
   if (error) throw error;

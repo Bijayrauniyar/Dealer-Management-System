@@ -1,10 +1,10 @@
 # Product roadmap — Phase 0 → Phase 3
 
-**Navigate:** [Docs hub](README.md) · [GTM Nepal](GTM_NEPAL.md) · [Product evolution (pain-first)](PRODUCT_EVOLUTION.md) · [Deferred work](DEFERRED_WORK.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Backend checklist](backend/BACKEND-TODO.md)
+**Navigate:** [Docs hub](README.md) · **[First launch checklist](FIRST_LAUNCH.md)** · [Backlog](BACKLOG.md) · [GTM Nepal](GTM_NEPAL.md) · [Product evolution](PRODUCT_EVOLUTION.md) · [Export spec](DATA_EXPORT_SPEC.md) · [Backend checklist](backend/BACKEND-TODO.md)
 
-**Status:** Living launch plan. **Phase 0 Tier A + B signed off (2026-05-26)**. **Tier C implemented in app (2026-05-26)** — migrations **0025–0026**, shell + support; sign-off [YOUR_TURN_PHASE0_TIER_C.md](YOUR_TURN_PHASE0_TIER_C.md). **Tier D** → Phase 1 per [PHASE1_TIER_D_SCOPE.md](PHASE1_TIER_D_SCOPE.md).
+**Status:** Living launch plan. **Phase 0 complete (2026-05-26)** — Tier **A + B + C** signed off (prod migrations **0025–0026**, manual QA §3.0c, deploy). **Tier D** → Phase 1 per [BACKLOG.md](BACKLOG.md).
 
-**Last updated:** 2026-05-26 · [Tier A](YOUR_TURN_PHASE0_TIER_A.md) · [Tier B](YOUR_TURN_PHASE0_TIER_B.md)
+**Last updated:** 2026-05-26 · [Phase 0 sign-off](PHASE0_SIGNOFF.md)
 
 ---
 
@@ -17,8 +17,8 @@
 | **ICP (Phase 0)**    | 1–5 staff, **1 godown**, billing at office/warehouse, 50–300 retailers              |
 | **Verticals**        | FMCG-style (ice-cream pilot → beverages, snacks, general)                           |
 | **Not now**          | 20+ van salesmen, offline hills, pharma batch, brand SFA, IRD e-filing              |
-| **Pricing (launch)** | NPR 1,000–2,500/mo founding → 2,500–5,000 standard                                  |
-| **Core pitch**       | VAT sales invoice + purchase from supplier + stock + udhar + **CSV for accountant** |
+| **Pricing (launch)** | **NPR 3,000 / year** per company (one package); higher tiers later after first shops |
+| **Core pitch**       | VAT sales invoice + purchase from supplier + stock + credit + **CSV for accountant** |
 
 
 **Locked for Phase 0:** No **sales order** or **purchase order** workflows — only **sales invoice** and **purchase invoice** entry. Orders → Phase 1.
@@ -63,12 +63,12 @@ Use tiers to time-box launch: **Tier A complete** — add **B** before ~10 tenan
 |------|---------|------|
 | **A — Must** | Deal-breaker for new paying wholesaler + CA | **Done** (2026-05-26) |
 | **B — Should** | Trust, scale, fewer support fires | Before ~10 tenants |
-| **C — Nice** | Polish & retention; app works without these short-term | Phase 0 if time; else cut scope |
+| **C — Nice** | Polish & retention | **Done** (2026-05-26) — signed off prod + QA + deploy |
 | **D — Later** | Wrong buyer or too heavy for solo launch | Phase 1–3 only |
 
 #### Tier A — Must (Phase 0) — **complete (2026-05-26)**
 
-Signed off: migrations **0019–0023**, `deploy:check`, `e2e:export`, manual QA — [YOUR_TURN_PHASE0_TIER_A.md](YOUR_TURN_PHASE0_TIER_A.md).
+Signed off: migrations **0019–0023**, `deploy:check`, `e2e:export`, manual QA — [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md).
 
 | ID | Item | Status |
 |----|------|--------|
@@ -99,7 +99,9 @@ Signed off: migrations **0019–0023**, `deploy:check`, `e2e:export`, manual QA 
 | **UI-0.9** | `PageBackLink` on inner pages | **Done** |
 | **UI-0.8 / UI-0.11** | Header Settings + tabbed Settings | **Done** (Tier A) |
 
-#### Tier C — Nice (Phase 0) — **implemented (2026-05-26); sign-off pending**
+#### Tier C — Nice (Phase 0) — **signed off (2026-05-26)**
+
+Prod migrations **0025–0026**, manual QA §3.0c, deploy — [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md).
 
 | ID | Item | Status |
 |----|------|--------|
@@ -112,7 +114,7 @@ Signed off: migrations **0019–0023**, `deploy:check`, `e2e:export`, manual QA 
 
 #### Tier A — Already shipped (maintain only)
 
-No Phase 0 build — keep working in demo: sales/purchase loop, udhar, payments, schemes, purchase VAT, print/PDF, home overdue (see [§2](#2-already-shipped-demo-today)).
+No Phase 0 build — keep working in demo: sales/purchase loop, credit, payments, schemes, purchase VAT, print/PDF, home overdue (see [§2](#2-already-shipped-demo-today)).
 
 ---
 
@@ -272,7 +274,7 @@ Settings (stock mode) → Product (+ opening) → Purchase invoice → Sales inv
 **Sales questions:** (1) Orders before bill? (2) Track by salesman? (3) Partial deliveries / multiple bills per order?  
 If all **no** → do not build orders; optional **SF-0** (salesman on invoice only) is enough.
 
-**Pricing:** Stay **per company** (NPR 2–5k/mo), not per salesman seat.
+**Pricing:** Stay **per company** (launch **NPR 3k/year**), not per salesman seat.
 
 #### Phase 1.0 — Light field minimum (build first when 1–2 clients ask)
 
@@ -329,7 +331,7 @@ Beat plan, visit checklist, van stock, GPS (optional), offline sync, load sheet 
 | -------------------- | -------------------------------------------------------------- |
 | **Backup & import**  | **IMP-0** full tenant ZIP · **IMP-1** CSV import per entity · **IMP-2** restore / resume — [DEFERRED_WORK.md](DEFERRED_WORK.md), [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md) |
 | **Categories**       | **CAT-2** ERP-style category tree (3+ levels) — after CAT-1    |
-| **AI (rules-first)** | Daily owner brief, udhar risk list                             |
+| **AI (rules-first)** | Daily owner brief, credit risk list                             |
 | **Supplier**         | SUP-1 supplier scheme → customer scheme pass-through           |
 | **Comms**            | SMS/WhatsApp overdue reminders                                 |
 | **Reporting**        | Richer period reports; async large export; `export_runs` audit |
@@ -371,7 +373,7 @@ Quick map of **Tier D** (not Phase 0) to when to build.
 | Restore from backup / resume same point (**IMP-2**) | **2** |
 | Bill history; `returns.bill_id`; live notifications + SMS; INV-2; customer price tier; roles | **1** |
 | `.xlsx` accountant pack; adjustment export register; delivery note | **1** |
-| AI brief, udhar risk; SUP-1; richer reporting; BS date on bills | **2** |
+| AI brief, credit risk; SUP-1; richer reporting; BS date on bills | **2** |
 | Van, offline, barcode, multi-godown, IRD certify API, Tally, SFA parity | **3** |
 
 ---

@@ -1,5 +1,5 @@
 import {
-  BRAND_LOGO_SRC,
+  BRAND_LOGO_LOCKUP_SRC,
   PRODUCT_DISPLAY_NAME,
   PRODUCT_TAGLINE,
   PRODUCT_TAGLINE_DETAIL,
@@ -14,14 +14,15 @@ export function AuthBrandHeader({ footer }: AuthBrandHeaderProps) {
   return (
     <div className="mb-8 text-center max-w-sm mx-auto">
       <img
-        src={BRAND_LOGO_SRC}
-        alt=""
-        width={64}
-        height={64}
-        className="mx-auto h-16 w-16 rounded-2xl shadow-sm"
+        src={BRAND_LOGO_LOCKUP_SRC}
+        alt={PRODUCT_DISPLAY_NAME}
+        width={400}
+        height={400}
+        decoding="async"
+        className="mx-auto h-40 w-auto max-w-[min(100%,18rem)] sm:h-44 sm:max-w-[20rem] object-contain"
       />
-      <h1 className="mt-4 text-2xl font-bold text-teal-600">{PRODUCT_DISPLAY_NAME}</h1>
-      <p className="mt-3 text-sm font-medium leading-snug text-foreground">
+      <h1 className="sr-only">{PRODUCT_DISPLAY_NAME}</h1>
+      <p className="mt-4 text-sm font-medium leading-snug text-foreground">
         {PRODUCT_TAGLINE}
       </p>
       <p className="mt-2 text-xs leading-relaxed text-muted">{PRODUCT_TAGLINE_DETAIL}</p>

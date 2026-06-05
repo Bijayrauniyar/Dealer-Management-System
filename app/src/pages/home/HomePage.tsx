@@ -8,7 +8,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
 import { ListPagination } from "@/components/app/ListPagination";
-import { useBusinessSettings, useCustomers, useProducts, useSchemes } from "@/store/domain";
+import {
+  useBusinessSettings,
+  useCustomers,
+  useDomainBundleErrorMessage,
+  useDomainBundleLoadState,
+  useProducts,
+  useSchemes,
+} from "@/store/domain";
+import { queryClient } from "@/lib/queryClient";
+import { DOMAIN_QUERY_KEY } from "@/lib/live/domainLive";
 import { isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { pickBestScheme, productIdsWithActiveSchemes, schemeSummaryLabel } from "@/lib/schemeApply";
 import {
@@ -50,6 +59,8 @@ export const HomePage = () => {
   const business = useBusinessSettings();
   const OVERDUE_DAYS = business.overdueDays;
 
+  const loadState = useDomainBundleLoadState();
+  const loadError = useDomainBundleErrorMessage();
   const CUSTOMERS = useCustomers();
   const PRODUCTS = useProducts();
   const SCHEMES = useSchemes();
@@ -219,6 +230,20 @@ export const HomePage = () => {
         ]}
       />
 
+      {loadState === "error" && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-900">
+          <p className="font-semibold">Could not load shop data.</p>
+          {loadError ? <p className="mt-1 text-xs">{loadError}</p> : null}
+          <button
+            type="button"
+            className="mt-2 text-xs font-semibold text-teal-800 underline"
+            onClick={() => void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY })}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
       {tab === "customers" && (
         <>
           <ListBrowsePanel
@@ -259,10 +284,22 @@ export const HomePage = () => {
             exportDisabled={customers.length === 0}
           />
 
-          {customers.length === 0 ? (
+          {loadState === "loading" && CUSTOMERS.length === 0 ? (
             <div className="py-10 text-center px-4">
-              <p className="text-sm text-muted">No customers match.</p>
-              {custEmptyHint && <p className="mt-2 text-xs text-muted">{custEmptyHint}</p>}
+              <p className="text-sm text-muted">Loading customers…</p>
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="py-10 text-center px-4">
+              <p className="text-sm text-muted">
+                {loadState === "error"
+                  ? "Customers could not be loaded."
+                  : CUSTOMERS.length === 0
+                    ? "No customers yet."
+                    : "No customers match."}
+              </p>
+              {custEmptyHint && loadState !== "error" ? (
+                <p className="mt-2 text-xs text-muted">{custEmptyHint}</p>
+              ) : null}
             </div>
           ) : (
             <>
@@ -371,10 +408,22 @@ export const HomePage = () => {
             exportDisabled={products.length === 0}
           />
 
-          {products.length === 0 ? (
+          {loadState === "loading" && PRODUCTS.length === 0 ? (
             <div className="py-10 text-center px-4">
-              <p className="text-sm text-muted">No products match.</p>
-              {stockEmptyHint && <p className="mt-2 text-xs text-muted">{stockEmptyHint}</p>}
+              <p className="text-sm text-muted">Loading stock…</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="py-10 text-center px-4">
+              <p className="text-sm text-muted">
+                {loadState === "error"
+                  ? "Stock could not be loaded."
+                  : PRODUCTS.length === 0
+                    ? "No products yet."
+                    : "No products match."}
+              </p>
+              {stockEmptyHint && loadState !== "error" ? (
+                <p className="mt-2 text-xs text-muted">{stockEmptyHint}</p>
+              ) : null}
             </div>
           ) : (
             <>

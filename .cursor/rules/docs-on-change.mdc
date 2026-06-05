@@ -14,7 +14,7 @@ When you **change app behavior**, **add a feature**, **add/alter a migration**, 
 3. **Migrations** — add step to `app/supabase/README.txt`; note in `docs/backend/phase1-use-cases-and-tests.md` pre-flight if tests need it.
 4. **Changelog** — one bullet in `docs/LLM_CONTEXT.md` (newest first, date + what changed).
 5. **Tests** — extend or update `app/scripts/e2e-*.mjs` in the **same PR** when behavior is testable (source grep, routes, live RPC/DB). Do not change Tier A/B/C/UI/patterns code without touching the matching e2e script (see table below).
-6. **Manual QA** — add/adjust rows in `docs/backend/phase1-manual-e2e-checklist.md` (§2 catalog + §3 steps + §1 Gaps if needed); keep `YOUR_TURN_PHASE0_TIER_*.md` in sync only for short sign-off lists.
+6. **Manual QA** — add/adjust rows in `docs/backend/phase1-manual-e2e-checklist.md` (§2 catalog + §3 steps + §1 Gaps if needed). Phase 0 sign-off: `docs/PHASE0_SIGNOFF.md` only (do not revive `docs/archive/YOUR_TURN_*.md`).
 
 ## Doc map (what to touch)
 
@@ -27,11 +27,12 @@ When you **change app behavior**, **add a feature**, **add/alter a migration**, 
 | Sales bill / print / PDF | `docs/backend/data-model.md` (sales), `phase1-use-cases` if maths/RPC |
 | New route or major page | `docs/LLM_CONTEXT.md` (routes/features), manual checklist if user-facing |
 | GTM / pricing / ICP / VAT·IRD / stock model | `docs/GTM_NEPAL.md` (§5 VAT/IRD, stock model) + `PRODUCT_EVOLUTION.md` |
-| Deferred / future work only | `docs/DEFERRED_WORK.md` or `BACKEND-TODO.md` — not LLM_CONTEXT unless shipped |
+| Deferred / future work only | `docs/BACKLOG.md` (+ `FIRST_LAUNCH.md` if promoting); `BACKEND-TODO.md` — not LLM_CONTEXT unless shipped |
+| Launch priority / pre-ad checklist | `docs/FIRST_LAUNCH.md` |
 | New `npm run e2e:*` script | `docs/backend/phase1-use-cases-and-tests.md`, project `README.md` if user-facing |
 | Phase 0 Tier A (export, categories, stock adj., settings tabs) | `e2e-tier-a.mjs` (+ `:live`), `e2e-export.mjs` if export-only; README **0019–0023** |
 | Phase 0 Tier B (oversell 0024, back link, VAT/credit, notifications) | `e2e-tier-b.mjs` (+ `:live` → `e2e:stock:live`); manual checklist |
-| Phase 0 Tier C (shell, support, Share, Home tabs, 0025/0026) | `e2e-tier-c.mjs` (+ `:live`); `YOUR_TURN_PHASE0_TIER_C.md` QA rows |
+| Phase 0 Tier C (shell, support, Share, Home tabs, 0025/0026) | `e2e-tier-c.mjs` (+ `:live`); manual checklist §3.0c |
 | UI chrome (`patterns.tsx`, `PageActionBar`, `ListPageHeader`, buttons) | `e2e-tier-c.mjs` and/or `UI_CONSISTENCY_PLAN.md`; run `npm run e2e:phase0` before release |
 | Any Phase 0 change | Prefer `npm run e2e:phase0` (or `e2e:phase0:live` if DB/RPC touched); update manual §3.0a–c — see `phase1-use-cases-and-tests.md` |
 | New screen / flow / behaviour change | `docs/backend/phase1-manual-e2e-checklist.md` §2 + §3 (+ §7 backlog if Phase 1+) |

@@ -67,7 +67,8 @@ Agents: see `.cursor/rules/docs-on-change.mdc` (always applied).
 | `npm run e2e:tier-b:live` | Tier B source + `e2e:stock:live` (oversell block + stock dates) |
 | `npm run e2e:tier-c` | **Phase 0 Tier C** — shell, support, Share, Home tabs, 0025/0026 files (source) |
 | `npm run e2e:tier-c:live` | Tier C + live columns + customer PAN/VAT insert |
-| `npm run e2e:phase0` | **All Tier A + B + C** source checks in one command |
+| `npm run e2e:p0-public` | **P0 marketing** — `/`, `/privacy`, `/terms`, pricing, router fallback (source) |
+| `npm run e2e:phase0` | **All Tier A + B + C + P0 public** source checks in one command |
 | `npm run e2e:phase0:live` | Tier A/B/C live (B includes full `e2e:stock:live`) |
 | `npm run e2e:suppliers` | **Supplier invoices** — routes, button wiring, types (no login) |
 | `npm run e2e:suppliers:live` | Same + DB: `supplier_invoice_no`, purchase lines, `update_purchase`, `payment_status` |

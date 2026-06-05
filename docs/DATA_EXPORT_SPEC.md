@@ -163,7 +163,7 @@ Build registers, not IRD filing XML:
 |----|------|
 | **IMP-0** | Export **everything** in one ZIP (trust + handoff) |
 | **IMP-1** | Per-entity CSV import (templates + upload + row errors) |
-| **IMP-2** | Optional full restore: masters + open udhar + history (Tier A–C) |
+| **IMP-2** | Optional full restore: masters + open credit + history (Tier A–C) |
 
 **Out of app:** Full ZIP + README; human registers even if they never re-import elsewhere.
 

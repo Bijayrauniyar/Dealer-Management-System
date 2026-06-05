@@ -346,7 +346,7 @@ async function runUiTests(billNoHint) {
     await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded" });
     await page.getByPlaceholder("you@company.com").fill(email);
     await page.getByPlaceholder("Password").fill(password);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
     await page.waitForURL(/\/app\//, { timeout: 20000 });
 
     await page.goto(`${BASE_URL}/app/bills/${encodeURIComponent(billNo)}`, {

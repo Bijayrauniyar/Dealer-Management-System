@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/app/FormField";
 import { AuthBrandHeader } from "@/components/app/AuthBrandHeader";
-
 function RegisterPageInner() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -39,7 +38,7 @@ function RegisterPageInner() {
         });
         if (signUpErr) {
           if (signUpErr.message.toLowerCase().includes("already registered")) {
-            setError("This email already has an account. Sign in, then complete workspace setup on the next screen.");
+            setError("This email already has an account. Log in, then complete workspace setup on the next screen.");
           } else {
             setError(signUpErr.message);
           }
@@ -47,7 +46,7 @@ function RegisterPageInner() {
           return;
         }
         if (!signUpData.session) {
-          setError("Check your email to confirm the account, then sign in.");
+          setError("Check your email to confirm the account, then log in.");
           setLoading(false);
           return;
         }
@@ -67,8 +66,8 @@ function RegisterPageInner() {
         return;
       }
 
-      toast.success("Workspace created. Awaiting approval if your project requires it.");
-      navigate("/app/home", { replace: true });
+      toast.success("Account created. Contact us or wait for activation to start your free trial.");
+      navigate("/pending-approval", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -124,10 +123,22 @@ function RegisterPageInner() {
           <p className="text-center text-sm text-muted">
             Already have an account?{" "}
             <Link to="/login" className="text-teal-600 font-medium hover:underline">
-              Sign in
+              Log in
             </Link>
           </p>
         </form>
+
+        <p className="mt-4 text-center text-xs text-muted leading-relaxed">
+          By registering you agree to our{" "}
+          <Link to="/terms" className="text-teal-600 hover:underline">
+            Terms of use
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="text-teal-600 hover:underline">
+            Privacy policy
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );

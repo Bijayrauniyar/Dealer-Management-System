@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-label="App preview placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0fdfa"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" rx="24" fill="url(#bg)"/>
+  <rect x="48" y="48" width="704" height="424" rx="16" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>
+  <rect x="72" y="72" width="200" height="24" rx="6" fill="#0d9488" opacity=".25"/>
+  <rect x="72" y="112" width="320" height="12" rx="4" fill="#94a3b8"/>
+  <rect x="72" y="136" width="260" height="12" rx="4" fill="#cbd5e1"/>
+  <rect x="72" y="180" width="656" height="200" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="96" y="204" width="120" height="80" rx="8" fill="#0d9488" opacity=".15"/>
+  <rect x="232" y="204" width="120" height="80" rx="8" fill="#0d9488" opacity=".2"/>
+  <rect x="368" y="204" width="120" height="80" rx="8" fill="#0d9488" opacity=".25"/>
+  <rect x="504" y="204" width="200" height="152" rx="8" fill="#fff" stroke="#0d9488" stroke-width="2"/>
+  <text x="604" y="248" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#0d9488" font-weight="600">Sales invoice</text>
+  <rect x="72" y="404" width="180" height="44" rx="10" fill="#0d9488"/>
+  <text x="400" y="490" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#64748b">Replace with Home or bill screenshot</text>
+</svg>

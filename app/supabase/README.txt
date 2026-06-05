@@ -132,6 +132,30 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Open: app/supabase/migrations/0026_customer_tax_ids.sql
    - Copy entire file → Paste → Run → Success.
 
+28. Migration 0030 (tenant trial / subscription — LIC-1)
+   - Open: app/supabase/migrations/0030_tenant_license.sql
+   - Copy entire file → Paste → Run → Success.
+   - Activates 7-day trial on approve_tenant (not on signup). See docs/TENANT_ACTIVATION.md
+
+29. Migration 0031 (optional days on approve / subscription / extend)
+   - Open: app/supabase/migrations/0031_tenant_license_days.sql
+   - Run after 0030. Examples: approve_tenant(id, 14); set_tenant_subscription(id, 'trial', 10); extend_tenant_license(id, 7)
+
+30. Migration 0032 (approve_tenant from Supabase SQL Editor — postgres has no auth.uid())
+   - Open: app/supabase/migrations/0032_license_ops_sql_editor.sql
+   - Run after 0031. Then approve_tenant(...) works in Dashboard SQL without super_admin session.
+
+28–30. CONTACT FORM (required if /#contact shows "Unable to send")
+   - Easiest: app/supabase/migrations/RUN_ONCE_contact_form.sql → SQL Editor → Run once.
+   - Verify: cd app && npm run test:contact-form
+   - Leads: Table Editor → platform_inquiries
+
+31. CONTACT FORM EMAIL (deferred — inbox alerts when ready)
+   - Checklist: docs/BACKLOG.md § L8 (copy-paste steps)
+   - Full guide: docs/CONTACT_FORM_EMAIL_SETUP.md
+   - Deploy: cd app && npm run deploy:contact-email
+   - Dashboard → Database → Webhooks → INSERT platform_inquiries → notify-platform-inquiry
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 
@@ -191,9 +215,9 @@ AFTER MIGRATIONS — app testing
 
 4. /register → create workspace OR /login if user already exists.
 
-5. If "pending approval" page: for dev only, in SQL Editor:
-     update tenants set status = 'active'
-     where id = (select tenant_id from tenant_users limit 1);
+5. If "pending approval" page: in SQL Editor (after 0030):
+     select approve_tenant('<tenant-uuid>');
+     -- Or docs/TENANT_ACTIVATION.md
 
 6. Full test checklist: docs/backend/testing-live-supabase.md
 

@@ -2,7 +2,7 @@
 
 **Goal:** One visual language — same buttons, list chrome, forms, filters — via reusable components in `app/src/components/app/patterns.tsx`.
 
-**Hub:** Phase 1 backlog item **UI-1** in [PHASE1_TIER_D_SCOPE.md](PHASE1_TIER_D_SCOPE.md) and [PHASE_ROADMAP.md §4](PHASE_ROADMAP.md#4-phase-1--retain--expand-after-first-paying-tenants).
+**Hub:** Phase 1 backlog item **UI-1** in [BACKLOG.md](BACKLOG.md) and [PHASE_ROADMAP.md §4](PHASE_ROADMAP.md#4-phase-1--retain--expand-after-first-paying-tenants).
 
 ---
 

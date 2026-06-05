@@ -1,8 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { LoginPage } from "@/pages/LoginPage";
-import { RegisterPage } from "@/pages/RegisterPage";
+import { RegisterGate } from "@/pages/RegisterGate";
 import { PendingApprovalPage } from "@/pages/PendingApprovalPage";
+import { LicenseExpiredPage } from "@/pages/LicenseExpiredPage";
 import { NoTenantPage } from "@/pages/NoTenantPage";
 import { HomePage } from "@/pages/home/HomePage";
 import { AgingDetailPage } from "@/pages/home/AgingDetailPage";
@@ -37,12 +38,23 @@ import { DashboardPage } from "@/pages/dashboard/DashboardPage";
 import { ProductFormPage } from "@/pages/products/ProductFormPage";
 import { ProductDetailPage } from "@/pages/products/ProductDetailPage";
 import { ProtectedRoute } from "@/lib/auth";
+import { PublicHomeGate } from "@/pages/marketing/PublicHomeGate";
+import { PrivacyPage } from "@/pages/marketing/PrivacyPage";
+import { TermsPage } from "@/pages/marketing/TermsPage";
+import { FaqPage } from "@/pages/marketing/FaqPage";
+import { MarketingContactPage } from "@/pages/marketing/MarketingContactPage";
 
 const AppRoutesInner = () => (
   <Routes>
+    <Route path="/" element={<PublicHomeGate />} />
+    <Route path="/privacy" element={<PrivacyPage />} />
+    <Route path="/terms" element={<TermsPage />} />
+    <Route path="/faq" element={<FaqPage />} />
+    <Route path="/contact" element={<MarketingContactPage />} />
     <Route path="/login" element={<LoginPage />} />
-    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/register" element={<RegisterGate />} />
     <Route path="/pending-approval" element={<PendingApprovalPage />} />
+    <Route path="/license-expired" element={<LicenseExpiredPage />} />
     <Route path="/no-tenant" element={<NoTenantPage />} />
 
     <Route
@@ -96,7 +108,7 @@ const AppRoutesInner = () => (
       <Route path="settings" element={<SettingsPage />} />
     </Route>
 
-    <Route path="*" element={<Navigate to="/login" replace />} />
+    <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
 

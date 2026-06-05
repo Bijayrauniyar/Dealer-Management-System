@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { PRODUCT_DISPLAY_NAME } from "@/config/productBrand";
 import {
   buildCustomersExport,
+  buildOutstandingExport,
   buildProductsExport,
   buildPurchasesRegisterExport,
   buildSalesLinesExport,
@@ -9,6 +10,7 @@ import {
   buildStockSnapshotExport,
   buildVatPeriodSummaryExport,
   CUSTOMER_COLUMNS,
+  OUTSTANDING_COLUMNS,
   PRODUCT_COLUMNS,
   PURCHASE_REGISTER_COLUMNS,
   SALES_LINES_COLUMNS,
@@ -37,10 +39,12 @@ export async function downloadFullBackupZip(range: ExportDateRange): Promise<voi
     buildProductsExport(true),
     buildCustomersExport(),
     buildStockSnapshotExport(),
+    buildOutstandingExport(),
   ]);
   zip.file("masters/products.csv", rowsToCsv(masters[0], [...PRODUCT_COLUMNS]));
   zip.file("masters/customers.csv", rowsToCsv(masters[1], [...CUSTOMER_COLUMNS]));
   zip.file("masters/stock_snapshot.csv", rowsToCsv(masters[2], [...STOCK_COLUMNS]));
+  zip.file("masters/customer_outstanding.csv", rowsToCsv(masters[3], [...OUTSTANDING_COLUMNS]));
 
   const [salesReg, salesLines, purchases, vat] = await Promise.all([
     buildSalesRegisterExport(range),

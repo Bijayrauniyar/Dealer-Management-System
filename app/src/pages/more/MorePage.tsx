@@ -68,7 +68,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     title: "App",
     items: [
       { label: "Settings", icon: Settings, to: "/app/settings", color: "bg-slate-100 text-slate-600" },
-      { label: "Sign out", icon: LogOut, to: "/login", color: "bg-red-100 text-red-500" },
+      { label: "Log out", icon: LogOut, to: "/login", color: "bg-red-100 text-red-500" },
     ],
   },
 ];
@@ -84,7 +84,7 @@ function MoreGrid({ onItemClick }: { onItemClick: (item: NavItem) => void }) {
               const Icon = item.icon;
               return (
                 <button
-                  key={item.label === "Sign out" ? "sign-out" : item.to}
+                  key={item.label === "Log out" ? "log-out" : item.to}
                   type="button"
                   onClick={() => onItemClick(item)}
                   className="flex flex-col items-center gap-2 rounded-2xl border border-border-subtle bg-white p-4 text-center shadow-sm hover:shadow-md active:scale-95 transition-all"
@@ -130,7 +130,7 @@ export const MorePage = () => {
   }, [business.allowStockAdjustment]);
 
   const onItemClick = (item: NavItem) => {
-    if (item.label === "Sign out") {
+    if (item.label === "Log out") {
       void signOut().then(() => navigate("/login", { replace: true }));
       return;
     }

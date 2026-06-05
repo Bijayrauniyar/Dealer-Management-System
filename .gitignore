@@ -13,6 +13,7 @@ app/.e2e-smoke.log
 **/dist/
 *.tsbuildinfo
 app/supabase/.temp/
+app/supabase/functions/.env
 
 # OS / editor
 .DS_Store

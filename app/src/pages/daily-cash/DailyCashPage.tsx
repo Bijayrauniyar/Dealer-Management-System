@@ -13,6 +13,7 @@ import { numericMoneyProps } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { commitDailyCashClose, useDailyCashBreakdown } from "@/store/domain";
+import { DOMAIN_QUERY_KEY } from "@/lib/live/domainLive";
 import { npr, toDateInput } from "@/lib/utils";
 import { PageBackLink } from "@/components/app/PageBackLink";
 
@@ -96,7 +97,7 @@ export const DailyCashPage = () => {
       setLocked(true);
       toast.success("Day locked.");
       void qc.invalidateQueries({ queryKey: ["daily-cash-breakdown"] });
-      void qc.invalidateQueries({ queryKey: ["domain", "v1"] });
+      void qc.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not lock day.");
     } finally {
