@@ -16,7 +16,7 @@ import { PAYMENT_MODES } from "@/domain/catalogs";
 import type { Sale } from "@/domain/types";
 import { useCustomers, useSales, commitPayment } from "@/store/domain";
 import { npr, fmtDate } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader } from "@/components/app/patterns";
 
 /** Open bills for allocation UI — sourced from live `useSales()` (Supabase). */
 type OpenBill = {
@@ -119,8 +119,7 @@ export const PaymentPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-5 text-lg font-semibold">Payment received</h1>
+      <FormPageHeader title="Payment received" subtitle="Allocate cash to open customer bills." />
 
       <div className="space-y-4">
         {/* ── Customer ── */}

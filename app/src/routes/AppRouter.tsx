@@ -30,6 +30,7 @@ import { StockAdjustmentPage } from "@/pages/stock/StockAdjustmentPage";
 import { ReportsHubPage } from "@/pages/reports/ReportsHubPage";
 import { SupportPage } from "@/pages/support/SupportPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
+import { ArchivesPage } from "@/pages/archives/ArchivesPage";
 import { CompanyOverviewPage } from "@/pages/company/CompanyOverviewPage";
 import { CapitalListPage } from "@/pages/company/CapitalListPage";
 import { CapitalEntryPage } from "@/pages/company/CapitalEntryPage";
@@ -106,6 +107,7 @@ const AppRoutesInner = () => (
       <Route path="support" element={<SupportPage />} />
       <Route path="more" element={<Navigate to="/app/reports" replace />} />
       <Route path="settings" element={<SettingsPage />} />
+      <Route path="archives" element={<ArchivesPage />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/" replace />} />

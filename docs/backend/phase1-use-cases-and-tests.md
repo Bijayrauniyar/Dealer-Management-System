@@ -102,8 +102,8 @@ Credentials: `app/.e2e-credentials.local` (from `node scripts/create-e2e-user-an
 |----|----------|---------|-----|----------|
 | M1 | Tenant active | Login | `tenants.status = active` | Reach `/app/home` |
 | M2 | Settings load/save | Settings → Save | `tenant_settings` | Header name/region/footer update after save |
-| M3 | Add product | Products → New | `products` | Row with code, prices, `is_active` |
-| M4 | Edit product | Products → edit | `products` | `sale_price` / `purchase_price` updated |
+| M3 | Add product | Products → New | `products` | Row with code, prices, `is_active`; optional `hsn_code` (`0034`) |
+| M4 | Edit product | Products → edit | `products` | `sale_price` / `purchase_price` updated; HSN optional |
 | M5 | Add customer | Customers → New | `customers` | Row; appears in sale picker |
 | M6 | Add supplier | Table Editor / API | `suppliers` | Row; appears on purchase |
 | M7 | List reads | Home, Customers, Stock | views + tables | RLS: only current tenant |

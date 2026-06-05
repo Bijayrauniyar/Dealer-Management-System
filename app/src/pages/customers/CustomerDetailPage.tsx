@@ -10,7 +10,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { BillStatus, OutstandingBill } from "@/domain/types";
-import { useCustomers, useOutstandingBills, usePayments } from "@/store/domain";
+import {
+  commitSetCustomerActive,
+  useCustomersCatalog,
+  useOutstandingBills,
+  usePayments,
+} from "@/store/domain";
+import { MasterArchiveAction } from "@/components/app/MasterArchiveAction";
 import { npr, fmtDate } from "@/lib/utils";
 import { ListPagination } from "@/components/app/ListPagination";
 import { usePagination } from "@/lib/usePagination";
@@ -109,7 +115,7 @@ export const CustomerDetailPage = () => {
   const navigate   = useNavigate();
   const [tab, setTab] = useState<Tab>("bills");
 
-  const CUSTOMERS        = useCustomers();
+  const CUSTOMERS        = useCustomersCatalog();
   const OUTSTANDING_BILLS = useOutstandingBills();
   const PAYMENTS         = usePayments();
 
@@ -229,22 +235,45 @@ export const CustomerDetailPage = () => {
       <DetailActions
         className="mb-4"
         actions={[
-          {
-            label: SALES_INVOICE_LABEL,
-            icon: FilePlus,
-            variant: "primary",
-            onClick: goToNewBill,
-          },
-          {
-            label: "Edit customer",
-            icon: Pencil,
-            variant: "outline",
-            onClick: () => navigate(`/app/customers/edit/${customer.id}`),
-          },
+          ...(customer.isActive
+            ? [
+                {
+                  label: SALES_INVOICE_LABEL,
+                  icon: FilePlus,
+                  variant: "primary" as const,
+                  onClick: goToNewBill,
+                },
+                {
+                  label: "Edit customer",
+                  icon: Pencil,
+                  variant: "outline" as const,
+                  onClick: () => navigate(`/app/customers/edit/${customer.id}`),
+                },
+              ]
+            : [
+                {
+                  label: "View customer",
+                  icon: Pencil,
+                  variant: "outline" as const,
+                  onClick: () => navigate(`/app/customers/edit/${customer.id}`),
+                },
+              ]),
         ]}
       />
 
-      {customer.outstanding > 0 && (
+      <div className="mb-4">
+        <MasterArchiveAction
+          entityLabel="customer"
+          isActive={customer.isActive}
+          blockArchiveReason={
+            customer.outstanding > 0.01 ? "Clear outstanding balance before archiving." : undefined
+          }
+          onSetActive={(active) => commitSetCustomerActive(customer.id, active)}
+          onArchived={() => navigate("/app/customers")}
+        />
+      </div>
+
+      {customer.isActive && customer.outstanding > 0 && (
         <Button size="full" className="mb-4 gap-2" onClick={goToPayment}>
           <CreditCard size={16} />
           Collect · {npr(customer.outstanding)}

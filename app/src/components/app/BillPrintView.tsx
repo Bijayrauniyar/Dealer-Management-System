@@ -2,7 +2,7 @@
  * BillPrintView — Sales invoice (screen, print, PDF).
  * Compact letterhead + "Billed to" customer block + line table + totals.
  */
-import React from "react";
+import React, { useEffect, useState } from "react";
 import type { Sale, Customer } from "@/domain/types";
 import { useBusinessSettings } from "@/store/domain";
 import { BillLetterhead } from "@/components/app/BillLetterhead";
@@ -20,12 +20,17 @@ import {
 import { nprNum, fmtDate, toMiti, amountInWords } from "@/lib/utils";
 import {
   billLineDiscDisplay,
-  billLineMrpDisplay,
   billLineParticulars,
   isFocSaleLine,
 } from "@/lib/billFoc";
+import {
+  billLineUnitPriceDisplay,
+  salesBillUnitPriceHeaderPrint,
+  showsSalesBillPaymentQr,
+} from "@/lib/billPriceDisplay";
+import { createSalesBillQrSignedUrl } from "@/lib/salesBillQrStorage";
 import { roundMoney } from "@/lib/money";
-import { billLineAmount } from "@/lib/saleLineMath";
+import { billLineAmount, saleLineDisplayMrp } from "@/lib/saleLineMath";
 
 type Props = {
   sale: Sale;
@@ -44,7 +49,7 @@ const rs = (n: number) => `Rs. ${nprNum(n)}`;
 /** Implied line discount when amount < qty × MRP (e.g. sell rate below MRP). */
 function lineDiscPct(line: { qty: number; mrp?: number; rate: number; discountPct?: number }): number {
   if ((line.discountPct ?? 0) > 0) return line.discountPct ?? 0;
-  const mrp = Number(line.mrp) || 0;
+  const mrp = saleLineDisplayMrp(line);
   const qty = Number(line.qty) || 0;
   if (mrp <= 0 || qty <= 0) return 0;
   const gross = roundMoney(qty * mrp);
@@ -89,6 +94,35 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
   const buyerVat = customer?.vatNumber?.trim() ?? "";
 
   const letterhead = sellerLetterheadFromBusiness(business);
+  const unitPriceHeader = salesBillUnitPriceHeaderPrint(business);
+  const priceColPct = "16%";
+  const nameColPct = hasLineDisc ? "31%" : "35%";
+  const showPaymentQr = showsSalesBillPaymentQr(business, sale.balance);
+  const [qrImageSrc, setQrImageSrc] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!showPaymentQr) {
+      setQrImageSrc("");
+      return;
+    }
+    const objectPath = business.salesBillQrObjectPath?.trim();
+    const legacyUrl = business.salesBillQrImageUrl?.trim() ?? "";
+    if (objectPath) {
+      void createSalesBillQrSignedUrl(objectPath)
+        .then((url) => {
+          if (!cancelled) setQrImageSrc(url);
+        })
+        .catch(() => {
+          if (!cancelled) setQrImageSrc(legacyUrl);
+        });
+    } else {
+      setQrImageSrc(legacyUrl);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [showPaymentQr, business.salesBillQrObjectPath, business.salesBillQrImageUrl]);
 
   const customerAddress = customer?.address?.trim() ?? "";
   const customerPhone = customer?.phone?.trim() ?? "";
@@ -156,8 +190,8 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
           <table className="bill-lines-table w-full table-fixed border-collapse text-[8px] leading-normal sm:text-[10px]">
             <colgroup>
               <col className="bill-col-sn" style={{ width: hasLineDisc ? "7%" : "8%" }} />
-              <col style={{ width: hasLineDisc ? "32%" : "36%" }} />
-              <col style={{ width: "14%" }} />
+              <col style={{ width: nameColPct }} />
+              <col style={{ width: priceColPct }} />
               <col style={{ width: "11%" }} />
               <col style={{ width: "11%" }} />
               {hasLineDisc ? <col style={{ width: "9%" }} /> : null}
@@ -171,8 +205,12 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
                 <th className="bill-cell border border-teal-700 p-0">
                   <BillCellInner align="center">Particulars</BillCellInner>
                 </th>
-                <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
-                  <BillCellInner align="center">MRP</BillCellInner>
+                <th className="bill-cell border border-teal-700 p-0">
+                  <BillCellInner align="center">
+                    <span className="block whitespace-nowrap text-[7px] leading-tight sm:text-[8px]">
+                      {unitPriceHeader}
+                    </span>
+                  </BillCellInner>
                 </th>
                 <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
                   <BillCellInner align="center">Unit</BillCellInner>
@@ -194,8 +232,7 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
               {lines.map((line, i) => {
                 const foc = isFocSaleLine(line);
                 const { title, subtitle } = billLineParticulars(line);
-                const mrpRaw = billLineMrpDisplay(line);
-                const mrpCell = mrpRaw === "FOC" || mrpRaw === "—" ? mrpRaw : nprNum(Number(mrpRaw));
+                const unitPriceCell = billLineUnitPriceDisplay(line, business.salesBillPriceMode);
                 return (
                 <tr key={i} className={foc ? "bg-pink-50/50 text-gray-700" : "even:bg-gray-50/60"}>
                   <td className="bill-cell border border-gray-300 p-0 text-gray-500">
@@ -214,7 +251,7 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
                     </BillCellInner>
                   </td>
                   <td className="bill-cell border border-gray-300 p-0 tabular-nums text-gray-700">
-                    <BillCellInner align="center">{mrpCell}</BillCellInner>
+                    <BillCellInner align="center">{unitPriceCell}</BillCellInner>
                   </td>
                   <td className="bill-cell border border-gray-300 p-0 text-[7px] text-gray-600 sm:text-[8px]">
                     <BillCellInner align="center">{line.uom || "PCS"}</BillCellInner>
@@ -334,6 +371,34 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
             </tbody>
           </table>
         </div>
+
+        {showPaymentQr ? (
+          <div className="bill-payment-qr mt-2 flex flex-wrap items-start justify-between gap-3 rounded border border-gray-200 bg-gray-50 px-2 py-2">
+            <div className="min-w-0 flex-1 text-[9px] leading-snug text-gray-700">
+              <p className="font-bold uppercase tracking-wide text-gray-500">Pay by QR</p>
+              {business.salesBillQrBankText ? (
+                <p className="mt-1 font-medium text-gray-800">{business.salesBillQrBankText}</p>
+              ) : null}
+              <p className="mt-1 text-gray-600">
+                Ref: <span className="font-semibold text-gray-900">{sale.billNo}</span>
+                {sale.balance > 0 ? (
+                  <>
+                    {" "}
+                    · Due <span className="font-semibold tabular-nums">{rs(sale.balance)}</span>
+                  </>
+                ) : null}
+              </p>
+            </div>
+            {qrImageSrc ? (
+              <img
+                src={qrImageSrc}
+                alt="Payment QR"
+                className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
+                crossOrigin="anonymous"
+              />
+            ) : null}
+          </div>
+        ) : null}
 
         {/* ── Signatures ── */}
         <div className="bill-signatures mt-2 grid grid-cols-2 gap-3 border-t border-dashed border-gray-300 pt-2 sm:mt-1.5 sm:pt-1.5">

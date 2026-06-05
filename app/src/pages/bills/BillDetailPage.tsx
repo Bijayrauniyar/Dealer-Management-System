@@ -65,8 +65,8 @@ export const BillDetailPage = () => {
 
   const stateSaleRaw = (location.state as { sale?: unknown } | null)?.sale;
   const stateSale = saleFromLocationState(stateSaleRaw, billNo);
-  const sale =
-    stateSale && stateSale.lines.length > 0 ? stateSale : fetchedSale;
+  /** DB sale is source of truth after save; navigation state only while loading. */
+  const sale = fetchedSale ?? stateSale;
   const obEntry   = OUTSTANDING_BILLS.find((b) => b.billNo === billNo);
   const payments  = PAYMENTS.filter((p) => p.billNo === billNo);
   const customer  = sale ? CUSTOMERS.find((c) => c.id === sale.customerId) : undefined;
@@ -104,14 +104,31 @@ export const BillDetailPage = () => {
 
   useBillDocumentTitle(sale?.billNo);
 
+  // Auto-print only after bill card is in the DOM (avoids printing "Loading bill…").
   useEffect(() => {
-    if (searchParams.get("print") === "1" && sale?.billNo) {
-      const t = setTimeout(() => printBill(sale.billNo), 600);
-      return () => clearTimeout(t);
-    }
-  }, [searchParams, sale?.billNo]);
+    if (searchParams.get("print") !== "1" || !sale?.billNo) return;
+    let cancelled = false;
+    const tryPrint = (attempt = 0) => {
+      if (cancelled) return;
+      if (document.getElementById("bill-print-root")) {
+        printBill(sale.billNo);
+        return;
+      }
+      if (attempt < 20) {
+        setTimeout(() => tryPrint(attempt + 1), 150);
+      }
+    };
+    const t = setTimeout(() => tryPrint(), 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [searchParams, sale?.billNo, sale?.lines.length]);
 
-  if (loadState === "loading" || saleQuery.isLoading) {
+  const waitingForSale =
+    !sale && (loadState === "loading" || saleQuery.isLoading || !saleQuery.isFetched);
+
+  if (waitingForSale) {
     return (
       <PageShell>
         <PageBackLink className="mb-0 flex items-center gap-1 text-sm font-medium text-teal-600" />

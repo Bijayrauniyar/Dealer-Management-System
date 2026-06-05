@@ -23,7 +23,7 @@
 | [BACKLOG.md](BACKLOG.md) | Deferred features — move to/from FIRST_LAUNCH |
 | [PHASE_ROADMAP.md](PHASE_ROADMAP.md) | Phase 0–3 strategy |
 | [LLM_CONTEXT.md](LLM_CONTEXT.md) | Code handbook + changelog |
-| [DELETE_POLICY.md](DELETE_POLICY.md) | Deactivate / void rules |
+| [DELETE_POLICY.md](DELETE_POLICY.md) | Archive/restore; no hard delete in shop UI |
 | [ONBOARDING_FIRST_SHOP.md](ONBOARDING_FIRST_SHOP.md) | First shop setup |
 | [TENANT_ACTIVATION.md](TENANT_ACTIVATION.md) | Approve signup, 7-day trial, monthly/annual license |
 | [GTM_NEPAL.md](GTM_NEPAL.md) | ICP, pricing, VAT |

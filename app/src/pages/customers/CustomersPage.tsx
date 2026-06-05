@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {Plus} from "lucide-react";
+import { ListPageHeader } from "@/components/app/patterns";
 import { PageShell } from "@/components/app/PageShell";
 import { ListRow } from "@/components/app/ListRow";
 import { EmptyState } from "@/components/app/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useCustomers } from "@/store/domain";
 import { npr } from "@/lib/utils";
 import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
@@ -80,15 +79,14 @@ export const CustomersPage = () => {
 
   return (
     <PageShell>
-      <div className="mb-4 flex items-center justify-between">
-        <Button size="sm" onClick={() => navigate("/app/customers/new")}>
-          <Plus size={14} /> New
-        </Button>
-      </div>
-      <h1 className="mb-4 text-lg font-semibold">
-        Customers
-        {outstandingOnly && <span className="ml-2 text-sm font-normal text-muted">(with balance)</span>}
-      </h1>
+      <ListPageHeader
+        showBack
+        title={
+          outstandingOnly ? "Customers (with balance)" : "Customers"
+        }
+        addLabel="Add customer"
+        onAdd={() => navigate("/app/customers/new")}
+      />
 
       <ListBrowsePanel
         search={query}

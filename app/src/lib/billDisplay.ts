@@ -1,5 +1,6 @@
 import type { BusinessSettings, Sale, SaleLine } from "@/domain/types";
 import { roundMoney } from "@/lib/money";
+import { saleLineDisplayMrp } from "@/lib/saleLineMath";
 import { DEFAULT_VAT_PCT, getVatPct } from "@/lib/tax";
 import { fmtDate } from "@/lib/utils";
 import { formatSellerAddressLines } from "./sellerAddressLine";
@@ -69,12 +70,32 @@ export function billBalanceDueLabel(): string {
 /** Line has explicit or implied discount (DISC% column on bill). */
 export function billLineHasDiscount(line: SaleLine): boolean {
   if ((line.discountPct ?? 0) > 0) return true;
-  const mrp = Number(line.mrp) || 0;
+  const mrp = saleLineDisplayMrp(line);
   const qty = Number(line.qty) || 0;
   if (mrp <= 0 || qty <= 0) return false;
   const gross = roundMoney(qty * mrp);
   const amt = line.amount != null ? roundMoney(line.amount) : roundMoney(qty * line.rate);
   return amt < gross;
+}
+
+/**
+ * DB stores discount NPR only — infer % vs flat when reopening a bill for edit.
+ * e.g. 15% of 1,500 → stored 225 → restore percent + value 15.
+ */
+export function inferBillDiscountFromStored(
+  subtotal: number,
+  discountAmount: number,
+): { discountType: "none" | "percent" | "flat"; discountValue: number } {
+  const sub = Number(subtotal) || 0;
+  const disc = Number(discountAmount) || 0;
+  if (disc <= 0) return { discountType: "none", discountValue: 0 };
+  if (sub > 0) {
+    const pct = Math.round((disc / sub) * 100);
+    if (pct >= 1 && pct <= 100 && Math.abs(roundMoney((sub * pct) / 100) - disc) <= 0.01) {
+      return { discountType: "percent", discountValue: pct };
+    }
+  }
+  return { discountType: "flat", discountValue: disc };
 }
 
 /**

@@ -23,7 +23,12 @@ import type {
 import {
   CAPITAL_QUERY_KEY,
   DOMAIN_QUERY_KEY,
+  MASTER_CATALOG_QUERY_KEY,
   commitPaymentLive,
+  fetchMasterCatalogLive,
+  setCustomerActiveLive,
+  setProductActiveLive,
+  setSupplierActiveLive,
   fetchCapitalEntriesLive,
   insertCapitalEntryLive,
   commitPurchaseLive,
@@ -45,6 +50,7 @@ import {
   upsertDailyCashLive,
   upsertSupplierLive,
   appendProductCategoryLive,
+  appendProductUnitLive,
   removeProductCategoryLive,
 } from "@/lib/live/domainLive";
 import type {
@@ -151,6 +157,31 @@ export function useCustomers(): Customer[] {
 
 export function useSuppliers(): Supplier[] {
   const q = useDomainBundleQuery();
+  return q.data?.suppliers ?? [];
+}
+
+function useMasterCatalogQuery() {
+  return useQuery({
+    queryKey: MASTER_CATALOG_QUERY_KEY,
+    queryFn: fetchMasterCatalogLive,
+    enabled: isSupabaseConfigured,
+    staleTime: 15_000,
+  });
+}
+
+/** DEL-1: includes archived masters for list/detail archive UI. */
+export function useProductsCatalog(): Product[] {
+  const q = useMasterCatalogQuery();
+  return q.data?.products ?? [];
+}
+
+export function useCustomersCatalog(): Customer[] {
+  const q = useMasterCatalogQuery();
+  return q.data?.customers ?? [];
+}
+
+export function useSuppliersCatalog(): Supplier[] {
+  const q = useMasterCatalogQuery();
   return q.data?.suppliers ?? [];
 }
 
@@ -278,6 +309,10 @@ export async function commitAppendProductCategory(name: string): Promise<string[
   return appendProductCategoryLive(name);
 }
 
+export async function commitAppendProductUnit(name: string): Promise<string[]> {
+  return appendProductUnitLive(name);
+}
+
 export async function commitRemoveProductCategory(name: string): Promise<string[]> {
   return removeProductCategoryLive(name);
 }
@@ -350,6 +385,18 @@ export async function commitCustomer(input: {
     pan_number: input.panNumber,
     vat_number: input.vatNumber,
   });
+}
+
+export async function commitSetProductActive(productId: string, active: boolean): Promise<void> {
+  await setProductActiveLive(productId, active);
+}
+
+export async function commitSetCustomerActive(customerId: string, active: boolean): Promise<void> {
+  await setCustomerActiveLive(customerId, active);
+}
+
+export async function commitSetSupplierActive(supplierId: string, active: boolean): Promise<void> {
+  await setSupplierActiveLive(supplierId, active);
 }
 
 export async function commitExpenseEntry(input: {

@@ -10,6 +10,7 @@ import {
   HelpCircle,
   LayoutDashboard,
   Package,
+  Archive,
   RotateCcw,
   ShoppingCart,
   Tag,
@@ -55,6 +56,7 @@ export const NAV_DRAWER_GROUPS: NavDrawerGroup[] = [
       { label: "Products", to: "/app/products", icon: LayoutDashboard },
       { label: "Customers", to: "/app/home?tab=customers", icon: Users },
       { label: "Suppliers", to: "/app/suppliers", icon: Truck },
+      { label: "Archives", to: "/app/archives", icon: Archive },
       { label: "Stock", to: "/app/home?tab=stock", icon: Box },
       {
         label: "Stock adjustment",
@@ -70,12 +72,15 @@ export const NAV_DRAWER_GROUPS: NavDrawerGroup[] = [
     items: [
       { label: "Sales invoice", to: "/app/sales/new", icon: ShoppingCart },
       { label: "Payment in", to: "/app/payments/new", icon: CreditCard },
-      { label: "Return", to: "/app/returns/new", icon: RotateCcw },
-      { label: "Damage", to: "/app/damages/new", icon: AlertTriangle },
       { label: "Purchase invoice", to: "/app/purchases/new", icon: Package },
+      { label: "Return", to: "/app/returns/new", icon: RotateCcw },
       { label: "Supplier pay", to: "/app/supplier-payments/new", icon: Truck },
       { label: "Expense", to: "/app/expenses/new", icon: DollarSign },
       { label: "Daily cash", to: "/app/daily-cash", icon: Calculator },
+      { label: "New product", to: "/app/products/new", icon: LayoutDashboard },
+      { label: "New customer", to: "/app/customers/new", icon: Users },
+      { label: "New supplier", to: "/app/suppliers/new", icon: Truck },
+      { label: "Damage", to: "/app/damages/new", icon: AlertTriangle },
       { label: "Scheme", to: "/app/schemes/new", icon: Tag },
     ],
   },
@@ -99,15 +104,18 @@ export const NAV_DRAWER_GROUPS: NavDrawerGroup[] = [
   },
 ];
 
-/** Centre + quick-action sheet */
+/** Centre + quick-action sheet — daily bills first, then new masters. */
 export const QUICK_ENTRY_ACTIONS: { label: string; to: string }[] = [
   { label: "Sales invoice", to: "/app/sales/new" },
   { label: "Payment received", to: "/app/payments/new" },
-  { label: "Return", to: "/app/returns/new" },
   { label: "Purchase invoice", to: "/app/purchases/new" },
+  { label: "Return", to: "/app/returns/new" },
   { label: "Supplier pay", to: "/app/supplier-payments/new" },
   { label: "Expense", to: "/app/expenses/new" },
   { label: "Daily cash", to: "/app/daily-cash" },
+  { label: "New product", to: "/app/products/new" },
+  { label: "New customer", to: "/app/customers/new" },
+  { label: "New supplier", to: "/app/suppliers/new" },
 ];
 
 export function filterDrawerGroups(

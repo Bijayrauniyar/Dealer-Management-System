@@ -20,12 +20,12 @@
 | ID | Title | Phase | Effort | Status | Notes |
 |----|--------|-------|--------|--------|-------|
 | **UI-1** | Symmetric UI (`patterns.tsx`) | 1.0 | 2–3 d | backlog | [UI_CONSISTENCY_PLAN](UI_CONSISTENCY_PLAN.md) |
-| **DEL-1** | Deactivate masters; cancel draft orders | 1.0 | 3–5 d | backlog | [DELETE_POLICY](DELETE_POLICY.md) |
+| **DEL-1** | Archive/restore masters + list filter; cancel draft orders; no hard delete in shop UI | 1.0 | 3–5 d | backlog | [DELETE_POLICY](DELETE_POLICY.md) |
 | **BILL-QR-1** | Payment QR + bank on sales invoice print | 1.0 | 1–2 d | backlog | Karobar-style static QR |
 | **LIC-1** | Trial / license expiry on tenant | 1.0 | 1–2 d | **done** | `0030`, `/license-expired`, `approve_tenant`, `set_tenant_subscription` — see [TENANT_ACTIVATION.md](TENANT_ACTIVATION.md) |
 | **PRICE-DISP-1** | Configurable MRP vs rate on print | 1.0 | 2–4 d | backlog | Settings; tax math unchanged |
 | **UNITS-1** | Custom units catalog in Settings | 1.0 | 2–3 d | backlog | |
-| **HSN-1** | HSN code on products (Settings toggle) | 1.0 | 1–2 d | backlog | See § HSN-1 below |
+| **HSN-1** | HSN code on products (optional field) | 1.0 | — | **done** | `0034`; no Settings toggle — see § HSN-1 below |
 | **SF-0** | Salesman on invoice only | 1.0 | 3–5 d | backlog | No order tables |
 | **ORD-1** | Sales order draft | 1.0 | 3–4 d | backlog | No stock move |
 | **ORD-2** | Convert order → sales bill (full) | 1.0 | 2–3 d | backlog | |
@@ -56,16 +56,16 @@
 | **COMM-2** | Owner vs staff roles | 1 | 4–7 d | backlog | |
 | **EXP-P1** | Extra export registers | 1 | 2–3 d | backlog | expenses, damages, returns |
 | **NAV-P1** | Delivery note from invoice | 1 | 2–3 d | backlog | |
-| **WEB-1** | Marketing site + `/app` route | 0 launch | 3–5 d | backlog | [FIRST_LAUNCH § Website](FIRST_LAUNCH.md#website-bikrikhatacom--app) |
+| **WEB-1** | Marketing site + `/app` route | 0 launch | — | **done** | [FIRST_LAUNCH § Website](FIRST_LAUNCH.md#website-bikrikhatacom--app) |
 | **MIG-0012** | Scheme Box→PCS columns | opt | 10 min | backlog | Only if cross-UOM schemes |
 | **INV-1** | Block oversell in DB | 0 | — | **done** | 0024 |
 | **EXP-1** | Export Tier A registers | 0 | — | **done** | partial ZIP |
 | **BRAND-1** | BikriKhata rebrand | 0 | — | **done** | |
-| **L8** | Contact form email alerts (Resend) | 0 ops | ~20 min | **ready** | Run migration 0033 + `npm run setup:contact-email` |
+| **L8** | Contact form email alerts (Resend) | 0 ops | ~20 min | **deferred** | Code ready; enable later — 0033 + `setup:contact-email` |
 
 ---
 
-## L8 — Contact form email alerts (ready to enable)
+## L8 — Contact form email alerts (deferred — enable when you want inbox alerts)
 
 **Now:** Form → **`platform_inquiries`**. Email needs one-time setup (~20 min).
 
@@ -117,19 +117,18 @@ Sigma-style lite v1: salesman master → sales order → full convert → one sa
 
 ---
 
-## Detail — HSN-1 (product form, configurable in Settings)
+## Detail — HSN-1 (done — optional product field)
 
-**Why:** Some dealers / CAs want **HSN** (harmonized system nomenclature) on product master for VAT returns; many small FMCG shops do not — make it **optional per tenant**.
+**Why:** Some dealers / CAs want **HSN** on product master for VAT returns; field is always visible but **optional** (no Settings toggle).
 
 | Layer | Spec |
 |-------|------|
-| **Settings** | Toggle e.g. **“Show HSN code on products”** (Business or Stock tab); default **off** at launch |
-| **DB** | `products.hsn_code` text nullable; optional `tenant_settings.show_product_hsn` boolean |
-| **Product create/edit** | When toggle on: field **HSN Code**, placeholder `Eg: 345578`; optional, not required to save |
-| **Bill print** | Out of v1 unless CA asks — product master only |
-| **Export** | Add `hsn_code` column to products CSV when column exists |
+| **DB** | `products.hsn_code` text nullable — migration `0034_product_hsn_code.sql` |
+| **Product create/edit** | **HSN code (optional)** on [ProductFormPage](app/src/pages/products/ProductFormPage.tsx); not required to save |
+| **Bill print** | Not on invoice layout yet — product + export only |
+| **Export** | `hsn_code` column on products CSV / backup ZIP |
 
-**Acceptance:** Toggle off → no HSN field on form. Toggle on → save/load HSN on product; existing products unchanged.
+**Acceptance:** Empty HSN saves; edit loads HSN; existing products unchanged (null).
 
 ---
 

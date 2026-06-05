@@ -83,6 +83,16 @@ function runSourceChecks() {
     } else {
       r.fail("drawer support link", "missing");
     }
+    if (
+      nav.includes("New product") &&
+      nav.includes("New customer") &&
+      nav.includes("New supplier") &&
+      nav.includes("QUICK_ENTRY_ACTIONS")
+    ) {
+      r.pass("QUICK_ENTRY_ACTIONS includes new masters");
+    } else {
+      r.fail("QUICK_ENTRY_ACTIONS masters", "missing");
+    }
   }
 
   const shell = readSrc("components/layout/AppShell.tsx");
@@ -167,6 +177,64 @@ function runSourceChecks() {
     r.pass("patterns.tsx reusable chrome");
   } else if (patterns) {
     r.fail("patterns.tsx", "incomplete exports");
+  }
+
+  const paymentPage = readSrc("pages/payments/PaymentPage.tsx");
+  if (paymentPage?.includes("FormPageHeader")) r.pass("UI-1 PaymentPage FormPageHeader");
+  else r.fail("UI-1 PaymentPage", "missing FormPageHeader");
+
+  const archiveAction = readSrc("components/app/MasterArchiveAction.tsx");
+  if (archiveAction?.includes("ConfirmDialog") && !archiveAction?.includes("window.confirm")) {
+    r.pass("DEL-1 archive ConfirmDialog");
+  } else {
+    r.fail("DEL-1 MasterArchiveAction", "expected ConfirmDialog, not window.confirm");
+  }
+
+  const archivesPage = readSrc("pages/archives/ArchivesPage.tsx");
+  if (archivesPage?.includes("export function ArchivesPage") && archivesPage?.includes("SegmentedTabs")) {
+    r.pass("DEL-1 ArchivesPage");
+  } else {
+    r.fail("DEL-1 ArchivesPage", "missing archives hub");
+  }
+
+  if (readSrc("routes/AppRouter.tsx")?.includes('path="archives"')) {
+    r.pass("route /app/archives");
+  } else {
+    r.fail("AppRouter archives route", "missing");
+  }
+
+  const domainLive = readSrc("lib/live/domainLive.ts");
+  if (domainLive?.includes("CUSTOMER_SELECT_FULL") && domainLive?.includes("is_active")) {
+    r.pass("DEL-1 customer is_active in select");
+  } else {
+    r.fail("DEL-1 customer select", "CUSTOMER_SELECT must include is_active for Archives");
+  }
+
+  if (archiveAction?.includes("onArchived")) {
+    r.pass("DEL-1 archive navigates after success");
+  } else {
+    r.fail("DEL-1 onArchived", "missing post-archive callback");
+  }
+
+  const settingsUnits = readSrc("pages/settings/SettingsPage.tsx");
+  if (settingsUnits?.includes("ProductUnitsSection") && settingsUnits?.includes("product_units")) {
+    r.pass("UNITS-1 Settings product units");
+  } else {
+    r.fail("UNITS-1 Settings", "missing ProductUnitsSection");
+  }
+
+  const productForm = readSrc("pages/products/ProductFormPage.tsx");
+  if (productForm?.includes("ProductUnitField") && productForm?.includes("Add unit")) {
+    r.pass("UNITS-1 product form Add unit");
+  } else {
+    r.fail("UNITS-1 ProductFormPage", "missing ProductUnitField");
+  }
+
+  const returnPage = readSrc("pages/returns/ReturnPage.tsx");
+  if (returnPage?.includes("fetchSaleByBillNoLive") && returnPage?.includes("loadingLines")) {
+    r.pass("Return entry loads bill lines");
+  } else {
+    r.fail("ReturnPage", "must fetch full bill lines on select");
   }
 
   const customerForm = readSrc("pages/customers/CustomerFormPage.tsx");

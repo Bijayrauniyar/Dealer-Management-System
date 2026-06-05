@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Building2, Phone, MapPin, FileText, Receipt, SlidersHorizontal } from "lucide-react";
@@ -25,8 +25,19 @@ import {
 import { LIST_PAGE_SIZE_OPTIONS, parseListPageSize } from "@/lib/listPageSize";
 import { Select } from "@/components/ui/select";
 import { ProductCategoriesSection } from "@/components/app/ProductCategoriesSection";
+import { ProductUnitsSection } from "@/components/app/ProductUnitsSection";
 import { PageBackLink } from "@/components/app/PageBackLink";
 import { SubscriptionSection } from "@/pages/settings/SubscriptionSection";
+import {
+  parsePurchaseBillPriceMode,
+  parseSalesBillPriceMode,
+  type PurchaseBillPriceMode,
+  type SalesBillPriceMode,
+} from "@/lib/billPriceDisplay";
+import {
+  createSalesBillQrSignedUrl,
+  uploadSalesBillQrImage,
+} from "@/lib/salesBillQrStorage";
 
 const SectionTitle = ({ icon: Icon, label }: { icon: React.ElementType; label: string }) => (
   <div className="mb-3 mt-6 flex items-center gap-2 first:mt-0">
@@ -60,12 +71,19 @@ type TenantSettingsRow = {
   default_min_pack_qty: number;
   default_vat_pct?: number;
   product_categories?: unknown;
+  product_units?: unknown;
   allow_stock_adjustment?: boolean | null;
   list_page_size?: number | null;
   show_district_province_on_bill?: boolean | null;
   support_phone?: string | null;
   support_email?: string | null;
   support_whatsapp?: string | null;
+  sales_bill_price_mode?: string | null;
+  purchase_bill_price_mode?: string | null;
+  sales_bill_qr_image_url?: string | null;
+  sales_bill_qr_bank_text?: string | null;
+  sales_bill_qr_enabled?: boolean | null;
+  sales_bill_qr_object_path?: string | null;
 };
 
 const SETTINGS_TABS = [
@@ -113,9 +131,20 @@ export function SettingsPage() {
   const [defaultMinPackQty, setDefaultMinPackQty] = useState(2);
   const [defaultVatPct, setDefaultVatPct] = useState(13);
   const [productCategories, setProductCategories] = useState<string[]>(["General"]);
+  const [productUnits, setProductUnits] = useState<string[]>(["PCS", "Pkt", "Box", "Ctn", "Doz", "Ltr", "Kg"]);
   const [allowStockAdjustment, setAllowStockAdjustment] = useState(false);
   const [listPageSize, setListPageSize] = useState(10);
   const [showDistrictOnBill, setShowDistrictOnBill] = useState(false);
+  const [salesBillPriceMode, setSalesBillPriceMode] = useState<SalesBillPriceMode>("mrp");
+  const [purchaseBillPriceMode, setPurchaseBillPriceMode] =
+    useState<PurchaseBillPriceMode>("rate_excl");
+  const [salesBillQrEnabled, setSalesBillQrEnabled] = useState(false);
+  const [salesBillQrObjectPath, setSalesBillQrObjectPath] = useState("");
+  const [salesBillQrBankText, setSalesBillQrBankText] = useState("");
+  const [qrPreviewUrl, setQrPreviewUrl] = useState("");
+  const [qrChosenFileName, setQrChosenFileName] = useState("");
+  const [uploadingQr, setUploadingQr] = useState(false);
+  const qrFileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<SettingsTab>(() => initialSettingsTab(location));
   const [saving, setSaving] = useState(false);
 
@@ -150,10 +179,44 @@ export function SettingsPage() {
       ? (data.product_categories as unknown[]).map((x) => String(x).trim()).filter(Boolean)
       : ["General"];
     setProductCategories(cats.length ? cats : ["General"]);
+    const units = Array.isArray(data.product_units)
+      ? (data.product_units as unknown[]).map((x) => String(x).trim()).filter(Boolean)
+      : ["PCS", "Pkt", "Box", "Ctn", "Doz", "Ltr", "Kg"];
+    setProductUnits(units.length ? units : ["PCS"]);
     setAllowStockAdjustment(Boolean(data.allow_stock_adjustment));
     setListPageSize(parseListPageSize(data.list_page_size));
     setShowDistrictOnBill(Boolean(data.show_district_province_on_bill));
+    setSalesBillPriceMode(parseSalesBillPriceMode(data.sales_bill_price_mode));
+    setPurchaseBillPriceMode(parsePurchaseBillPriceMode(data.purchase_bill_price_mode));
+    setSalesBillQrEnabled(Boolean(data.sales_bill_qr_enabled));
+    setSalesBillQrObjectPath(data.sales_bill_qr_object_path?.trim() ?? "");
+    setSalesBillQrBankText(data.sales_bill_qr_bank_text?.trim() ?? "");
+    setQrChosenFileName("");
   };
+
+  const qrFileStatus = uploadingQr
+    ? "Uploading…"
+    : qrChosenFileName ||
+      (salesBillQrObjectPath.trim() ? "QR image saved" : "No file chosen");
+
+  useEffect(() => {
+    let cancelled = false;
+    const path = salesBillQrObjectPath.trim();
+    if (!path) {
+      setQrPreviewUrl("");
+      return;
+    }
+    void createSalesBillQrSignedUrl(path)
+      .then((url) => {
+        if (!cancelled) setQrPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrPreviewUrl("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [salesBillQrObjectPath]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -219,26 +282,48 @@ export function SettingsPage() {
       default_min_pack_qty: defaultMinPackQty,
       default_vat_pct: defaultVatPct,
       product_categories: productCategories,
+      product_units: productUnits,
       allow_stock_adjustment: allowStockAdjustment,
     };
 
-    type OptionalCol = "list_page_size" | "show_district_province_on_bill";
+    type OptionalCol =
+      | "list_page_size"
+      | "show_district_province_on_bill"
+      | "sales_bill_price_mode"
+      | "purchase_bill_price_mode"
+      | "sales_bill_qr_bank_text"
+      | "sales_bill_qr_enabled"
+      | "sales_bill_qr_object_path"
+      | "product_units";
+    const optionalCols: OptionalCol[] = [
+      "list_page_size",
+      "show_district_province_on_bill",
+      "sales_bill_price_mode",
+      "purchase_bill_price_mode",
+      "sales_bill_qr_bank_text",
+      "sales_bill_qr_enabled",
+      "sales_bill_qr_object_path",
+      "product_units",
+    ];
     let payload: Record<string, unknown> = {
       ...basePayload,
       list_page_size: parseListPageSize(listPageSize),
       show_district_province_on_bill: showDistrictOnBill,
+      sales_bill_price_mode: salesBillPriceMode,
+      purchase_bill_price_mode: purchaseBillPriceMode,
+      sales_bill_qr_enabled: salesBillQrEnabled,
+      sales_bill_qr_object_path: salesBillQrObjectPath.trim() || null,
+      sales_bill_qr_bank_text: salesBillQrBankText.trim() || null,
     };
     const skipped = new Set<OptionalCol>();
     let error: { message: string } | null = null;
 
-    for (let attempt = 0; attempt < 4; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       const res = await supabase.from("tenant_settings").update(payload).eq("tenant_id", tenantId);
       error = res.error;
       if (!error) break;
       const msg = error.message;
-      const missing = (["list_page_size", "show_district_province_on_bill"] as const).find(
-        (col) => msg.includes(col) && col in payload,
-      );
+      const missing = optionalCols.find((col) => msg.includes(col) && col in payload);
       if (!missing) break;
       skipped.add(missing);
       const next = { ...payload };
@@ -320,6 +405,14 @@ export function SettingsPage() {
               categories={productCategories}
               onChange={setProductCategories}
             />
+          </div>
+
+          <SectionTitle icon={SlidersHorizontal} label="Product units" />
+          <p className="mb-3 text-xs text-muted">
+            Unit labels on the product form (e.g. PCS, Box, Bag). Save settings after changes.
+          </p>
+          <div className="mb-6">
+            <ProductUnitsSection units={productUnits} onChange={setProductUnits} />
           </div>
 
           <SectionTitle icon={Building2} label="Business identity" />
@@ -438,6 +531,113 @@ export function SettingsPage() {
                 rows={3}
                 value={billFooter}
                 onChange={(e) => setBillFooter(e.target.value)}
+              />
+            </FormField>
+            <FormField
+              label="Sales bill pricing"
+              hint="Bill always prints Rate column. MRP billing = label price (+ line Disc%). Sell-price billing = catalog rate. Pick before saving new bills."
+            >
+              <Select
+                className="h-10"
+                value={salesBillPriceMode}
+                onChange={(e) =>
+                  setSalesBillPriceMode(parseSalesBillPriceMode(e.target.value))
+                }
+                aria-label="Sales bill pricing mode"
+              >
+                <option value="mrp">MRP + line discount</option>
+                <option value="selling_price">Rate (selling price)</option>
+              </Select>
+            </FormField>
+            <FormField
+              label="Purchase bill rate column"
+              hint="Excl. VAT matches purchase entry. Incl. VAT shows landed unit rate."
+            >
+              <Select
+                className="h-10"
+                value={purchaseBillPriceMode}
+                onChange={(e) =>
+                  setPurchaseBillPriceMode(parsePurchaseBillPriceMode(e.target.value))
+                }
+                aria-label="Purchase bill rate column"
+              >
+                <option value="rate_excl">Rate excl. VAT</option>
+                <option value="rate_incl">Rate incl. VAT</option>
+              </Select>
+            </FormField>
+          </div>
+
+          <SectionTitle icon={Receipt} label="Payment QR on sales invoice" />
+          <div className="mb-4 space-y-3">
+            <label className="flex items-center gap-3 rounded-lg border border-border-subtle bg-white px-4 py-3">
+              <input
+                type="checkbox"
+                checked={salesBillQrEnabled}
+                onChange={(e) => setSalesBillQrEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-border-subtle text-teal-600"
+              />
+              <span className="text-sm">Show payment QR on sales invoice (balance due only)</span>
+            </label>
+          </div>
+          <div className="space-y-4">
+            <FormField
+              label="QR image"
+              hint="PNG, JPEG, WebP, or GIF — max 1 MB. Upload replaces any previous image."
+            >
+              <div className="space-y-2">
+                <input
+                  ref={qrFileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="sr-only"
+                  disabled={uploadingQr}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file || !tenantId) return;
+                    setQrChosenFileName(file.name);
+                    void (async () => {
+                      setUploadingQr(true);
+                      try {
+                        const path = await uploadSalesBillQrImage(tenantId, file);
+                        setSalesBillQrObjectPath(path);
+                        const preview = await createSalesBillQrSignedUrl(path);
+                        setQrPreviewUrl(preview);
+                        toast.success("QR image uploaded. Save settings to apply.");
+                      } catch (err) {
+                        setQrChosenFileName("");
+                        toast.error(err instanceof Error ? err.message : "Upload failed.");
+                      } finally {
+                        setUploadingQr(false);
+                      }
+                    })();
+                  }}
+                />
+                <div className="flex h-11 w-full items-center gap-3 rounded-lg border border-border-subtle bg-white px-3 text-sm">
+                  <button
+                    type="button"
+                    disabled={uploadingQr}
+                    onClick={() => qrFileInputRef.current?.click()}
+                    className="shrink-0 rounded border border-teal-600 bg-white px-3 py-1.5 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50 disabled:opacity-50"
+                  >
+                    Choose file
+                  </button>
+                  <span className="min-w-0 truncate text-foreground">{qrFileStatus}</span>
+                </div>
+                {qrPreviewUrl ? (
+                  <img
+                    src={qrPreviewUrl}
+                    alt="Payment QR preview"
+                    className="h-24 w-24 rounded border border-border-subtle object-contain"
+                  />
+                ) : null}
+              </div>
+            </FormField>
+            <FormField label="Bank details" hint="Printed under the QR, e.g. NMB Bank · A/c 1234567890">
+              <Input
+                value={salesBillQrBankText}
+                onChange={(e) => setSalesBillQrBankText(e.target.value)}
+                placeholder="Bank name · account number · branch"
               />
             </FormField>
           </div>

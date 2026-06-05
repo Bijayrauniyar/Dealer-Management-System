@@ -6,7 +6,11 @@ import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useDomainBundleErrorMessage, useDomainBundleLoadState, useSuppliers } from "@/store/domain";
+import {
+  useDomainBundleErrorMessage,
+  useDomainBundleLoadState,
+  useSuppliers,
+} from "@/store/domain";
 import type { Supplier } from "@/domain/types";
 import { npr } from "@/lib/utils";
 import { ListPagination } from "@/components/app/ListPagination";
@@ -126,7 +130,7 @@ const SupplierCard = ({
           >
             <DetailActions
               actions={[
-                ...(s.outstanding > 0
+                ...(s.isActive && s.outstanding > 0
                   ? [
                       {
                         label: "Record supplier payment",
@@ -136,18 +140,29 @@ const SupplierCard = ({
                       },
                     ]
                   : []),
-                {
-                  label: "Edit supplier",
-                  icon: Pencil,
-                  variant: s.outstanding > 0 ? "outline" : "primary",
-                  onClick: () => onEdit(s.id),
-                },
-                {
-                  label: "View purchase invoices",
-                  icon: FileText,
-                  variant: "outline",
-                  onClick: () => onViewPurchases(s.id),
-                },
+                ...(s.isActive
+                  ? [
+                      {
+                        label: "Edit supplier",
+                        icon: Pencil,
+                        variant: s.outstanding > 0 ? ("outline" as const) : ("primary" as const),
+                        onClick: () => onEdit(s.id),
+                      },
+                      {
+                        label: "View purchase invoices",
+                        icon: FileText,
+                        variant: "outline" as const,
+                        onClick: () => onViewPurchases(s.id),
+                      },
+                    ]
+                  : [
+                      {
+                        label: "View supplier",
+                        icon: Pencil,
+                        variant: "outline" as const,
+                        onClick: () => onEdit(s.id),
+                      },
+                    ]),
               ]}
             />
           </div>
@@ -164,10 +179,11 @@ export const SuppliersPage = () => {
   const loadError = useDomainBundleErrorMessage();
   const SUPPLIERS = useSuppliers();
 
-  const filtered = SUPPLIERS.filter((s) =>
-    !query ||
-    s.name.toLowerCase().includes(query.toLowerCase()) ||
-    s.contactPerson.toLowerCase().includes(query.toLowerCase()),
+  const filtered = SUPPLIERS.filter(
+    (s) =>
+      !query ||
+      s.name.toLowerCase().includes(query.toLowerCase()) ||
+      s.contactPerson.toLowerCase().includes(query.toLowerCase()),
   );
 
   const page = usePagination(filtered, undefined, query);

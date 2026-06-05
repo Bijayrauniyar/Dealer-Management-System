@@ -391,6 +391,24 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
+- **2026-06-05** — **Bill discount edit:** reopening a saved bill restores **Percent (%)** when discount matches a round % (e.g. 15% → 225 NPR); `inferBillDiscountFromStored` on edit fetch path.
+- **2026-06-05** — **Bill Rate column:** invoice always prints **Rate** (not MRP header); Settings picks value (label MRP + Disc% vs sell price); sale line UI = single Rate field + reference price; `saleLineDisplayMrp` on saved lines.
+- **2026-06-05** — **Sale line pricing UI:** side-by-side **Rate (sell)** + **Label MRP**; badge **Bill prints:** from Settings; line total follows Settings (MRP vs selling price); removed dashed “rate details” toggle (`SaleLinePricingBlock`, `saleEntryLineAmount`).
+- **2026-06-05** — **Bill print:** selling-price column header shortened to **Rate** on invoice/PDF; wider column; Settings hint clarified (MRP vs rate).
+- **2026-06-05** — **Print flow:** removed **Save & print** on invoice form; **Print** on bill detail only; bill page waits for `bill-print-root` before auto-print.
+- **2026-06-05** — **Sale entry:** `EntityPicker` search z-index fix (typing blocked).
+- **2026-06-05** — **Return fix:** load bill line items via `fetchSaleByBillNoLive` (header-only sales list); reason saved to return notes. **UNITS-1:** **+ Add unit** on product form (`ProductUnitField`).
+- **2026-06-05** — **Export fix:** Credit outstanding + backup ZIP (`v_customer_balance` direct select); clearer sales register labels; date-range validation.
+- **2026-06-05** — **DEL-1 fix:** customer `is_active` in `CUSTOMER_SELECT` (Archives tab was empty); after archive → back to master list.
+- **2026-06-05** — **DEL-1 UX:** `/app/archives` hub (products/customers/suppliers tabs + restore); compact list pagination; in-app `ConfirmDialog`.
+- **2026-06-05** — **P1 complete:** **DEL-1** archive/restore (`0037`); **UNITS-1** product units in Settings (`0038`); **EXP-P1** expenses/damages/returns export; **UI-1** `FormPageHeader` on entry forms.
+- **2026-06-05** — **BILL-QR-1 storage:** Payment QR **upload** to private `tenant-assets` bucket (signed URL on bill), **enable toggle** (`0036`; `salesBillQrStorage.ts`, Settings upload UI).
+- **2026-05-26** — **PRICE-DISP-1 + BILL-QR-1:** Settings → Bills & VAT — sales unit column **MRP / Selling price**, purchase **Rate excl / incl VAT**; payment **QR + bank text** on sales invoice when balance due (`0035`; `billPriceDisplay.ts`, `BillPrintView`, `PurchaseBillView`).
+- **2026-05-26** — **DELETE_POLICY:** shop app **no hard delete** for now; masters use **Archive/Restore** + Active/Archived list filter (DEL-1); bills/money rows never hard-delete.
+- **2026-05-26** — **L8** contact inbox email **deferred** (not blocking ads); **0034** HSN on prod.
+- **2026-05-26** — Centre **+** New entry sheet: **New product**, **New customer**, **New supplier** (`QUICK_ENTRY_ACTIONS`); scroll when list grows.
+- **2026-05-26** — **FIRST_LAUNCH:** What's done / what's next sections; P0 ops order (deploy, L2, L1, 0034, L8, L6).
+- **2026-05-26** — **HSN-1:** optional `products.hsn_code` (`0034`); HSN field on product form (no Settings toggle); products export CSV includes `hsn_code`.
 - **2026-05-26** — Marketing logo/home: scroll to hero on logo click (`useMarketingHomeNav`) and when landing on `/` without hash.
 - **2026-05-26** — Marketing copy: hero/features use **tax invoices** (not “PAN/VAT bills”); PAN/VAT kept in FAQ and feature bullets for registration types.
 - **2026-05-26** — Landing hero: Distributo-style eyebrow (`PRODUCT_HERO_EYEBROW`), audience-first H1 (distributors/dealers/stockists), PAN/VAT + godown + credit subline; features subtitle de-duplicated.

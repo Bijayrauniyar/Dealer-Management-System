@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
 import { numericMoneyProps } from "@/lib/money";
 import { Textarea } from "@/components/ui/textarea";
-import { useSuppliers, commitSupplier } from "@/store/domain";
+import { commitSetSupplierActive, commitSupplier, useSuppliersCatalog } from "@/store/domain";
+import { FormPageHeader } from "@/components/app/patterns";
 import { PageBackLink } from "@/components/app/PageBackLink";
+import { MasterArchiveAction } from "@/components/app/MasterArchiveAction";
 
 export const SupplierFormPage = () => {
   const navigate = useNavigate();
   const { supplierId } = useParams<{ supplierId?: string }>();
-  const SUPPLIERS = useSuppliers();
+  const SUPPLIERS = useSuppliersCatalog();
   const existing = supplierId ? SUPPLIERS.find((s) => s.id === supplierId) : undefined;
   const isEdit = Boolean(supplierId);
   const notFound = isEdit && !existing;
@@ -61,9 +63,10 @@ export const SupplierFormPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-1 text-lg font-bold">{isEdit ? "Edit supplier" : "New supplier"}</h1>
-      <p className="mb-5 text-sm text-muted">Used on purchases and supplier payments.</p>
+      <FormPageHeader
+        title={isEdit ? "Edit supplier" : "New supplier"}
+        subtitle="Used on purchases and supplier payments."
+      />
 
       <div className="space-y-4">
         <FormField label="Name" required>
@@ -90,6 +93,20 @@ export const SupplierFormPage = () => {
           </FormField>
         )}
       </div>
+
+      {isEdit && existing ? (
+        <div className="mt-4">
+          <MasterArchiveAction
+            entityLabel="supplier"
+            isActive={existing.isActive}
+            blockArchiveReason={
+              existing.outstanding > 0.01 ? "Clear payable balance before archiving." : undefined
+            }
+            onSetActive={(active) => commitSetSupplierActive(existing.id, active)}
+            onArchived={() => navigate("/app/suppliers")}
+          />
+        </div>
+      ) : null}
 
       <StickyBar
         action={isEdit ? "Update supplier" : "Save supplier"}

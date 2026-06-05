@@ -11,6 +11,7 @@ export const PRODUCT_COLUMNS = [
   "mrp",
   "opening_stock",
   "on_hand",
+  "hsn_code",
   "active",
 ] as const;
 
@@ -83,6 +84,35 @@ export const VAT_SUMMARY_COLUMNS = [
   "output_vat",
   "input_vat",
   "net_vat_payable",
+] as const;
+
+export const EXPENSES_REGISTER_COLUMNS = [
+  "expense_date",
+  "category",
+  "amount",
+  "paid_by",
+  "notes",
+] as const;
+
+export const DAMAGES_REGISTER_COLUMNS = [
+  "damage_date",
+  "product_code",
+  "product_name",
+  "qty",
+  "reason",
+  "cost",
+  "notes",
+] as const;
+
+export const RETURNS_REGISTER_COLUMNS = [
+  "return_date",
+  "customer_name",
+  "product_code",
+  "product_name",
+  "qty",
+  "reason",
+  "credit_note_amount",
+  "notes",
 ] as const;
 
 export function num(v: unknown): number {

@@ -16,6 +16,11 @@ import {
 } from "@/lib/billDisplay";
 import { roundMoney } from "@/lib/money";
 import { billLineAmount } from "@/lib/saleLineMath";
+import {
+  billLineUnitPriceDisplay,
+  salesBillUnitPriceHeaderPrint,
+  showsSalesBillPaymentQr,
+} from "@/lib/billPriceDisplay";
 import { amountInWords, fmtDate, nprNum, toMiti } from "@/lib/utils";
 
 export type BillPdfInput = {
@@ -48,12 +53,13 @@ function lineDiscPct(line: SaleLine): number {
 
 type Col = { key: string; label: string; w: number; align: "left" | "center" | "right" };
 
-function buildCols(lines: SaleLine[], sale: Sale): Col[] {
+function buildCols(lines: SaleLine[], sale: Sale, business: BusinessSettings): Col[] {
   const hasDisc = billShowsLineDiscColumn(lines, sale);
+  const unitLabel = salesBillUnitPriceHeaderPrint(business).toUpperCase();
   const cols: Col[] = [
     { key: "sn", label: "S.N.", w: 11, align: "center" },
     { key: "name", label: "PARTICULARS", w: hasDisc ? 48 : 58, align: "center" },
-    { key: "mrp", label: "MRP", w: 20, align: "right" },
+    { key: "unitPrice", label: unitLabel, w: 20, align: "right" },
     { key: "unit", label: "UNIT", w: 14, align: "center" },
     { key: "qty", label: "QTY", w: 14, align: "right" },
   ];
@@ -64,14 +70,19 @@ function buildCols(lines: SaleLine[], sale: Sale): Col[] {
   return cols.map((c) => ({ ...c, w: c.w * scale }));
 }
 
-function cellText(line: SaleLine, i: number, key: string): string {
+function cellText(
+  line: SaleLine,
+  i: number,
+  key: string,
+  priceMode: BusinessSettings["salesBillPriceMode"],
+): string {
   switch (key) {
     case "sn":
       return String(i + 1);
     case "name":
       return line.productName || "—";
-    case "mrp":
-      return line.mrp ? nprNum(line.mrp) : "—";
+    case "unitPrice":
+      return billLineUnitPriceDisplay(line, priceMode);
     case "qty":
       return nprNum(line.qty);
     case "unit":
@@ -135,7 +146,7 @@ function drawTotalRow(
 export function createBillPdf({ sale, customer, business }: BillPdfInput): jsPDF {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const lines = Array.isArray(sale.lines) ? sale.lines : [];
-  const cols = buildCols(lines, sale);
+  const cols = buildCols(lines, sale, business);
   let y = MARGIN;
 
   const head = sellerLetterheadFromBusiness(business);
@@ -242,7 +253,10 @@ export function createBillPdf({ sale, customer, business }: BillPdfInput): jsPDF
 
     cx = MARGIN;
     for (const col of cols) {
-      const content = col.key === "name" ? nameLines : cellText(line, i, col.key);
+      const content =
+        col.key === "name"
+          ? nameLines
+          : cellText(line, i, col.key, business.salesBillPriceMode);
       drawInCell(pdf, content, cx, col.w, y, col.align, 8);
       cx += col.w;
     }
@@ -328,6 +342,30 @@ export function createBillPdf({ sale, customer, business }: BillPdfInput): jsPDF
 
   const summaryH = Math.max(wordsH, ty - summaryTop + 2);
   y = summaryTop + summaryH + 4;
+
+  if (showsSalesBillPaymentQr(business, sale.balance)) {
+    y += 4;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(7);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text("PAY BY QR", MARGIN, y);
+    y += 4;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(40, 40, 40);
+    if (business.salesBillQrBankText.trim()) {
+      const bankLines = pdf.splitTextToSize(business.salesBillQrBankText.trim(), CONTENT_W);
+      pdf.text(bankLines, MARGIN, y);
+      y += bankLines.length * 3.5;
+    }
+    const ref = `Ref: ${sale.billNo} · Due ${rs(sale.balance)}`;
+    pdf.text(ref, MARGIN, y);
+    y += 6;
+    pdf.setFontSize(7);
+    pdf.setTextColor(120, 120, 120);
+    pdf.text("(Scan QR on screen bill — vector PDF shows bank details only)", MARGIN, y);
+    y += 6;
+  }
 
   pdf.setDrawColor(180);
   pdf.setLineDashPattern([2, 2], 0);

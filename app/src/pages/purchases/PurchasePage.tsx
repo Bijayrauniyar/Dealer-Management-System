@@ -31,6 +31,7 @@ import {
   productUomChoices,
 } from "@/lib/uom";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
+import { FormPageHeader } from "@/components/app/patterns";
 import { PageBackLink } from "@/components/app/PageBackLink";
 
 type Line = {
@@ -305,11 +306,14 @@ export const PurchasePage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-1 text-lg font-semibold">{isEdit ? "Edit purchase invoice" : "New purchase invoice"}</h1>
-      {isEdit && paidOnPurchase > 0 && (
-        <p className="mb-3 text-sm text-muted">Paid {npr(paidOnPurchase)} on this purchase</p>
-      )}
+      <FormPageHeader
+        title={isEdit ? "Edit purchase invoice" : "New purchase invoice"}
+        subtitle={
+          isEdit && paidOnPurchase > 0
+            ? `Paid ${npr(paidOnPurchase)} on this purchase`
+            : "Record supplier stock inward and VAT."
+        }
+      />
 
       <div className="space-y-3">
         <FormField label="Supplier" required>

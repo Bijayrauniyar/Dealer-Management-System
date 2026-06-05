@@ -25,7 +25,6 @@ html, body { margin: 0; padding: 0; background: #fff; }
 export function printBill(_billNo?: string): void {
   const root = document.getElementById("bill-print-root");
   if (!root) {
-    window.print();
     return;
   }
 

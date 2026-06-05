@@ -1,4 +1,5 @@
 import { roundMoney } from "@/lib/money";
+import type { SalesBillPriceMode } from "@/lib/billPriceDisplay";
 
 /** MRP-based bill line calculations (customer-facing invoice). */
 
@@ -42,9 +43,96 @@ export function billLineAmount(line: {
   });
 }
 
+/** Rate column value on bill — Settings picks MRP or sell price; bill header always says Rate. */
+export function billLineRateColumnValue(
+  line: {
+    qty: number;
+    mrp?: number;
+    rate: number;
+    discountPct?: number;
+    amount?: number;
+  },
+  mode: SalesBillPriceMode,
+): number {
+  if (mode === "selling_price") {
+    return Number(line.rate) > 0 ? Number(line.rate) : Number(line.mrp) || 0;
+  }
+  const disc = Number(line.discountPct ?? 0);
+  if (disc > 0) {
+    return saleLineDisplayMrp(line);
+  }
+  return saleLineChargeUnit(
+    { mrp: Number(line.mrp) || 0, rate: Number(line.rate) || 0 },
+    "mrp",
+  );
+}
+
+/** Per-unit price used for line total — follows Settings (MRP vs selling price). */
+export function saleLineChargeUnit(
+  line: { mrp: number; rate: number },
+  mode: SalesBillPriceMode,
+): number {
+  if (mode === "selling_price") {
+    return Number(line.rate) > 0 ? Number(line.rate) : Number(line.mrp) || 0;
+  }
+  return Number(line.mrp) > 0 ? Number(line.mrp) : Number(line.rate) || 0;
+}
+
+/** Line amount on sales entry — respects Settings price column choice. */
+export function saleEntryLineAmount(
+  line: LinePricing & { discountPct?: number },
+  mode: SalesBillPriceMode,
+): number {
+  const qty = Number(line.qty) || 0;
+  const disc = Number(line.discountPct ?? 0);
+  const unit = saleLineChargeUnit(
+    { mrp: Number(line.mrp) || 0, rate: Number(line.rate) || 0 },
+    mode,
+  );
+  return roundMoney(qty * unit * (1 - disc / 100));
+}
+
 /** Unit price stored in DB so sum(qty×rate) matches subtotal. */
 export function effectiveRateForRpc(l: LinePricing): number {
   const qty = Number(l.qty) || 0;
   if (qty <= 0) return 0;
   return roundMoney(lineAmountFromMrp(l) / qty);
+}
+
+/**
+ * Label MRP on a saved bill line.
+ * With line Disc% → reverse from amount (dealer shows MRP + discount).
+ * Without → stored rate per unit (matches what was charged; ignores catalog drift).
+ */
+export function saleLineDisplayMrp(line: {
+  qty: number;
+  rate: number;
+  mrp?: number;
+  discountPct?: number;
+  amount?: number;
+}): number {
+  const qty = Number(line.qty) || 0;
+  const rate = Number(line.rate) || 0;
+  const disc = Number(line.discountPct ?? 0);
+  const amt = billLineAmount(line);
+
+  if (qty <= 0) return Number(line.mrp) || rate || 0;
+
+  if (disc > 0 && amt > 0) {
+    const label = roundMoney(amt / (qty * (1 - disc / 100)));
+    if (label > 0) return label;
+  }
+
+  if (rate > 0) return rate;
+  return Number(line.mrp) || 0;
+}
+
+/** RPC rate when shop uses MRP or selling price for line totals. */
+export function effectiveRateForRpcWithMode(
+  line: LinePricing & { discountPct?: number },
+  mode: SalesBillPriceMode,
+): number {
+  const qty = Number(line.qty) || 0;
+  if (qty <= 0) return 0;
+  return roundMoney(saleEntryLineAmount(line, mode) / qty);
 }

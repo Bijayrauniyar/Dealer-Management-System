@@ -17,6 +17,7 @@ export function productsToCsvRows(products: Product[], includeCost = true): CsvR
       mrp: p.mrp,
       opening_stock: p.openingStock ?? 0,
       on_hand: p.onHand,
+      hsn_code: p.hsnCode ?? "",
       active: "yes",
     }),
   );

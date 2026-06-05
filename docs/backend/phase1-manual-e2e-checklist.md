@@ -175,7 +175,7 @@ Migrations **0025** (optional), **0026** (customer tax). Automated: `npm run e2e
 
 | # | Step | Pass |
 |---|------|------|
-| T0C1 | Bottom tabs: **Home · Customers · Inventory · Reports**; centre **+** entry sheet | |
+| T0C1 | Bottom tabs: **Home · Customers · Inventory · Reports**; centre **+** opens **New entry** (bills + **New product / customer / supplier**) | |
 | T0C2 | **Customers** tab → `/app/home?tab=customers`; **Inventory** → `?tab=stock` | |
 | T0C3 | Header **☰** drawer: **Masters**, **Entry**, **Reports**, **Support** links work | |
 | T0C4 | `/app/more` → redirects to **Reports** | |
@@ -262,6 +262,17 @@ Automated: `npm run e2e:p0-public` (included in `e2e:phase0`). Runbook: [P0_LAUN
 | S8 | Default markup % and min qty | New product form pre-fills or hints use these |
 | S9 | **Default VAT %** e.g. 13 | Product buy hint and purchase totals use this rate |
 | S10 | **Edge:** Save with empty trading name | Validation error or safe default |
+| S11 | Settings → **Rate (selling price)** → Save → new sale | Line total = **Qty × Rate**; print column **Rate**; Amt = Rate × Qty |
+| S11b | Settings → **MRP + line discount** → product with line Disc% | Print shows **MRP** + **Disc%**; Amt = MRP × Qty × (1−Disc%) |
+| S11c | Reopen saved bill MXMPRV-28 (or any) → Print | MRP/Rate column matches Amt (no 100 vs 1,500 mismatch) |
+| S12 | Settings → **Purchase bill rate** = **Rate incl. VAT** → Save | Purchase detail print shows incl. rate column |
+| S13 | Settings → enable **payment QR**, **upload QR image** + **Bank details** → Save | Credit bill print shows QR block + bank line + bill ref; toggle off or fully paid bill hides QR |
+| S14 | Settings → **Product units** — add **Bag** → Save → new product form | **Bag** appears in base unit dropdown |
+| S14b | New product → **+ Add unit** → **Drum** → pick as base unit | Unit saved to Settings; product saves with Drum |
+| S17b | Return entry — pick customer + bill → **+** on a line → Save | Return saves; credit shows on customer |
+| S15 | **More → Archives** (or drawer → Archives) → **Products** tab → **Restore** | Product returns to active list and sale picker |
+| S16 | Archive customer (zero balance) → **Archives → Customers** → **Restore** | Customer hidden from sale picker until restored |
+| S17 | Settings → Export → period **Expenses** / **Damages** / **Goods returns** CSV | Files open with dated rows for selected range |
 
 ---
 
@@ -269,7 +280,7 @@ Automated: `npm run e2e:p0-public` (included in `e2e:phase0`). Runbook: [P0_LAUN
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| P1 | Menu → Products → New: name, buy **excl. VAT**, MRP, category, min qty; **opening qty** optional | Saves; opening qty editable only on create |
+| P1 | Menu → Products → New: name, buy **excl. VAT**, MRP, category, min qty; **opening qty** optional; **HSN code** optional (`0034`) | Saves; opening qty editable only on create; HSN blank OK |
 | P1b | Edit same product | Opening qty read-only summary; on-hand shown; corrections via Purchase or Stock adjustment (if enabled) |
 | P2 | Edit product: change sell price | List and sale picker show new price |
 | P3 | Search product by name | Filters list |
@@ -329,7 +340,8 @@ open     = total − paid
 | SA11 | **VAT OFF** | No VAT line; total excludes VAT |
 | SA12 | **Multi-line:** 2 different products | Subtotal = sum of lines; one bill_no |
 | SA13 | **Preview bill** button | Preview modal matches sticky totals |
-| SA14 | **Save & Print** | Print view opens; header/footer from settings |
+| SA14 | **Save** → bill detail → **Print** | Print view opens; header/footer from settings (no print on save) |
+| SA14b | Add product line on sale form | **Rate (sell)** + **Label MRP** side by side; **Bill prints:** badge on Items header |
 | SA15 | **Live edit:** Bill detail → Edit → change qty/rate → Save | `update_sales_bill` succeeds; totals/stock updated in DB |
 | SA16 | **Edit blocked:** reduce total below `paid` | RPC error or validation; bill unchanged |
 | SA17 | Sale without customer | Validation error |

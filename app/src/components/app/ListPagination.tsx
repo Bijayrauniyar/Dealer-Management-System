@@ -13,7 +13,7 @@ type Props = {
   className?: string;
 };
 
-/** Prev / next controls below a list (hidden when everything fits on one page). */
+/** Compact prev / next below lists (hidden when everything fits on one page). */
 export function ListPagination({
   page,
   totalPages,
@@ -28,50 +28,54 @@ export function ListPagination({
   if (total === 0) return null;
 
   const multiPage = totalPages > 1;
+  if (!multiPage && !showingLabel) return null;
 
   return (
     <div
       className={cn(
-        "mt-3 flex flex-col gap-2 rounded-xl border border-border-subtle bg-white px-3 py-2.5",
+        "mt-2 flex items-center justify-between gap-2 px-1 py-1 text-[11px] text-muted",
         className,
       )}
     >
-      <p className="text-center text-[11px] text-muted tabular-nums">
-        {showingLabel ?? `Page ${page} of ${totalPages}`}
-      </p>
       {multiPage ? (
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onPrev}
-            disabled={!hasPrev}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1 rounded-lg border py-2 text-sm font-medium transition-colors",
-              hasPrev
-                ? "border-border-subtle text-teal-600 hover:bg-teal-50"
-                : "border-transparent text-muted/40 cursor-not-allowed",
-            )}
-          >
-            <ChevronLeft size={16} /> Previous
-          </button>
-          <span className="shrink-0 px-2 text-xs font-semibold text-muted tabular-nums">
-            {page} / {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={!hasNext}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1 rounded-lg border py-2 text-sm font-medium transition-colors",
-              hasNext
-                ? "border-border-subtle text-teal-600 hover:bg-teal-50"
-                : "border-transparent text-muted/40 cursor-not-allowed",
-            )}
-          >
-            Next <ChevronRight size={16} />
-          </button>
-        </div>
-      ) : null}
+        <button
+          type="button"
+          onClick={onPrev}
+          disabled={!hasPrev}
+          aria-label="Previous page"
+          className={cn(
+            "inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 font-medium transition-colors",
+            hasPrev ? "text-teal-600 hover:bg-teal-50" : "cursor-not-allowed opacity-35",
+          )}
+        >
+          <ChevronLeft size={14} />
+          Prev
+        </button>
+      ) : (
+        <span />
+      )}
+
+      <span className="shrink-0 tabular-nums">
+        {showingLabel ?? (multiPage ? `${page} / ${totalPages}` : null)}
+      </span>
+
+      {multiPage ? (
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!hasNext}
+          aria-label="Next page"
+          className={cn(
+            "inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 font-medium transition-colors",
+            hasNext ? "text-teal-600 hover:bg-teal-50" : "cursor-not-allowed opacity-35",
+          )}
+        >
+          Next
+          <ChevronRight size={14} />
+        </button>
+      ) : (
+        <span />
+      )}
     </div>
   );
 }

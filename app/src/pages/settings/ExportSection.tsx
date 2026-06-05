@@ -7,17 +7,23 @@ import { Input } from "@/components/ui/input";
 import { downloadCsv } from "@/lib/export/csv";
 import {
   buildCustomersExport,
+  buildDamagesRegisterExport,
+  buildExpensesRegisterExport,
   buildOutstandingExport,
   buildProductsExport,
   buildPurchasesRegisterExport,
+  buildReturnsRegisterExport,
   buildSalesLinesExport,
   buildSalesRegisterExport,
   buildStockSnapshotExport,
   buildVatPeriodSummaryExport,
   CUSTOMER_COLUMNS,
+  DAMAGES_REGISTER_COLUMNS,
+  EXPENSES_REGISTER_COLUMNS,
   OUTSTANDING_COLUMNS,
   PRODUCT_COLUMNS,
   PURCHASE_REGISTER_COLUMNS,
+  RETURNS_REGISTER_COLUMNS,
   SALES_LINES_COLUMNS,
   SALES_REGISTER_COLUMNS,
   STOCK_COLUMNS,
@@ -106,13 +112,16 @@ export function ExportSection() {
             }
           >
             <Download size={16} className="mr-2" />
-            Credit outstanding
+            Credit outstanding (dues)
           </Button>
         </div>
       </div>
 
       <div>
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-teal-600">Period registers</p>
+        <p className="mb-3 text-xs text-muted">
+          Pick a date range, then download registers for that period.
+        </p>
         <div className="mb-4 grid grid-cols-2 gap-3">
           <FormField label="From">
             <Input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
@@ -132,19 +141,19 @@ export function ExportSection() {
               })
             }
           >
-            Sales register
+            Sales register (by bill)
           </Button>
           <Button
             variant="secondary"
             disabled={!!busy}
             onClick={() =>
-              void run("Sales lines", async () => {
+              void run("Item-wise sales", async () => {
                 const rows = await buildSalesLinesExport(range);
                 downloadCsv(`sales-lines-${range.from}-${range.to}`, rows, [...SALES_LINES_COLUMNS]);
               })
             }
           >
-            Sales lines
+            Item-wise sales (by product)
           </Button>
           <Button
             variant="secondary"
@@ -169,6 +178,42 @@ export function ExportSection() {
             }
           >
             VAT period summary
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!!busy}
+            onClick={() =>
+              void run("Expenses", async () => {
+                const rows = await buildExpensesRegisterExport(range);
+                downloadCsv(`expenses-${range.from}-${range.to}`, rows, [...EXPENSES_REGISTER_COLUMNS]);
+              })
+            }
+          >
+            Expenses
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!!busy}
+            onClick={() =>
+              void run("Damages", async () => {
+                const rows = await buildDamagesRegisterExport(range);
+                downloadCsv(`damages-${range.from}-${range.to}`, rows, [...DAMAGES_REGISTER_COLUMNS]);
+              })
+            }
+          >
+            Damages
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!!busy}
+            onClick={() =>
+              void run("Returns", async () => {
+                const rows = await buildReturnsRegisterExport(range);
+                downloadCsv(`returns-${range.from}-${range.to}`, rows, [...RETURNS_REGISTER_COLUMNS]);
+              })
+            }
+          >
+            Goods returns
           </Button>
         </div>
       </div>

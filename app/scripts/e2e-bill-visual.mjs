@@ -100,12 +100,12 @@ async function assertBillNotClipped(page, label) {
       r.pass(`${label}.meta payment mode sensible`);
     }
 
-    const mrpHeader = root.locator(".bill-lines-table thead th").nth(2);
-    const mrpHdrText = (await mrpHeader.innerText()).trim();
-    if (!/^MRP$/i.test(mrpHdrText)) {
-      r.fail(`${label}.MRP header`, `clipped or missing: "${mrpHdrText}"`);
+    const rateHeader = root.locator(".bill-lines-table thead th").nth(2);
+    const rateHdrText = (await rateHeader.innerText()).trim();
+    if (!/^Rate$/i.test(rateHdrText)) {
+      r.fail(`${label}.Rate header`, `clipped or missing: "${rateHdrText}"`);
     } else {
-      r.pass(`${label}.MRP column header visible`);
+      r.pass(`${label}.Rate column header visible`);
     }
 
     const grandValue = root.locator(".bill-totals-grand td").last();
