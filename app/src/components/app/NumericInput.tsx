@@ -49,6 +49,21 @@ export const NumericInput = ({
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState("");
 
+  /** Plain string for editing — no thousand separators (commas break decimal typing). */
+  const editStringFromValue = useCallback(
+    (v: number | null) => {
+      if (v === null) return "";
+      if (v === 0) return showZero ? "0" : "";
+      if (allowDecimal) {
+        const r = roundMoney(v, decimalPlaces);
+        const s = r.toFixed(decimalPlaces);
+        return s.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+      }
+      return String(v);
+    },
+    [allowDecimal, decimalPlaces, showZero],
+  );
+
   const displayFromValue = useCallback(
     (v: number | null) => {
       if (v === null) return "";
@@ -100,7 +115,7 @@ export const NumericInput = ({
       value={focused ? text : displayFromValue(value)}
       onFocus={(e) => {
         setFocused(true);
-        setText(displayFromValue(value));
+        setText(editStringFromValue(value));
         onFocus?.(e);
       }}
       onBlur={(e) => {
@@ -110,7 +125,13 @@ export const NumericInput = ({
         onBlur?.(e);
       }}
       onChange={(e) => {
-        const next = e.target.value;
+        let next = e.target.value.replace(/,/g, "");
+        if (allowDecimal && next.includes(".")) {
+          const [whole, frac = ""] = next.split(".");
+          if (frac.length > decimalPlaces) {
+            next = `${whole}.${frac.slice(0, decimalPlaces)}`;
+          }
+        }
         if (allowDecimal) {
           if (next === "" || decimalPattern.test(next)) setText(next);
         } else if (next === "" || /^-?\d*$/.test(next)) {

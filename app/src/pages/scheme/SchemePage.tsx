@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useProducts, commitSchemeEntry } from "@/store/domain";
 import { productUomChoices } from "@/lib/uom";
 import { toDateInput } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 export const SchemePage = () => {
   const navigate = useNavigate();
@@ -101,9 +102,7 @@ export const SchemePage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-5 text-lg font-semibold">Scheme entry</h1>
-      <p className="mb-4 text-sm text-muted-foreground">Buy X, get Y free on one product.</p>
+      <FormPageHeader title="Scheme entry" subtitle="Buy X, get Y free on one product." />
       <div className="space-y-4">
         <FormField label="Scheme name" required>
           <Input
@@ -174,12 +173,8 @@ export const SchemePage = () => {
           </FormField>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <FormField label="Start date">
-            <Input type="date" value={startDate} onChange={(e) => setStart(e.target.value)} />
-          </FormField>
-          <FormField label="End date" required>
-            <Input type="date" value={endDate} onChange={(e) => setEnd(e.target.value)} />
-          </FormField>
+          <DateFormField label="Start date" value={startDate} onChange={setStart} />
+          <DateFormField label="End date" required value={endDate} onChange={setEnd} />
         </div>
       </div>
       <StickyBar action="Save scheme" onAction={handleSave} loading={saving} />

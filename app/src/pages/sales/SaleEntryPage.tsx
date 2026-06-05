@@ -6,6 +6,7 @@ import { printBill } from "@/lib/printBill";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
+import { DateFormField } from "@/components/app/DateFormField";
 import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { BillPrintView } from "@/components/app/BillPrintView";
@@ -433,9 +434,7 @@ export const SaleEntryPage = () => {
               {billNo}
             </div>
           </FormField>
-          <FormField label="Date">
-            <Input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} />
-          </FormField>
+          <DateFormField label="Date" value={billDate} onChange={setBillDate} />
         </div>
 
         {/* ── Line items ── */}
@@ -656,22 +655,13 @@ export const SaleEntryPage = () => {
 
         {/* ── Balance due ── */}
         {balanceDue > 0 && (
-          <Card className="border-warning/30 bg-warning-light">
-            <CardContent className="space-y-3 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-warning-foreground">Balance due</p>
-                <Badge variant="warning">{npr(balanceDue)}</Badge>
-              </div>
-              <FormField label="Due date" required>
-                <Input
-                  type="date"
-                  value={dueDate}
-                  min={toDateInput()}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </FormField>
-            </CardContent>
-          </Card>
+          <div className="rounded-xl border border-warning/30 bg-warning-light px-3 py-2.5">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-warning-foreground">Balance due</span>
+              <span className="text-sm font-bold tabular-nums text-warning-foreground">{npr(balanceDue)}</span>
+            </div>
+            <DateFormField label="Due date" required dense value={dueDate} onChange={setDueDate} />
+          </div>
         )}
 
         {balanceDue === 0 && grandTotal > 0 && (

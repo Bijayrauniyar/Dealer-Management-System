@@ -45,7 +45,7 @@ export const CustomerFormPage = () => {
         vatNumber: vatNumber.trim(),
       });
       toast.success(isEdit ? `${name} updated.` : `${name} added.`);
-      navigate(isEdit ? `/app/customers/${id}` : "/app/home?tab=customers");
+      navigate(isEdit ? `/app/customers/${id}` : "/app/customers");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save customer");
     } finally {

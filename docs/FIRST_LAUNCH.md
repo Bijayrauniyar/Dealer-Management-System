@@ -8,7 +8,23 @@
 
 **Product:** BikriKhata — VAT billing, purchase, stock, credit, and period export for Nepal wholesalers and dealers (1 godown).
 
-**Phase 0 status:** **Complete (2026-05-26)** — Tier A + B + C on prod (migrations through **0026**).
+**Phase 0 status:** **Complete (2026-05-26)** — Tier A + B + C on prod.
+
+**P1 product status:** **Complete (2026-06-05)** — UI redesign, stock hub, support form, 4-decimal prices, dual dates; migrations through **`0039`** applied on prod.
+
+**Launch ops status:** **Not ads-ready yet** — owner still needs **L2** prod auth smoke + **L6** pilot shop ~1 week.
+
+---
+
+## Where we are (2026-06-05)
+
+| Layer | Status |
+|-------|--------|
+| **Core app** | Phase 0 + P1 checklist items shipped in code |
+| **DB** | Migrations **0001–0039** on prod (incl. HSN `0034`, print/QR `0035`–`0036`, archive `0037`, units `0038`, 4-dec price `0039`) |
+| **UI / nav** | Home ops dashboard; bottom bar **Home · Customers · + · Stock · Reports**; Stock hub at `/app/products`; Settings 4 tabs; Reports hub; supplier detail |
+| **Before ads** | Deploy latest → **L2** register/login on prod → **L6** one pilot shop ~1 week → sign-off |
+| **Phase 1 backlog** | Orders, catalog, on-screen books, BS dropdown picker — deferred until a shop asks ([P2](#p2--when-paying-shops-ask-phase-1)) |
 
 ---
 
@@ -28,12 +44,22 @@
 - Contact thank-you + optional WhatsApp prefill; logo scrolls to top on home
 - `e2e:p0-public` — 85/85 source checks
 
-### P1 already shipped
+### P1 already shipped (2026-05-26 – 2026-06-05)
 
 | ID | What |
 |----|------|
 | **LIC-1** | Trial / license expiry, renewal banners, `approve_tenant` |
-| **HSN-1** | Optional HSN on product form — migration **`0034`** **done** on prod; included in products export CSV |
+| **HSN-1** | Optional HSN on product form (`0034`); products export CSV |
+| **UI-1** | `FormPageHeader` / `ListPageHeader`; `EntityList` compact rows; Settings `SegmentedTabs` |
+| **DEL-1** | Archive/restore masters + Active/Archived filter (`0037`); `/app/archives` hub |
+| **BILL-QR-1** | Payment QR upload + bank text on balance-due sales bills (`0035`–`0036`) |
+| **PRICE-DISP-1** | Settings: MRP vs Selling price on sales; excl/incl on purchase (`0035`) |
+| **UNITS-1** | Custom product units in Settings (`0038`); **+ Add unit** on product form |
+| **EXP-P1** | Export: expenses, damages, returns registers + backup ZIP |
+| **PRICE-4DEC** | Product + line prices up to **4 decimals** (`0039` on prod; `numericPriceProps`; bill totals stay 2-dec NPR) |
+| **NAV-P1** | Stock hub (`/app/products`, `/app/stock` redirects); Home ops dashboard; drawer deduped |
+| **DATE-AD** | `DateFormField` + `DateDisplay` — AD native picker + BS line below (full BS picker = **DATE-BS-1** backlog) |
+| **SUP-APP** | In-app support: inquiry form → `platform_inquiries` + WhatsApp (`AppSupportInquiryForm`) |
 
 ---
 
@@ -56,16 +82,6 @@
 | ID | What | When |
 |----|------|------|
 | **L8** | Inbox email for contact form (`0033` + Resend, ~20 min) | When you want Gmail alerts — [CONTACT_FORM_EMAIL_SETUP.md](CONTACT_FORM_EMAIL_SETUP.md). Leads still save in Supabase + WhatsApp button works today. |
-
-### After launch — product (P1, pick by shop demand)
-
-| Priority | ID | Effort | Notes |
-|----------|-----|--------|-------|
-| 1 | **BILL-QR-1** | — | **Done** — payment QR + bank on balance-due sales bills |
-| 2 | **UNITS-1** | — | **Done** — custom units in Settings (`0038`) |
-| 3 | **DEL-1** | — | **Done** — archive/restore masters + Active/Archived filter (`0037`) |
-| 4 | **UI-1** | — | **Done** — `FormPageHeader` on entry forms; `ListPageHeader` on customers |
-| 5 | **PRICE-DISP-1** | — | **Done** — MRP vs Selling price; purchase excl/incl |
 
 ### When paying shops ask (P2)
 
@@ -112,6 +128,10 @@ When an item is **deferred**, copy its ID to [BACKLOG.md](BACKLOG.md) and set St
 | UNITS-1      | Custom units list in Settings                                        | **done** | —      | `0038`; product form dropdowns                  |
 | **HSN-1**    | Optional **HSN code** on product form                                | **done** | —      | `0034`; products export CSV                     |
 | EXP-P1       | Export: expenses / damages / returns registers                       | **done** | —      | Settings → Export period registers + backup ZIP |
+| PRICE-4DEC   | Product + sale/purchase line prices up to 4 decimals               | **done** | —      | `0039` on prod; `money.ts` `numericPriceProps`  |
+| NAV-P1       | Stock hub, Home dashboard, nav dedupe                                | **done** | —      | `/app/products`; `/app/stock` → redirect        |
+| SUP-APP      | In-app support inquiry form + WhatsApp                             | **done** | —      | `AppSupportInquiryForm` on `/app/support`       |
+| DATE-AD      | Dual BS+AD dates (AD picker + BS line below)                         | **done** | —      | Full BS picker deferred — **DATE-BS-1**         |
 
 ---
 
@@ -219,6 +239,7 @@ Tier A export, rebrand, stock adjustment, oversell **0024**, credit warn, shell,
 | Phase 0 (A+B+C)                       | 2026-05-26 |                                |
 | P0 marketing + legal (L3–L5, L7)      | 2026-05-26 | SPA landing, runbook           |
 | Marketing polish + HSN-1              | 2026-05-26 | Hero, contact, HSN `0034`      |
+| P1 product (UI, stock hub, `0037`–`0039`) | 2026-06-05 | Code + prod migrations      |
 | Pilot shop (L6)                       |            | Owner — ~1 week on prod        |
 | First ad live                         |            | After L2 prod smoke + L6 pilot |
 | First paying tenant                   |            |                                |
@@ -227,4 +248,4 @@ Tier A export, rebrand, stock adjustment, oversell **0024**, credit warn, shell,
 
 ---
 
-*Last updated: 2026-05-26 — L8 deferred; `0034` on prod; P0 ops remaining: deploy, L2, L1, L6 pilot.*
+*Last updated: 2026-06-05 — P1 product complete; migrations through `0039` on prod; ads blocked on L2 + L6 only.*

@@ -13,6 +13,7 @@ import { EXPENSE_CATEGORIES } from "@/domain/catalogs";
 import { commitExpenseEntry } from "@/store/domain";
 import { npr, toDateInput } from "@/lib/utils";
 import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
@@ -64,7 +65,7 @@ export const ExpensePage = () => {
             onChange={(v) => setAmount(v === 0 ? "" : String(v))}
           />
         </FormField>
-        <FormField label="Date"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></FormField>
+        <DateFormField label="Date" value={date} onChange={setDate} />
         <FormField label="Notes"><Textarea placeholder="Details" value={notes} onChange={(e) => setNotes(e.target.value)} /></FormField>
       </div>
       <StickyBar rows={amount ? [["Amount", npr(Number(amount))]] : undefined} action="Save expense" onAction={handleSave} loading={saving} />

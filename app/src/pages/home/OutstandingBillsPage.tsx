@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/app/EmptyState";
 import { useCustomers, useOutstandingBills } from "@/store/domain";
 import { PaginatedListSection } from "@/components/app/PaginatedListSection";
-import { npr, fmtDate } from "@/lib/utils";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { npr } from "@/lib/utils";
 import { PageBackLink } from "@/components/app/PageBackLink";
 
 /** All open bills (balance &gt; 0) with customer names — tap-through to bill detail. */
@@ -48,21 +49,18 @@ export const OutstandingBillsPage = () => {
                   type="button"
                   key={b.id}
                   onClick={() => navigate(`/app/bills/${encodeURIComponent(b.billNo)}`)}
-                  className="flex w-full items-center justify-between gap-2 border-b border-border-subtle py-3.5 text-left last:border-0"
+                  className="flex w-full items-center justify-between gap-2 border-b border-border-subtle py-2.5 text-left last:border-0 active:bg-slate-50"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground truncate">{b.billNo}</p>
-                    <p className="text-xs text-muted">
-                      {byCust.get(b.customerId) ?? "Customer"} · {fmtDate(b.billDate)}
-                    </p>
-                    <p className="text-[11px] text-muted">
-                      Total {npr(b.billTotal)} · paid {npr(b.paidAmount)}
+                    <p className="truncate text-[13px] font-semibold text-foreground">{b.billNo}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted">
+                      {byCust.get(b.customerId) ?? "Customer"} · <DateDisplay iso={b.billDate} dual compact /> ·{" "}
+                      {npr(b.balance)} due
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-sm font-bold text-warning">{npr(b.balance)}</span>
+                  <div className="flex shrink-0 items-center gap-1">
                     <span className="text-[10px] uppercase text-muted">{b.status}</span>
-                    <ChevronRight size={14} className="text-muted" />
+                    <ChevronRight size={13} className="text-muted" />
                   </div>
                 </button>
               )}

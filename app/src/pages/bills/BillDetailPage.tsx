@@ -17,7 +17,8 @@ import {
   useDomainBundleLoadState,
   useBusinessSettings,
 } from "@/store/domain";
-import { npr, fmtDate } from "@/lib/utils";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { npr, fmtDateDualBs } from "@/lib/utils";
 import { PageBackLink } from "@/components/app/PageBackLink";
 import { PageActionBar } from "@/components/app/PageActionBar";
 
@@ -195,7 +196,7 @@ export const BillDetailPage = () => {
       {status === "overdue" && (
         <div data-no-print className="mb-4 flex items-center justify-between gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
           <p className="text-sm font-semibold text-danger">
-            {overDays}d overdue — was due {fmtDate(sale.dueDate)}
+            {overDays}d overdue — was due {fmtDateDualBs(sale.dueDate)}
           </p>
           <button
             onClick={() => navigate(`/app/payments/new?customerId=${sale.customerId}`)}
@@ -220,11 +221,11 @@ export const BillDetailPage = () => {
           <Card>
             <CardContent className="p-0 px-4">
               {payments.map((p) => (
-                <div key={p.id} className="flex items-center justify-between border-b border-border-subtle py-3 last:border-0">
+                <div key={p.id} className="flex items-center justify-between border-b border-border-subtle py-2.5 last:border-0">
                   <div>
                     <p className="text-sm font-semibold text-success-foreground">{npr(p.amount)}</p>
                     <p className="text-xs text-muted">
-                      {fmtDate(p.date)} · {p.mode}{p.reference ? ` · ${p.reference}` : ""}
+                      <DateDisplay iso={p.date} dual compact /> · {p.mode}{p.reference ? ` · ${p.reference}` : ""}
                     </p>
                   </div>
                 </div>

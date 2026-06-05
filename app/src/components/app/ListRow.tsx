@@ -1,18 +1,16 @@
 /**
- * ListRow – a tappable row for lists (customers, products, transactions …).
- * Pass `onClick` to make it a navigate-to action.
+ * ListRow – compact tappable row for transactions, reports, period lists.
  */
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
 type Props = {
-  left: ReactNode;       // main content (name, date, …)
-  right?: ReactNode;     // amount / badge on the right
-  sub?: ReactNode;       // muted sub-line below left
+  left: ReactNode;
+  right?: ReactNode;
+  sub?: ReactNode;
   onClick?: () => void;
   className?: string;
-  /** Show a divider below the row */
   divider?: boolean;
 };
 
@@ -23,19 +21,19 @@ export const ListRow = ({ left, right, sub, onClick, className, divider = true }
     onClick={onClick}
     onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
     className={cn(
-      "flex items-center justify-between gap-3 py-3",
+      "flex items-center justify-between gap-2 py-2.5",
       divider && "border-b border-border-subtle last:border-0",
-      onClick && "cursor-pointer hover:bg-slate-50 active:bg-slate-100 -mx-4 px-4 rounded-lg transition-colors",
+      onClick && "cursor-pointer active:bg-slate-50 transition-colors",
       className,
     )}
   >
     <div className="min-w-0 flex-1">
-      <div className="truncate text-sm font-medium text-foreground">{left}</div>
-      {sub && <div className="mt-0.5 truncate text-xs text-muted">{sub}</div>}
+      <div className="truncate text-[13px] font-semibold leading-tight text-foreground">{left}</div>
+      {sub ? <div className="mt-0.5 truncate text-[11px] leading-snug text-muted">{sub}</div> : null}
     </div>
     <div className="flex shrink-0 items-center gap-1">
-      {right && <span className="text-sm font-semibold text-foreground">{right}</span>}
-      {onClick && <ChevronRight size={14} className="text-muted-foreground" />}
+      {right}
+      {onClick ? <ChevronRight size={13} className="text-muted" /> : null}
     </div>
   </div>
 );

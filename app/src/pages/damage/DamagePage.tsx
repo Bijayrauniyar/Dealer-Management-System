@@ -14,6 +14,7 @@ import { DAMAGE_REASONS } from "@/domain/catalogs";
 import { useProducts, commitDamageEntry } from "@/store/domain";
 import { toDateInput } from "@/lib/utils";
 import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 export const DamagePage = () => {
   const navigate  = useNavigate();
@@ -69,9 +70,7 @@ export const DamagePage = () => {
         <FormField label="Notes (optional)">
           <Textarea placeholder="Any detail" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </FormField>
-        <FormField label="Date">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </FormField>
+        <DateFormField label="Date" value={date} onChange={setDate} />
       </div>
       <StickyBar action="Save damage" onAction={handleSave} loading={saving} />
     </PageShell>

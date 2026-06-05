@@ -12,6 +12,7 @@
 | **Human — what to build next** | **[BACKLOG.md](BACKLOG.md)** |
 | **AI agent** | **[AI_AGENT.md](AI_AGENT.md)** |
 | **Phase 0 done?** | **[PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md)** |
+| **P1 done? Where are we?** | **[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** — P1 product complete; ads blocked on L2 + L6 |
 
 ---
 
@@ -72,4 +73,4 @@ Rule: [.cursor/rules/docs-on-change.mdc](../.cursor/rules/docs-on-change.mdc)
 
 ---
 
-*Hub simplified 2026-05-26 — use FIRST_LAUNCH + BACKLOG + AI_AGENT instead of many tier sign-off files.*
+*Last updated: 2026-06-05 — P1 product complete; migrations through `0039` on prod; launch ops: L2 + L6.*

@@ -69,14 +69,14 @@ export const AppShell = () => {
       active: isHomeTabActive(location.pathname, location.search),
     },
     {
-      to: "/app/home?tab=customers",
+      to: "/app/customers",
       label: "Customers",
       icon: Users,
       active: isCustomersTabActive(location.pathname, location.search),
     },
     {
-      to: "/app/home?tab=stock",
-      label: "Inventory",
+      to: "/app/products",
+      label: "Stock",
       icon: Box,
       active: isInventoryTabActive(location.pathname, location.search),
     },

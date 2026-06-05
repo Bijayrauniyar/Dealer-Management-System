@@ -12,7 +12,8 @@ import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
 import { summarizeCapital } from "@/lib/capitalSummary";
 import { useCapitalEntries } from "@/store/domain";
 import { PaginatedListSection } from "@/components/app/PaginatedListSection";
-import { npr, fmtDate } from "@/lib/utils";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { npr } from "@/lib/utils";
 import { PageBackLink } from "@/components/app/PageBackLink";
 
 const categoryLabel = (cat: string) =>
@@ -49,7 +50,7 @@ export const CapitalListPage = () => {
 
       <h1 className="mb-1 text-lg font-semibold">Capital entries</h1>
       <p className="mb-4 text-sm text-muted">
-        Assets, owner capital, deposits, inventory, and loans from day one.
+        Owner money, fixed assets, deposits, and loans — not day-to-day rent or fuel (use Expense).
       </p>
 
       <div className="mb-5 grid grid-cols-2 gap-3">
@@ -98,7 +99,7 @@ export const CapitalListPage = () => {
                       <Badge variant={categoryBadge(entry.category)} className="text-[10px] px-1.5 py-0">
                         {categoryLabel(entry.category)}
                       </Badge>
-                      <span>{fmtDate(entry.date)}</span>
+                      <DateDisplay iso={entry.date} dual compact />
                     </span>
                   }
                 />

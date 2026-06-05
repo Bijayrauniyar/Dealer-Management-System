@@ -1,6 +1,10 @@
-/** User-facing labels for primary flows (match More menu + sale entry screen). */
+/** User-facing labels for primary flows (Vyapar/Tally-style; keep in sync with quick menu + forms). */
 export const SALES_INVOICE_LABEL = "Sales invoice";
 export const PURCHASE_INVOICE_LABEL = "Purchase invoice";
+/** Money received from customers (Vyapar: Payment In; Tally: Receipt). */
+export const PAYMENT_IN_LABEL = "Payment in";
+/** Money paid to suppliers (Vyapar: Payment Out). */
+export const PAYMENT_OUT_LABEL = "Payment out";
 
 /** Sticky bar primary actions on sale entry. */
 export const SAVE_INVOICE_ACTION = "Save invoice";

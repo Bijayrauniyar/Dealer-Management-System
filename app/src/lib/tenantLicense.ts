@@ -1,5 +1,6 @@
 import { LAUNCH_TRIAL_DAYS } from "@/config/launchPricing";
 import { PRODUCT_DISPLAY_NAME } from "@/config/productBrand";
+import { fmtDateDualBs } from "@/lib/utils";
 
 export type TenantPlan = "trial" | "monthly" | "annual" | null;
 
@@ -67,7 +68,7 @@ export function formatTenantPlanLabel(plan: TenantPlan): string {
 export function formatLicenseEndDate(endIso: string | null): string | null {
   if (!endIso) return null;
   try {
-    return new Date(endIso).toLocaleDateString(undefined, { dateStyle: "medium" });
+    return fmtDateDualBs(endIso.slice(0, 10));
   } catch {
     return null;
   }
@@ -117,7 +118,7 @@ export function licenseExpiredCopy(
   const endedOn = (iso: string | null) => {
     if (!iso) return null;
     try {
-      return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+      return fmtDateDualBs(iso.slice(0, 10));
     } catch {
       return null;
     }

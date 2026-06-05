@@ -23,6 +23,8 @@ type Props = {
   filterOptions: BrowseFilterOption[];
   onFilterChange: (value: string) => void;
   filterLabel?: string;
+  /** Highlight filter control — e.g. danger when Overdue selected */
+  filterVariant?: "default" | "danger";
   /** Second dimension — e.g. Area (customers) or Category (stock/products). */
   extraFilter?: BrowseExtraFilter;
   /** Third dimension on second row — e.g. stock status on products. */
@@ -45,20 +47,31 @@ function FilterField({
   options,
   onChange,
   ariaLabel,
+  variant = "default",
 }: {
   label: string;
   value: string;
   options: BrowseFilterOption[];
   onChange: (value: string) => void;
   ariaLabel: string;
+  variant?: "default" | "danger";
 }) {
+  const danger = variant === "danger";
   return (
     <div>
-      <label className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-muted">
+      <label
+        className={cn(
+          "mb-0.5 block text-[10px] font-bold uppercase tracking-wider",
+          danger ? "text-danger" : "text-muted",
+        )}
+      >
         {label}
       </label>
       <Select
-        className="h-9 text-xs"
+        className={cn(
+          "h-9 text-xs",
+          danger && "border-danger/50 text-danger font-semibold focus:ring-danger/30",
+        )}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
@@ -82,6 +95,7 @@ export function ListBrowsePanel({
   filterOptions,
   onFilterChange,
   filterLabel = "Filter",
+  filterVariant = "default",
   extraFilter,
   secondaryFilter,
   sortValue,
@@ -137,6 +151,7 @@ export function ListBrowsePanel({
             options={filterOptions}
             onChange={onFilterChange}
             ariaLabel={filterLabel}
+            variant={filterVariant}
           />
           {extraFilter ? (
             <FilterField

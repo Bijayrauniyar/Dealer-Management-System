@@ -70,6 +70,14 @@ export function fmtDateDual(iso: string): string {
   return `${fmtDate(iso)} (${bs})`;
 }
 
+/** Bikram Sambat primary with AD in brackets — matches DateDisplay dual. */
+export function fmtDateDualBs(iso: string): string {
+  const bs = toMiti(iso);
+  const ad = fmtDate(iso);
+  if (bs === iso) return ad;
+  return `${bs} (${ad})`;
+}
+
 // ── Amount in Words (NPR) ─────────────────────────────────────────────────────
 const _ONES = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
   "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];

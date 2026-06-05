@@ -2,7 +2,7 @@
 
 **Navigate:** [Docs hub](README.md) · **[FIRST_LAUNCH](FIRST_LAUNCH.md)** · **[BACKLOG](BACKLOG.md)** · [Project README](../README.md) · [Data model](backend/data-model.md) · [E2E tests](backend/phase1-use-cases-and-tests.md) · [Deploy](deployment.md)
 
-**Last updated:** 2026-05-26 (Phase 0 **A + B + C** complete — prod sign-off; launch docs consolidated)
+**Last updated:** 2026-06-05 (Phase 0 complete; **P1 product complete** — UI/nav, stock hub, `0037`–`0039` on prod; launch blocked on L2 + L6 only)
 
 **Gemma 4 26B:** paste **[archive/GEMMA_SYSTEM_PROMPT.md](archive/GEMMA_SYSTEM_PROMPT.md)** into System instructions, then attach this file each session.
 
@@ -47,7 +47,7 @@ bikrikhata/                      # repo root (local clone path may differ)
 │   │       ├── billPdfCapture.ts      # html2canvas → PDF
 │   │       └── billPdfDocument.ts     # Vector PDF fallback
 │   ├── scripts/                 # e2e-*.mjs, check-tailwind-classes.mjs
-│   └── supabase/migrations/     # 0001 … 0011 (ordered SQL)
+│   └── supabase/migrations/     # 0001 … 0039 (ordered SQL)
 ├── docs/                        # Human + AI documentation
 └── netlify.toml
 ```
@@ -62,7 +62,7 @@ bikrikhata/                      # repo root (local clone path may differ)
 | `/privacy`, `/terms`, `/faq` | Privacy, Terms, FAQ | P0 public (`pages/marketing/`) |
 | `/login`, `/register` | Login, Register | Auth; register calls `signup_tenant` + links to legal |
 | `/pending-approval`, `/no-tenant` | Pending, NoTenant | Tenant gate |
-| `/app/home` | HomePage | Dashboard, KPIs, quick links |
+| `/app/home` | HomePage | Ops dashboard: today KPIs, attention cards, quick actions |
 | `/app/home/aging/:bucket` | AgingDetailPage | Receivables aging |
 | `/app/home/overdue` | OverduePage | Overdue bills |
 | `/app/home/outstanding` | OutstandingBillsPage | Open bills list |
@@ -78,15 +78,17 @@ bikrikhata/                      # repo root (local clone path may differ)
 | `/app/damages/new` | DamagePage | Stock damage |
 | `/app/daily-cash` | DailyCashPage | Daily cash (partial wiring) |
 | `/app/schemes/new` | SchemePage | Promotional scheme UI |
-| `/app/products`, `…/new`, `…/edit/:id` | Products, ProductFormPage | Product CRUD |
-| `/app/customers`, `…/new`, `…/edit/:id`, `/:id` | Customers, forms, detail | Customer CRUD |
-| `/app/suppliers`, `…/new` | Suppliers, SupplierFormPage | Suppliers |
-| `/app/stock` | StockPage | Stock on hand (`v_stock`) |
-| `/app/dashboard` | DashboardPage | Charts |
-| `/app/company` | CompanyOverviewPage | Company KPIs |
-| `/app/capital`, `/app/capital/new` | Capital list / entry | Capital (live) |
-| `/app/more` | MorePage | Nav hub |
-| `/app/settings` | SettingsPage | `tenant_settings` |
+| `/app/products`, `…/new`, `…/edit/:id` | ProductsPage (title **Stock**), ProductFormPage | Stock hub — products + on-hand qty; **Add purchase** |
+| `/app/customers`, `…/new`, `…/edit/:id`, `/:id` | CustomersPage, forms, detail | Customer hub (Customers tab) |
+| `/app/suppliers`, `…/new`, `…/:id`, `…/invoices` | SuppliersPage, SupplierDetailPage, forms | Supplier hub + detail |
+| `/app/stock` | redirect → `/app/products` | Stock hub via products |
+| `/app/reports` | ReportsHubPage | Categorized reports hub |
+| `/app/dashboard` | DashboardPage | Period summary |
+| `/app/company` | CompanyOverviewPage | Read-only business snapshot |
+| `/app/capital`, `/app/capital/new` | Capital list / entry | Owner assets & loans |
+| `/app/more` | redirect → `/app/reports` | Legacy |
+| `/app/support` | SupportPage | Platform help + `AppSupportInquiryForm` → `platform_inquiries` |
+| `/app/settings` | SettingsPage | Business / Bills & tax / Catalog & stock / Data & account |
 
 ### Feature → primary files (where to edit)
 
@@ -160,6 +162,16 @@ See `app/supabase/README.txt` for copy-paste steps.
 | 0009 | `products.uom_conversion` |
 | 0010 | `sales_items.unit`, stock in PCS |
 | 0011 | `min_qty_pack` on products |
+| 0019–0023 | Phase 0 Tier A — categories, stock adjustment, export |
+| 0024 | Oversell guard (`assert_sale_stock_available`) |
+| 0025–0026 | Support fields; customer PAN/VAT on bill |
+| 0027–0032 | Platform inquiries, tenant license |
+| 0034 | `products.hsn_code` (HSN-1) |
+| 0035 | Sales print settings + payment QR/bank text |
+| 0036 | Payment QR storage (`tenant-assets` bucket) |
+| 0037 | Archive/restore RPCs (`is_active`) |
+| 0038 | Custom product units (`tenant_settings.product_units`) |
+| 0039 | Product prices `numeric(12,4)` — buy/sell/MRP up to 4 decimals |
 
 ---
 
@@ -375,13 +387,13 @@ Add one line under **Changelog** yourself:
 
 ### What to build next (read first)
 
-**[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** — P0 before ads. **Phase 0 complete (2026-05-26).**
+**[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** — **P1 product done (2026-06-05).** Before ads: **L2** prod auth smoke + **L6** pilot shop ~1 week.
 
 **[PHASE_ROADMAP.md](PHASE_ROADMAP.md)** — strategy Phase 1–3. **[PRODUCT_EVOLUTION.md](PRODUCT_EVOLUTION.md)** — pain-first why.
 
 ### Deferred backlog (address later)
 
-**[BACKLOG.md](BACKLOG.md)** — **INV-2**, **SUP-1**, **IMP-0/1/2**, UI-1, ORD-*, etc. Historical tier checklists: `docs/archive/YOUR_TURN_*.md` only.
+**[BACKLOG.md](BACKLOG.md)** — **DATE-BS-1**, **ORD-***, **CAT-PUB-***, **RPT-1**, **INV-2**, **IMP-0/1/2**, etc. Historical tier checklists: `docs/archive/YOUR_TURN_*.md` only.
 
 **Data export** — Tier A shipped (`lib/export/*`, Settings → Export); **IMP-0** = full tenant ZIP (Phase 2): [DATA_EXPORT_SPEC.md](DATA_EXPORT_SPEC.md).
 
@@ -391,6 +403,16 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
+- **2026-06-05** — **Docs sync — where we are:** [FIRST_LAUNCH](FIRST_LAUNCH.md) P1 complete + `0039` on prod; [BACKLOG](BACKLOG.md) P1 IDs done; manual checklist §3.0d; pre-flight `0034`–`0039`; [UI_CONSISTENCY_PLAN](UI_CONSISTENCY_PLAN.md) rollout status.
+- **2026-06-05** — **Backlog DATE-BS-1:** BS day/month/year dropdowns only (no full calendar grid); native AD picker + BS line below until shipped — [BACKLOG.md](BACKLOG.md) § DATE-BS-1.
+- **2026-06-05** — **4-decimal prices on sale/purchase lines:** `SaleLinePricingBlock` + purchase line cost use `numericPriceProps` (Label MRP / sell on invoice, buy on purchase); product form + `0039` migration for DB; bill **totals** stay 2-decimal NPR.
+- **2026-06-05** — **Product price + date fixes:** `addVatToExclPrice` / `purchasePriceExclFromProduct` use 4 decimals; `DateFormField` picker + BS/AD below; slimmer balance-due on sales invoice.
+- **2026-06-05** — **Mobile-compact lists + dates:** `EntityList`/`EntityListCard` divided rows (2 lines max); `DateDisplay compact` on lists; bill/customer rows tightened.
+- **2026-06-05** — **Stock hub + pricing + dates:** One **Stock** screen (`/app/products`) — products + on-hand qty; drawer deduped; **Add purchase** on stock page; `useProductBrowse` shared hook; product prices **4 decimals** (`0039`, `numericPriceProps`); support message type = dropdown.
+- **2026-06-05** — **Support form + UI symmetry + dual dates:** `/app/support` saves inquiries via `submit_platform_inquiry` then offers WhatsApp; `EntityListCard` unifies customer/product lists; Home header date-only; `fmtDateDualBs` / `DateDisplay dual` on lists, bills, license expiry.
+- **2026-06-05** — **Support + dates + amounts:** Support page matches landing contacts + WhatsApp intent chips; `DateFormField` (BS + AD under every form date); Home header card (no duplicate Sales button); Sales invoice in quick grid; overdue filter **red**; `NumericInput` comma-safe editing.
+- **2026-06-05** — **UI polish:** bottom tab **Customers** (not Parties); quick menu **Payment in / Payment out** (Vyapar-style); Return only in + sheet; Settings first tab **Business**; customer detail loading fix; customer list **Overdue** filter; `PAYMENT_IN_LABEL` in `actionLabels.ts`.
+- **2026-06-05** — **UI redesign (Phases 0–5):** Home = ops dashboard (`DateDisplay`, today KPIs, `HOME_QUICK_ACTIONS`); bottom bar **Home · Customers · + · Stock · Reports**; `/app/customers` hub; supplier detail + `ListBrowsePanel`; Settings tabs **Business / Bills & tax / Catalog & stock / Data & account**; Reports hub sections; drawer deduped; Company vs Capital vs Expense copy clarified.
 - **2026-06-05** — **Bill discount edit:** reopening a saved bill restores **Percent (%)** when discount matches a round % (e.g. 15% → 225 NPR); `inferBillDiscountFromStored` on edit fetch path.
 - **2026-06-05** — **Bill Rate column:** invoice always prints **Rate** (not MRP header); Settings picks value (label MRP + Disc% vs sell price); sale line UI = single Rate field + reference price; `saleLineDisplayMrp` on saved lines.
 - **2026-06-05** — **Sale line pricing UI:** side-by-side **Rate (sell)** + **Label MRP**; badge **Bill prints:** from Settings; line total follows Settings (MRP vs selling price); removed dashed “rate details” toggle (`SaleLinePricingBlock`, `saleEntryLineAmount`).

@@ -2,7 +2,7 @@
 
 **Goal:** One visual language — same buttons, list chrome, forms, filters — via reusable components in `app/src/components/app/patterns.tsx`.
 
-**Hub:** Phase 1 backlog item **UI-1** in [BACKLOG.md](BACKLOG.md) and [PHASE_ROADMAP.md §4](PHASE_ROADMAP.md#4-phase-1--retain--expand-after-first-paying-tenants).
+**Hub:** **UI-1 done (2026-06-05)** — see [BACKLOG.md](BACKLOG.md) and [FIRST_LAUNCH.md](FIRST_LAUNCH.md).
 
 ---
 
@@ -15,7 +15,7 @@
 | `FormPageHeader` | Back + title + subtitle (forms, support, sale entry) |
 | `ListPageHeader` | Back (optional) + **Add** + title (products, suppliers, …) |
 | `AddEntityButton` | Standard `+ Add …` (`Button` primary sm) |
-| `SegmentedTabs` | Home Customers / Stock; Settings-style toggles |
+| `SegmentedTabs` | Settings tabs; archives hub |
 | `InfoCallout` | VAT note, non-error hints |
 | `LinkActionRow` | Support phone / email / WhatsApp rows |
 | `PreviewToolbar` | Bill preview Print / PDF / Close |
@@ -30,32 +30,53 @@
 | `DetailActions` | Stacked actions on entity detail |
 | `ListBrowsePanel` + `ListPagination` | Search + filters + export + pages |
 | `EmptyState` | Empty lists |
+| `DateDisplay` | BS + AD; use `compact` in lists (`components/app/DateDisplay.tsx`) |
+| `EntityList` / `EntityListCard` | Divided compact rows — products, customers, suppliers (`EntityListCard.tsx`) |
+| `DateFormField` | One-row picker + inline BS/AD preview |
+
+---
+
+## Entity hub template (list → detail → form)
+
+Every master entity (products, customers, suppliers) should follow:
+
+| Layer | Components / behaviour |
+|-------|------------------------|
+| **List** | `ListPageHeader` (+ Add) → `ListBrowsePanel` → `EntityList` + `EntityListCard` (masters) or `ListRow` in `Card` (transactions) → `ListPagination` |
+| **Detail** | `PageBackLink` → title + KPIs → `DetailActions` (related flows: sale, payment, purchase, …) → `MasterArchiveAction` when active |
+| **Form** | `FormPageHeader` → fields → `StickyBar` save |
+| **Archives** | `/app/archives` hub + Active/Archived filter on master lists (DEL-1) |
+
+**Reference:** `ProductsPage` + `ProductDetailPage`. **Customers:** `CustomersPage` + `CustomerDetailPage`. **Suppliers:** `SuppliersPage` + `SupplierDetailPage`.
+
+**Routes (bottom bar):** Home = ops dashboard; **Customers** → `/app/customers`; **Stock** → `/app/products`; `/app/stock` redirects to products.
 
 ---
 
 ## Rollout status
 
-### Done (Phase 0 / pre–Phase 1)
+### Done (UI redesign Phase 0–5)
 
-- [x] `patterns.tsx` library
-- [x] `PageActionBar` + bill detail
-- [x] Home: `SegmentedTabs`, `Button` for Sales invoice
-- [x] Products / Suppliers: `ListPageHeader`
-- [x] Customer form, Support, Sale entry header: `FormPageHeader`
-- [x] Sale entry: `InfoCallout`, preview `Button`s
-- [x] Phase 1 todo **UI-1** documented
+- [x] `patterns.tsx` library + `DateDisplay`
+- [x] Entry forms → `FormPageHeader` (payment, purchase, return, expense, damage, scheme, capital, stock adjustment, daily cash, …)
+- [x] Home → ops dashboard (`HOME_QUICK_ACTIONS`, today KPIs, attention cards)
+- [x] Bottom bar: Home | Customers | + | Stock | Reports
+- [x] `EntityList` / `EntityListCard` compact rows on products, customers, suppliers
+- [x] `DateFormField` + `DateDisplay` (AD picker + BS line below)
+- [x] Active/Archived filter on master lists (DEL-1)
+- [x] `/app/support` — `AppSupportInquiryForm` + platform contact channels
+- [x] `/app/customers` → `CustomersPage`; `/app/products` stock hub; supplier detail route
+- [x] Suppliers list → `ListBrowsePanel` + detail page
+- [x] Settings → Shop / Bills & tax / Catalog & stock / Data & account (`SegmentedTabs`)
+- [x] Reports hub → categorized sections; dashboard unlocked via Period summary
+- [x] Drawer deduped with + sheet quick entry
+- [x] NPR amounts: `NumericInput` + `numericMoneyProps` (no raw `type="number"` on money in pages)
 
-### Phase 1 — UI-1 (symmetry pass)
+### Remaining (optional polish)
 
-- [ ] Migrate remaining list pages → `ListPageHeader` + `ListBrowsePanel` (customers route redirect, stock standalone, reports hub cards)
-- [ ] Migrate entry forms → `FormPageHeader` (payment, purchase, return, expense, damage, scheme, capital, stock adjustment, product form)
 - [ ] `PageBackLink` → optional `Button variant="ghost"` wrapper (one style)
-- [ ] Delete / danger: `Button variant="danger"` only (when delete ships)
-- [ ] `grep bg-teal-600 app/src/pages` → zero (except `SegmentedTabs` active state inside `patterns.tsx`)
-- [ ] Manual checklist row + optional `e2e-ui-patterns.mjs` smoke (routes render)
-- [ ] Settings tabs → `SegmentedTabs` or shared tab component
-
-**Do not** mix UI-1 with first Tier D migration in same deploy without QA.
+- [ ] `grep bg-teal-600 app/src/pages` audit for ad-hoc primary buttons
+- [ ] **DATE-BS-1** — BS day/month/year dropdowns (backlog; native AD picker + BS line below today)
 
 ---
 
@@ -68,21 +89,17 @@
 | Tertiary | `outline` or `ghost` |
 | Form save | `StickyBar` only |
 | Detail document actions | `PageActionBar` — utility actions **secondary**; **Collect** (money) **primary** green |
-| Entity shortcuts | `DetailActions` (or converge to `PageActionBar` in UI-1) |
+| Entity shortcuts | `DetailActions` |
 
 ---
 
 ## When you change UI — update tests (required)
 
-Same rule as [phase1-use-cases-and-tests.md § Keeping tests in sync](backend/phase1-use-cases-and-tests.md#keeping-tests-in-sync-required-on-every-change):
-
 | You change… | Update… | Run |
 |-------------|---------|-----|
-| `patterns.tsx` or a page that should use it | `e2e-tier-c.mjs` (source greps for component names / routes) | `npm run e2e:tier-c` |
-| `PageActionBar` or bill detail actions | `e2e-tier-c.mjs` (`BillDetailPage` Share/Collect labels) | `npm run e2e:tier-c` |
-| Any list/form chrome migration | `e2e-tier-c.mjs` + manual checklist **UI1** | `npm run e2e:phase0` |
-
-Remove obsolete greps when you delete a feature (e.g. old “WhatsApp” label). Add a new `r.pass` when you add a route or button.
+| `patterns.tsx` or a page that should use it | `e2e-tier-c.mjs` | `npm run e2e:tier-c` |
+| Home / bottom nav / entity routes | `e2e-tier-c.mjs` + manual checklist § Home | `npm run e2e:phase0` |
+| Settings tabs | `e2e-tier-c.mjs` + manual § Settings | `npm run e2e:tier-c` |
 
 ---
 
@@ -100,8 +117,18 @@ Remove obsolete greps when you delete a feature (e.g. old “WhatsApp” label).
 
 ```
 app/src/components/app/patterns.tsx
+app/src/components/app/DateDisplay.tsx
 app/src/components/app/PageActionBar.tsx
 app/src/components/ui/button.tsx
 app/src/components/app/ListBrowsePanel.tsx
 app/src/components/app/StickyBar.tsx
+app/src/pages/home/HomePage.tsx
+app/src/pages/products/ProductsPage.tsx
+app/src/pages/customers/CustomersPage.tsx
+app/src/pages/suppliers/SuppliersPage.tsx
+app/src/components/app/EntityListCard.tsx
+app/src/components/app/DateFormField.tsx
+app/src/components/app/AppSupportInquiryForm.tsx
 ```
+
+*Last updated: 2026-06-05 — UI-1 done; Customers tab label; DEL-1 + EntityList shipped.*

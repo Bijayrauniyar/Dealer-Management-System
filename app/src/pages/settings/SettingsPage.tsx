@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Building2, Phone, MapPin, FileText, Receipt, SlidersHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { ExportSection } from "@/pages/settings/ExportSection";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -27,6 +26,7 @@ import { Select } from "@/components/ui/select";
 import { ProductCategoriesSection } from "@/components/app/ProductCategoriesSection";
 import { ProductUnitsSection } from "@/components/app/ProductUnitsSection";
 import { PageBackLink } from "@/components/app/PageBackLink";
+import { SegmentedTabs } from "@/components/app/patterns";
 import { SubscriptionSection } from "@/pages/settings/SubscriptionSection";
 import {
   parsePurchaseBillPriceMode,
@@ -87,20 +87,31 @@ type TenantSettingsRow = {
 };
 
 const SETTINGS_TABS = [
-  { id: "business", label: "Business" },
-  { id: "bills", label: "Bills & VAT" },
-  { id: "stock", label: "Stock" },
-  { id: "export", label: "Export" },
+  { id: "shop", label: "Business" },
+  { id: "bills", label: "Bills & tax" },
+  { id: "catalog", label: "Catalog & stock" },
+  { id: "data", label: "Data & account" },
 ] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
 
+function normalizeSettingsTab(raw: string | undefined): SettingsTab | null {
+  if (!raw) return null;
+  const legacy: Record<string, SettingsTab> = {
+    business: "shop",
+    stock: "catalog",
+    export: "data",
+    shop: "shop",
+    bills: "bills",
+    catalog: "catalog",
+    data: "data",
+  };
+  return legacy[raw] ?? null;
+}
+
 function initialSettingsTab(location: ReturnType<typeof useLocation>): SettingsTab {
   const raw = (location.state as { settingsTab?: string } | null)?.settingsTab;
-  if (raw === "export" || raw === "stock" || raw === "bills" || raw === "business") {
-    return raw;
-  }
-  return "business";
+  return normalizeSettingsTab(raw) ?? "shop";
 }
 
 export function SettingsPage() {
@@ -351,23 +362,14 @@ export function SettingsPage() {
     <PageShell stickyBar>
       <PageBackLink />
       <h1 className="mb-1 text-lg font-bold text-foreground">Settings</h1>
-      <p className="mb-4 text-sm text-muted">Business profile, stock, and data export</p>
+      <p className="mb-4 text-sm text-muted">Business profile, bills, catalog, and account</p>
 
-      <div className="mb-5 flex gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
-        {SETTINGS_TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "shrink-0 rounded-md px-3 py-2 text-xs font-semibold transition-colors",
-              tab === t.id ? "bg-white text-teal-700 shadow-sm" : "text-muted",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        value={tab}
+        options={SETTINGS_TABS.map((t) => ({ id: t.id, label: t.label }))}
+        onChange={setTab}
+        className="mb-5"
+      />
 
       {loadError && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{loadError}</div>
@@ -375,15 +377,12 @@ export function SettingsPage() {
 
       {!loaded && !loadError && <p className="text-sm text-muted">Loading…</p>}
 
-      {loaded && tab === "export" && <ExportSection />}
-
-      {loaded && tab !== "export" && (
+      {loaded && tab === "data" && (
         <>
-          {tab === "business" && (
-            <>
+          <ExportSection />
           <SectionTitle icon={SlidersHorizontal} label="Lists &amp; display" />
           <div className="mb-6 space-y-4">
-            <FormField label="Rows per page">
+            <FormField label="Rows per page" hint="Default rows on product and customer lists">
               <Select
                 className="h-10"
                 value={String(listPageSize)}
@@ -398,23 +397,30 @@ export function SettingsPage() {
               </Select>
             </FormField>
           </div>
-
-          <SectionTitle icon={Building2} label="Product categories" />
-          <div className="mb-6">
-            <ProductCategoriesSection
-              categories={productCategories}
-              onChange={setProductCategories}
-            />
+          <div className="mt-4 border-t border-border-subtle pt-4 pb-2">
+            <SubscriptionSection />
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Account</p>
+            <Button
+              variant="secondary"
+              size="full"
+              onClick={() => {
+                void signOut().then(() => {
+                  toast.info("Signed out.");
+                  navigate("/login", { replace: true });
+                });
+              }}
+              className="text-danger border-danger/30 hover:bg-red-50"
+            >
+              Log out
+            </Button>
           </div>
+        </>
+      )}
 
-          <SectionTitle icon={SlidersHorizontal} label="Product units" />
-          <p className="mb-3 text-xs text-muted">
-            Unit labels on the product form (e.g. PCS, Box, Bag). Save settings after changes.
-          </p>
-          <div className="mb-6">
-            <ProductUnitsSection units={productUnits} onChange={setProductUnits} />
-          </div>
-
+      {loaded && tab !== "data" && (
+        <>
+          {tab === "shop" && (
+            <>
           <SectionTitle icon={Building2} label="Business identity" />
           <div className="space-y-4">
             <FormField label="Trading name" hint="On app header and invoices">
@@ -644,8 +650,25 @@ export function SettingsPage() {
             </>
           )}
 
-          {tab === "stock" && (
+          {tab === "catalog" && (
             <>
+          <SectionTitle icon={Building2} label="Product categories" />
+          <p className="mb-3 text-xs text-muted">Categories on the product form and filters.</p>
+          <div className="mb-6">
+            <ProductCategoriesSection
+              categories={productCategories}
+              onChange={setProductCategories}
+            />
+          </div>
+
+          <SectionTitle icon={SlidersHorizontal} label="Product units" />
+          <p className="mb-3 text-xs text-muted">
+            Unit labels on the product form (e.g. PCS, Box, Bag). Save settings after changes.
+          </p>
+          <div className="mb-6">
+            <ProductUnitsSection units={productUnits} onChange={setProductUnits} />
+          </div>
+
           <SectionTitle icon={SlidersHorizontal} label="Stock adjustment" />
           <div className="mb-6 space-y-3">
             <label className="flex items-center gap-3 rounded-lg border border-border-subtle bg-white px-4 py-3">
@@ -712,34 +735,12 @@ export function SettingsPage() {
         </>
       )}
 
-      {tab !== "export" && (
       <StickyBar
         action="Save settings"
         onAction={() => void handleSave()}
         loading={saving}
         disabled={!loaded || !tenantId || !!loadError}
       />
-      )}
-
-      {loaded && (
-        <div className="mt-4 border-t border-border-subtle pt-4 pb-6">
-          <SubscriptionSection />
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Account</p>
-          <Button
-            variant="secondary"
-            size="full"
-            onClick={() => {
-              void signOut().then(() => {
-                toast.info("Signed out.");
-                navigate("/login", { replace: true });
-              });
-            }}
-            className="text-danger border-danger/30 hover:bg-red-50"
-          >
-            Log out
-          </Button>
-        </div>
-      )}
     </PageShell>
   );
 }

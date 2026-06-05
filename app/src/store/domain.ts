@@ -1,6 +1,7 @@
 export {
   useDomainBundleLoadState,
   useDomainBundleErrorMessage,
+  useMasterCatalogLoadState,
   useBusinessSettings,
   usePnlTotals,
   useLatestCashClosing,

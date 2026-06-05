@@ -14,7 +14,8 @@ import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
 import type { CapitalEntry } from "@/domain/types";
 import { commitCapitalEntry } from "@/store/domain";
 import { npr, toDateInput } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 export const CapitalEntryPage = () => {
   const navigate = useNavigate();
@@ -58,11 +59,10 @@ export const CapitalEntryPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-1 text-lg font-semibold">Add capital entry</h1>
-      <p className="mb-5 text-sm text-muted">
-        Money or assets invested in the business (freezer, vehicle, owner cash, loans, deposits). For daily running costs use Expense; for stock from suppliers use Purchase.
-      </p>
+      <FormPageHeader
+        title="Add capital entry"
+        subtitle="Assets, owner money, loans, deposits. For daily costs use Expense; for stock use Purchase."
+      />
 
       <div className="space-y-4">
         {/* ── Category ── */}
@@ -133,9 +133,7 @@ export const CapitalEntryPage = () => {
         )}
 
         {/* ── Date ── */}
-        <FormField label="Date of investment / purchase" required>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </FormField>
+        <DateFormField label="Date of investment / purchase" required value={date} onChange={setDate} />
 
         {/* ── Notes ── */}
         <FormField label="Notes (optional)">

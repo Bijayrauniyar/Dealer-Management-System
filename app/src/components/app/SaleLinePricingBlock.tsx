@@ -1,8 +1,8 @@
 import { FormField } from "@/components/app/FormField";
 import { NumericInput } from "@/components/app/NumericInput";
-import { numericMoneyProps } from "@/lib/money";
+import { formatPriceAmount, numericPriceProps } from "@/lib/money";
 import { billLineRateColumnValue, saleLineChargeUnit } from "@/lib/saleLineMath";
-import { addVatToExcl } from "@/lib/tax";
+import { addVatToExclPrice } from "@/lib/tax";
 import { cn, nprNum } from "@/lib/utils";
 
 type LineDraft = {
@@ -63,7 +63,7 @@ export function SaleLinePricingBlock({
             hint={mrpBilling ? "→ Rate on bill" : "Reference only"}
           >
             <NumericInput
-              {...numericMoneyProps}
+              {...numericPriceProps}
               min={0}
               value={line.mrp}
               onChange={onMrpChange}
@@ -76,7 +76,7 @@ export function SaleLinePricingBlock({
             hint={!mrpBilling ? "→ Rate on bill" : "Reference only"}
           >
             <NumericInput
-              {...numericMoneyProps}
+              {...numericPriceProps}
               min={0}
               value={line.rate}
               onChange={onRateChange}
@@ -91,13 +91,13 @@ export function SaleLinePricingBlock({
           <span className="text-muted"> ({nprNum(chargeUnit)} × {line.qty})</span>
         </span>
         <span className="font-medium text-teal-800">
-          Prints: Rate · {nprNum(printRate)}
+          Prints: Rate · {formatPriceAmount(printRate)}
         </span>
       </div>
 
       {tenantVat && !mrpBilling && line.rate > 0 ? (
         <p className="text-[10px] text-muted">
-          Sell price incl. {vatPct}% VAT: {nprNum(addVatToExcl(line.rate, vatPct))}
+          Sell price incl. {vatPct}% VAT: {formatPriceAmount(addVatToExclPrice(line.rate, vatPct))}
         </p>
       ) : null}
     </div>

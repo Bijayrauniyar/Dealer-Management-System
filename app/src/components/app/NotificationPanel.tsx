@@ -19,7 +19,7 @@ import type { Product, Sale } from "@/domain/types";
 import { useAuth } from "@/lib/auth";
 import { useBusinessSettings, useProducts, useSales } from "@/store/domain";
 import { isLowStock, minStockLabel } from "@/lib/stockAlert";
-import { npr, fmtDate } from "@/lib/utils";
+import { npr, fmtDateDualBs } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { TenantPlan } from "@/lib/tenantLicense";
@@ -68,7 +68,7 @@ export function buildNotifications(
       ns.push({
         id: `overdue-${s.billNo}`, type: "overdue", tab: "bills",
         title: s.customerName,
-        body: `Bill ${s.billNo} · due ${ago}d ago (${fmtDate(s.dueDate!)})`,
+        body: `Bill ${s.billNo} · due ${ago}d ago (${fmtDateDualBs(s.dueDate!)})`,
         amount: s.balance, linkTo: `/app/bills/${s.billNo}`, urgent: true,
       });
     });
@@ -86,7 +86,7 @@ export function buildNotifications(
       ns.push({
         id: `due-${s.billNo}`, type: "due_soon", tab: "bills",
         title: s.customerName,
-        body: `Bill ${s.billNo} · due ${when} (${fmtDate(s.dueDate!)})`,
+        body: `Bill ${s.billNo} · due ${when} (${fmtDateDualBs(s.dueDate!)})`,
         amount: s.balance, linkTo: `/app/bills/${s.billNo}`, urgent: d <= 0,
       });
     });
@@ -99,7 +99,7 @@ export function buildNotifications(
         id: `low-${p.id}`, type: "low_stock", tab: "stock",
         title: p.name,
         body: `${p.onHand} ${p.uom} left · min ${minStockLabel(p)}`,
-        linkTo: "/app/home?tab=stock", urgent: p.onHand === 0,
+        linkTo: "/app/products?filter=low", urgent: p.onHand === 0,
       });
     });
 
@@ -126,7 +126,7 @@ export function buildLicenseRenewalNotif(input: LicenseNotifInput): Notif | null
   if (!shouldWarnLicenseRenewal(days)) return null;
   const endIso = tenantLicenseEndAt(profile);
   const planLabel = formatTenantPlanLabel(input.tenantPlan);
-  const when = endIso ? fmtDate(endIso) : "";
+  const when = endIso ? fmtDateDualBs(endIso.slice(0, 10)) : "";
   const urgent = days !== null && days <= 3;
   return {
     id: "license-renewal",

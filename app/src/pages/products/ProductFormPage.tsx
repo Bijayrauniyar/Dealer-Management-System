@@ -27,12 +27,20 @@ import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
-import { numericMoneyProps, numericPercentProps, numericQtyProps, roundMoney, roundPercent } from "@/lib/money";
+import {
+  numericPercentProps,
+  numericPriceProps,
+  numericQtyProps,
+  PRICE_DECIMAL_PLACES,
+  formatPriceAmount,
+  roundMoney,
+  roundPercent,
+} from "@/lib/money";
 import { Select } from "@/components/ui/select";
 import { useBusinessSettings, useProductsCatalog, upsertProductLive } from "@/store/domain";
 import { FormPageHeader } from "@/components/app/patterns";
 import { supabase } from "@/lib/supabase";
-import { addVatToExcl, getVatPct, purchasePriceExclFromProduct } from "@/lib/tax";
+import { addVatToExclPrice, getVatPct, purchasePriceExclFromProduct } from "@/lib/tax";
 import { npr, nprNum } from "@/lib/utils";
 import {
   availableExtraUoms,
@@ -166,12 +174,13 @@ export const ProductFormPage = () => {
 
   // ── Linked price calculations ─────────────────────────────────────────────
   const recalcSellFromMarkup = (buy: number, markup: number | null) => {
-    if (buy > 0) setSellPrice(roundMoney(buy * (1 + markupForCalc(markup) / 100)));
+    if (buy > 0) setSellPrice(roundMoney(buy * (1 + markupForCalc(markup) / 100), PRICE_DECIMAL_PLACES));
   };
 
   const handleBuyChange = (v: number) => {
-    setBuyPrice(v);
-    recalcSellFromMarkup(v, markupPct);
+    const rounded = roundMoney(v, PRICE_DECIMAL_PLACES);
+    setBuyPrice(rounded);
+    recalcSellFromMarkup(rounded, markupPct);
   };
 
   const handleMarkupChange = (v: number | null) => {
@@ -181,9 +190,10 @@ export const ProductFormPage = () => {
 
   // If sell price is typed manually, back-calculate markup %
   const handleSellChange = (v: number) => {
-    setSellPrice(v);
-    if (buyPrice > 0 && v > 0) {
-      setMarkupPct(roundPercent(((v - buyPrice) / buyPrice) * 100));
+    const rounded = roundMoney(v, PRICE_DECIMAL_PLACES);
+    setSellPrice(rounded);
+    if (buyPrice > 0 && rounded > 0) {
+      setMarkupPct(roundPercent(((rounded - buyPrice) / buyPrice) * 100));
     }
   };
 
@@ -192,7 +202,7 @@ export const ProductFormPage = () => {
     if (buyPrice <= 0) return;
     const m = markupPct ?? defaultMarkup;
     if (markupPct === null) setMarkupPct(defaultMarkup);
-    setSellPrice(roundMoney(buyPrice * (1 + m / 100)));
+    setSellPrice(roundMoney(buyPrice * (1 + m / 100), PRICE_DECIMAL_PLACES));
   };
 
   // ── Derived preview ───────────────────────────────────────────────────────
@@ -260,9 +270,12 @@ export const ProductFormPage = () => {
         name: name.trim(),
         category,
         unit: uom,
-        purchase_price: vatPct > 0 ? addVatToExcl(buyPrice, vatPct) : buyPrice,
-        sale_price: sellPrice,
-        mrp,
+        purchase_price:
+          vatPct > 0
+            ? addVatToExclPrice(buyPrice, vatPct)
+            : roundMoney(buyPrice, PRICE_DECIMAL_PLACES),
+        sale_price: roundMoney(sellPrice, PRICE_DECIMAL_PLACES),
+        mrp: roundMoney(mrp, PRICE_DECIMAL_PLACES),
         uom_prices: buildUomPricesForSave(),
         uom_conversion: toDbUomConversion(uomConversion),
         discount_pct: discountPct,
@@ -402,7 +415,7 @@ export const ProductFormPage = () => {
 
         <div className="space-y-4">
           <FormField label="MRP (NPR)" hint="Price on the product label — shown on bill for customer reference">
-            <NumericInput {...numericMoneyProps} min={0} value={mrp} placeholder="0" onChange={setMrp} />
+            <NumericInput {...numericPriceProps} min={0} value={mrp} placeholder="0" onChange={setMrp} />
           </FormField>
 
           {/* Buy price */}
@@ -410,14 +423,14 @@ export const ProductFormPage = () => {
             label="Buy price excl. VAT (NPR)"
             hint={
               buyPrice > 0 && vatPct > 0
-                ? `With VAT (${vatPct}%): ${nprNum(addVatToExcl(buyPrice, vatPct))}`
+                ? `With VAT (${vatPct}%): ${formatPriceAmount(addVatToExclPrice(buyPrice, vatPct))}`
                 : vatPct > 0
                   ? `VAT ${vatPct}% from Settings`
                   : undefined
             }
           >
             <NumericInput
-              {...numericMoneyProps}
+              {...numericPriceProps}
               min={0}
               value={buyPrice}
               placeholder="0"
@@ -445,7 +458,7 @@ export const ProductFormPage = () => {
               label="Sell price excl. VAT (NPR)"
               hint={
                 sellPrice > 0 && vatPct > 0
-                  ? `With VAT (${vatPct}%): ${nprNum(addVatToExcl(sellPrice, vatPct))}`
+                  ? `With VAT (${vatPct}%): ${formatPriceAmount(addVatToExclPrice(sellPrice, vatPct))}`
                   : vatPct > 0
                     ? `VAT ${vatPct}% from Settings`
                     : undefined
@@ -453,7 +466,7 @@ export const ProductFormPage = () => {
             >
               <div className="relative">
                 <NumericInput
-                  {...numericMoneyProps}
+                  {...numericPriceProps}
                   min={0}
                   value={sellPrice}
                   placeholder="0"
@@ -529,7 +542,7 @@ export const ProductFormPage = () => {
                   </FormField>
                   <FormField label="MRP (NPR)">
                     <NumericInput
-                      {...numericMoneyProps}
+                      {...numericPriceProps}
                       min={0}
                       value={row.mrp}
                       onChange={(v) =>
@@ -541,7 +554,7 @@ export const ProductFormPage = () => {
                   </FormField>
                   <FormField label="Sell excl. VAT">
                     <NumericInput
-                      {...numericMoneyProps}
+                      {...numericPriceProps}
                       min={0}
                       value={row.sellingPrice}
                       onChange={(v) =>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Download, Archive } from "lucide-react";
-import { FormField } from "@/components/app/FormField";
+import { DateFormField } from "@/components/app/DateFormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { downloadCsv } from "@/lib/export/csv";
@@ -123,12 +123,16 @@ export function ExportSection() {
           Pick a date range, then download registers for that period.
         </p>
         <div className="mb-4 grid grid-cols-2 gap-3">
-          <FormField label="From">
-            <Input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
-          </FormField>
-          <FormField label="To">
-            <Input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
-          </FormField>
+          <DateFormField
+            label="From"
+            value={range.from}
+            onChange={(from) => setRange((r) => ({ ...r, from }))}
+          />
+          <DateFormField
+            label="To"
+            value={range.to}
+            onChange={(to) => setRange((r) => ({ ...r, to }))}
+          />
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <Button

@@ -180,6 +180,11 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Copy entire file → Paste → Run → Success.
    - Settings → Business: Product units list.
 
+36. Migration 0039 (product price precision — buy/sell/MRP up to 4 decimals)
+   - Open: app/supabase/migrations/0039_product_price_precision.sql
+   - Copy entire file → Paste → Run → Success.
+   - Product form accepts e.g. 98.4567 on buy price (stored after migration).
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 

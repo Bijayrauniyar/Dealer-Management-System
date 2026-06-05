@@ -1,36 +1,34 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  AlertTriangle,
   BarChart2,
-  BookOpen,
   Box,
   Calculator,
   CreditCard,
   DollarSign,
   HelpCircle,
-  LayoutDashboard,
   Package,
   Archive,
   RotateCcw,
   ShoppingCart,
-  Tag,
+  SlidersHorizontal,
   Truck,
   Users,
 } from "lucide-react";
 
 /** Home dashboard quick-entry tiles (centre + has full list). */
+/** Daily ops on Home — Sales in grid; Return only in + sheet / drawer. */
 export const HOME_QUICK_ACTIONS: {
   label: string;
   to: string;
   icon: LucideIcon;
   color: string;
 }[] = [
-  { label: "Sales", to: "/app/sales/new", icon: ShoppingCart, color: "bg-teal-100 text-teal-700" },
-  { label: "Payment", to: "/app/payments/new", icon: CreditCard, color: "bg-green-100 text-green-700" },
+  { label: "Sales invoice", to: "/app/sales/new", icon: ShoppingCart, color: "bg-teal-100 text-teal-700" },
+  { label: "Payment in", to: "/app/payments/new", icon: CreditCard, color: "bg-green-100 text-green-700" },
   { label: "Purchase", to: "/app/purchases/new", icon: Package, color: "bg-blue-100 text-blue-700" },
-  { label: "Return", to: "/app/returns/new", icon: RotateCcw, color: "bg-amber-100 text-amber-700" },
   { label: "Expense", to: "/app/expenses/new", icon: DollarSign, color: "bg-orange-100 text-orange-700" },
-  { label: "Supplier pay", to: "/app/supplier-payments/new", icon: Truck, color: "bg-purple-100 text-purple-700" },
+  { label: "Payment out", to: "/app/supplier-payments/new", icon: Truck, color: "bg-purple-100 text-purple-700" },
+  { label: "Daily cash", to: "/app/daily-cash", icon: Calculator, color: "bg-slate-100 text-slate-700" },
 ];
 
 export type NavLinkItem = {
@@ -53,49 +51,35 @@ export const NAV_DRAWER_GROUPS: NavDrawerGroup[] = [
     id: "masters",
     title: "Masters",
     items: [
-      { label: "Products", to: "/app/products", icon: LayoutDashboard },
-      { label: "Customers", to: "/app/home?tab=customers", icon: Users },
+      { label: "Stock", to: "/app/products", icon: Box },
+      { label: "Customers", to: "/app/customers", icon: Users },
       { label: "Suppliers", to: "/app/suppliers", icon: Truck },
       { label: "Archives", to: "/app/archives", icon: Archive },
-      { label: "Stock", to: "/app/home?tab=stock", icon: Box },
       {
         label: "Stock adjustment",
         to: "/app/stock-adjustment/new",
-        icon: Box,
+        icon: SlidersHorizontal,
         requiresStockAdjustment: true,
       },
     ],
   },
   {
     id: "entry",
-    title: "New entry",
+    title: "Quick entry",
     items: [
       { label: "Sales invoice", to: "/app/sales/new", icon: ShoppingCart },
       { label: "Payment in", to: "/app/payments/new", icon: CreditCard },
-      { label: "Purchase invoice", to: "/app/purchases/new", icon: Package },
+      { label: "Purchase", to: "/app/purchases/new", icon: Package },
       { label: "Return", to: "/app/returns/new", icon: RotateCcw },
-      { label: "Supplier pay", to: "/app/supplier-payments/new", icon: Truck },
       { label: "Expense", to: "/app/expenses/new", icon: DollarSign },
+      { label: "Payment out", to: "/app/supplier-payments/new", icon: Truck },
       { label: "Daily cash", to: "/app/daily-cash", icon: Calculator },
-      { label: "New product", to: "/app/products/new", icon: LayoutDashboard },
-      { label: "New customer", to: "/app/customers/new", icon: Users },
-      { label: "New supplier", to: "/app/suppliers/new", icon: Truck },
-      { label: "Damage", to: "/app/damages/new", icon: AlertTriangle },
-      { label: "Scheme", to: "/app/schemes/new", icon: Tag },
     ],
   },
   {
     id: "reports",
     title: "Reports",
-    items: [
-      { label: "Reports hub", to: "/app/reports", icon: BarChart2 },
-      { label: "Dashboard", to: "/app/dashboard", icon: BarChart2 },
-      { label: "Outstanding bills", to: "/app/home/outstanding", icon: BookOpen },
-      { label: "Overdue customers", to: "/app/home/overdue", icon: AlertTriangle },
-      { label: "Company overview", to: "/app/company", icon: LayoutDashboard },
-      { label: "Capital entries", to: "/app/capital", icon: DollarSign },
-      { label: "Supplier ledger", to: "/app/home/period/supplier-payable", icon: BookOpen },
-    ],
+    items: [{ label: "Reports hub", to: "/app/reports", icon: BarChart2 }],
   },
   {
     id: "support",
@@ -130,28 +114,31 @@ export function filterDrawerGroups(
   }));
 }
 
-function homeTabParam(search: string): string | null {
-  return new URLSearchParams(search).get("tab");
-}
-
-/** Home tab — main hub without Customers/Inventory tab query. */
-export function isHomeTabActive(pathname: string, search = ""): boolean {
+/** Home tab — ops dashboard and home sub-routes. */
+export function isHomeTabActive(pathname: string, _search = ""): boolean {
+  if (pathname === "/app/home") return true;
   if (pathname.startsWith("/app/home/")) return true;
-  if (pathname !== "/app/home") return false;
-  const tab = homeTabParam(search);
-  return tab !== "customers" && tab !== "stock";
+  return false;
 }
 
+/** Customers tab — customer hub (+ legacy home?tab=customers). */
 export function isCustomersTabActive(pathname: string, search = ""): boolean {
   if (pathname.startsWith("/app/customers")) return true;
-  return pathname === "/app/home" && homeTabParam(search) === "customers";
-}
-
-export function isInventoryTabActive(pathname: string, search = ""): boolean {
-  if (pathname.startsWith("/app/stock") || pathname.startsWith("/app/products")) {
+  if (pathname === "/app/home" && new URLSearchParams(search).get("tab") === "customers") {
     return true;
   }
-  return pathname === "/app/home" && homeTabParam(search) === "stock";
+  return false;
+}
+
+/** Stock tab — products / inventory hub. */
+export function isInventoryTabActive(pathname: string, search = ""): boolean {
+  if (pathname.startsWith("/app/products") || pathname.startsWith("/app/stock")) {
+    return true;
+  }
+  if (pathname === "/app/home" && new URLSearchParams(search).get("tab") === "stock") {
+    return true;
+  }
+  return false;
 }
 
 export function isReportsTabActive(pathname: string): boolean {

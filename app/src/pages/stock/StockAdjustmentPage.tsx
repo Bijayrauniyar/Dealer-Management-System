@@ -12,7 +12,8 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useProducts, commitStockAdjustment } from "@/store/domain";
 import { toDateInput } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 const REASONS = ["Physical count", "Found stock", "Shrinkage", "Data correction", "Other"];
 
@@ -47,7 +48,7 @@ export const StockAdjustmentPage = () => {
         adjustmentDate: date,
       });
       toast.success("Stock adjustment saved.");
-      navigate("/app/home?tab=stock");
+      navigate("/app/products");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save");
     } finally {
@@ -57,11 +58,10 @@ export const StockAdjustmentPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-1 text-lg font-semibold">Stock adjustment</h1>
-      <p className="mb-5 text-sm text-muted">
-        Correct on-hand qty without a purchase. Use + for found stock, − for shrinkage.
-      </p>
+      <FormPageHeader
+        title="Stock adjustment"
+        subtitle="Correct on-hand qty without a purchase. Use + for found stock, − for shrinkage."
+      />
       <div className="space-y-4">
         <FormField label="Product" required>
           <EntityPicker
@@ -94,9 +94,7 @@ export const StockAdjustmentPage = () => {
         <FormField label="Notes (optional)">
           <Textarea placeholder="Any detail" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </FormField>
-        <FormField label="Date">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </FormField>
+        <DateFormField label="Date" value={date} onChange={setDate} />
       </div>
       <StickyBar action="Save adjustment" onAction={handleSave} loading={saving} />
     </PageShell>

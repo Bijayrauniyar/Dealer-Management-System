@@ -12,12 +12,16 @@ import { Button } from "@/components/ui/button";
 import type { BillStatus, OutstandingBill } from "@/domain/types";
 import {
   commitSetCustomerActive,
+  useCustomers,
   useCustomersCatalog,
+  useDomainBundleLoadState,
+  useMasterCatalogLoadState,
   useOutstandingBills,
   usePayments,
 } from "@/store/domain";
 import { MasterArchiveAction } from "@/components/app/MasterArchiveAction";
-import { npr, fmtDate } from "@/lib/utils";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { npr, fmtDateDualBs } from "@/lib/utils";
 import { ListPagination } from "@/components/app/ListPagination";
 import { usePagination } from "@/lib/usePagination";
 import { PageBackLink } from "@/components/app/PageBackLink";
@@ -50,59 +54,69 @@ const BillCard = ({
   const overDays = daysOverdue(bill.dueDate);
   const remDays  = daysUntilDue(bill.dueDate);
 
+  const dueLabel =
+    bill.balance > 0
+      ? bill.status === "overdue"
+        ? `${overDays}d overdue`
+        : `Due ${remDays}d`
+      : null;
+
   return (
-    <div className="border-b border-border-subtle last:border-0 py-3.5">
-      {/* Row 1: bill number + status badge + balance */}
-      <div className="flex items-center justify-between gap-2 mb-1" onClick={onOpen} role="button">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-teal-600 underline underline-offset-2">{bill.billNo}</span>
-          <Badge variant={cfg.variant} className="flex items-center gap-1 text-[10px] px-1.5 py-0">
+    <div className="border-b border-border-subtle py-2.5 last:border-0">
+      <div
+        className="flex items-center justify-between gap-2"
+        onClick={onOpen}
+        onKeyDown={(e) => e.key === "Enter" && onOpen()}
+        role="button"
+        tabIndex={0}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="truncate text-[13px] font-semibold text-teal-600">{bill.billNo}</span>
+          <Badge variant={cfg.variant} className="flex shrink-0 items-center gap-0.5 px-1 py-0 text-[9px]">
             {cfg.icon} {cfg.label}
           </Badge>
         </div>
-        <div className="flex items-center gap-2">
-          {bill.balance > 0 ? (
-            <span className={`text-sm font-bold ${bill.status === "overdue" ? "text-danger" : "text-foreground"}`}>
-              {npr(bill.balance)}
-            </span>
-          ) : (
-            <span className="text-sm font-semibold text-success-foreground">{npr(bill.billTotal)}</span>
-          )}
-          <ChevronRight size={14} className="text-muted" />
-        </div>
-      </div>
-
-      {/* Row 2: dates + total info */}
-      <div className="flex items-center justify-between text-xs text-muted">
-        <span>Bill {fmtDate(bill.billDate)} · Total {npr(bill.billTotal)}</span>
-        {bill.balance > 0 && bill.paidAmount > 0 && (
-          <span className="text-success-foreground">Paid {npr(bill.paidAmount)}</span>
-        )}
-      </div>
-
-      {/* Row 3: due date line */}
-      {bill.balance > 0 && (
-        <div className={`mt-1.5 flex items-center justify-between text-xs ${
-          bill.status === "overdue" ? "text-danger" : "text-muted"
-        }`}>
-          <span className="flex items-center gap-1">
-            {bill.status === "overdue"
-              ? <AlertTriangle size={11} />
-              : <Clock size={11} />}
-            {bill.status === "overdue"
-              ? `${overDays} day${overDays !== 1 ? "s" : ""} overdue · Due was ${fmtDate(bill.dueDate)}`
-              : `Due ${fmtDate(bill.dueDate)} · ${remDays} day${remDays !== 1 ? "s" : ""} left`}
+        <div className="flex shrink-0 items-center gap-1">
+          <span
+            className={`text-[13px] font-bold ${
+              bill.balance > 0
+                ? bill.status === "overdue"
+                  ? "text-danger"
+                  : "text-foreground"
+                : "text-success-foreground"
+            }`}
+          >
+            {npr(bill.balance > 0 ? bill.balance : bill.billTotal)}
           </span>
-          {bill.status !== "paid" && (
-            <button
-              className="text-teal-600 font-medium underline underline-offset-2"
-              onClick={onPay}
-            >
-              Collect
-            </button>
-          )}
+          <ChevronRight size={13} className="text-muted" />
         </div>
-      )}
+      </div>
+
+      <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] text-muted">
+        <span className="min-w-0 truncate">
+          <DateDisplay iso={bill.billDate} dual compact />
+          {bill.balance > 0 ? (
+            <>
+              {" · "}
+              <DateDisplay iso={bill.dueDate} dual compact />
+              {dueLabel ? ` · ${dueLabel}` : ""}
+            </>
+          ) : (
+            <> · Total {npr(bill.billTotal)}</>
+          )}
+        </span>
+        {bill.balance > 0 && bill.status !== "paid" ? (
+          <button
+            type="button"
+            className="shrink-0 text-[11px] font-semibold text-teal-600"
+            onClick={onPay}
+          >
+            Collect
+          </button>
+        ) : bill.balance > 0 && bill.paidAmount > 0 ? (
+          <span className="shrink-0 text-success-foreground">Paid {npr(bill.paidAmount)}</span>
+        ) : null}
+      </div>
     </div>
   );
 };
@@ -115,17 +129,37 @@ export const CustomerDetailPage = () => {
   const navigate   = useNavigate();
   const [tab, setTab] = useState<Tab>("bills");
 
-  const CUSTOMERS        = useCustomersCatalog();
+  const ACTIVE_CUSTOMERS = useCustomers();
+  const CATALOG_CUSTOMERS = useCustomersCatalog();
+  const bundleState = useDomainBundleLoadState();
+  const catalogState = useMasterCatalogLoadState();
   const OUTSTANDING_BILLS = useOutstandingBills();
   const PAYMENTS         = usePayments();
 
-  const customer = CUSTOMERS.find((c) => c.id === id);
-  if (!customer) return (
-    <PageShell>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <p className="mt-8 text-center text-muted">Customer not found.</p>
-    </PageShell>
-  );
+  const customer =
+    CATALOG_CUSTOMERS.find((c) => c.id === id) ??
+    ACTIVE_CUSTOMERS.find((c) => c.id === id);
+
+  if (
+    !customer &&
+    (bundleState === "loading" || catalogState === "loading")
+  ) {
+    return (
+      <PageShell>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
+        <p className="mt-8 text-center text-sm text-muted">Loading customer…</p>
+      </PageShell>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <PageShell>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
+        <p className="mt-8 text-center text-sm text-muted">Customer not found.</p>
+      </PageShell>
+    );
+  }
 
   const allBills   = OUTSTANDING_BILLS.filter((b) => b.customerId === id)
     .sort((a, b) => {
@@ -226,7 +260,7 @@ export const CustomerDetailPage = () => {
             <p className="text-sm text-amber-800">
               <span className="font-semibold">{dueSoon.length} bill{dueSoon.length !== 1 ? "s" : ""}</span> due
               within 3 days —{" "}
-              {dueSoon.map((b) => `${b.billNo} (${fmtDate(b.dueDate)})`).join(", ")}
+              {dueSoon.map((b) => `${b.billNo} (${fmtDateDualBs(b.dueDate)})`).join(", ")}
             </p>
           </div>
         );
@@ -368,7 +402,7 @@ export const CustomerDetailPage = () => {
                       <div>
                         <p className="text-sm font-semibold text-foreground">{npr(p.amount)}</p>
                         <p className="text-xs text-muted">
-                          {fmtDate(p.date)} · {p.mode}
+                          <DateDisplay iso={p.date} dual compact /> · {p.mode}
                           {p.reference ? ` · ${p.reference}` : ""}
                         </p>
                       </div>

@@ -6,7 +6,8 @@ import { KpiCard } from "@/components/app/KpiCard";
 import { useExpensesList, usePayments, usePnlTotals, usePurchasesList, useSales, useSuppliers } from "@/store/domain";
 import { purchaseDisplayTitle, purchaseDisplaySubtitle } from "@/lib/purchaseDisplay";
 import { PaginatedListSection } from "@/components/app/PaginatedListSection";
-import { npr, fmtDate } from "@/lib/utils";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { npr } from "@/lib/utils";
 import { PageBackLink } from "@/components/app/PageBackLink";
 
 const CONFIG: Record<string, { title: string; description: string }> = {
@@ -72,7 +73,7 @@ export const PeriodListPage = () => {
                   key={s.id}
                   left={s.customerName}
                   right={npr(s.total)}
-                  sub={`${fmtDate(s.date)} · ${s.billNo}`}
+                  sub={<><DateDisplay iso={s.date} dual compact /> · {s.billNo}</>}
                 />
               )}
             />
@@ -91,7 +92,7 @@ export const PeriodListPage = () => {
                   key={p.id}
                   left={p.customerName}
                   right={npr(p.amount)}
-                  sub={`${fmtDate(p.date)} · ${p.mode}`}
+                  sub={<><DateDisplay iso={p.date} dual compact /> · {p.mode}</>}
                 />
               )}
             />
@@ -110,7 +111,7 @@ export const PeriodListPage = () => {
                   key={e.id}
                   left={e.category}
                   right={npr(e.amount)}
-                  sub={`${fmtDate(e.date)}${e.notes ? " · " + e.notes : ""}`}
+                  sub={<><DateDisplay iso={e.date} dual compact />{e.notes ? ` · ${e.notes}` : ""}</>}
                 />
               )}
             />

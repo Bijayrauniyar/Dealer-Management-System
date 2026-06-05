@@ -141,8 +141,8 @@ One row per tenant — stores the full business profile that appears on invoices
 
 **Pricing model (important for billing):**
 - `mrp` — Maximum Retail Price printed on the product by the manufacturer. Displayed on the sales bill for the customer's reference. Never used in calculations.
-- `cost_price` (DB: `purchase_price`) — Buy price from supplier, stored **VAT-inclusive**. **Private — never shown on bills.** The product form lets the dealer type buy price **excl. VAT**; the app converts using `tenant_settings.default_vat_pct` before save. Purchase entry prefills line cost as **excl.** via the same split.
-- `selling_price` — Price charged to customers, **exclusive of VAT** (may be `0` until set). This is the basis for sale line rates when billing.
+- `cost_price` (DB: `purchase_price`) — Buy price from supplier, stored **VAT-inclusive**. **Private — never shown on bills.** The product form lets the dealer type buy price **excl. VAT**; the app converts using `tenant_settings.default_vat_pct` before save. Purchase entry prefills line cost as **excl.** via the same split. **`numeric(12,4)`** after migration `0039` (up to 4 decimals).
+- `selling_price` (DB: `sale_price`) — Price charged to customers, **exclusive of VAT** (may be `0` until set). This is the basis for sale line rates when billing. **`numeric(12,4)`** after `0039`.
 - `discount_pct` — Standard percentage discount auto-applied on new bills for this product (0 = none).
 - `vat_applicable` — If true, VAT at `default_vat_pct` is added at the bill total level (not per line). The `selling_price` is the VAT-exclusive base.
 - **Auto-calculation (FE):** Markup applies to buy **excl.** in the form; `selling_price = buy_excl × (1 + markup_pct / 100)`. `markup_pct` defaults to `default_markup_pct`. Sell price is optional on save; manual sell price back-calculates markup % for display.
@@ -173,9 +173,9 @@ Subtotal (Σ line amounts)
 | category | text | |
 | uom | text DEFAULT 'PCS' | Unit of Measure: PCS, Box, Ltr, Kg, Pkt, Ctn, Doz |
 | description | text | Flavour, size, pack details |
-| mrp | numeric NOT NULL | MRP on product — shown on bill, not used in calc |
-| cost_price | numeric NOT NULL | Buy price (VAT-inclusive in DB); form entry is excl. VAT |
-| selling_price | numeric NOT NULL | Our price to customer, excl. VAT (0 allowed) |
+| mrp | numeric(12,4) NOT NULL (`0039`) | MRP on product — shown on bill, not used in calc |
+| purchase_price | numeric(12,4) NOT NULL (`0039`) | Buy price VAT-inclusive in DB; form entry is excl. VAT |
+| sale_price | numeric(12,4) NOT NULL (`0039`) | Sell price excl. VAT (0 allowed) |
 | discount_pct | numeric DEFAULT 0 | Standard % discount given on this product |
 | vat_applicable | boolean DEFAULT false | If true, VAT at default_vat_pct added at bill footer |
 | on_hand | integer DEFAULT 0 | Updated on each sale/purchase/return/damage |

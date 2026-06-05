@@ -1,242 +1,81 @@
-import { useState, useMemo, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight, FilePlus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { SegmentedTabs } from "@/components/app/patterns";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
-import { ListPagination } from "@/components/app/ListPagination";
+import { KpiCard } from "@/components/app/KpiCard";
+import { SectionHeader } from "@/components/app/SectionHeader";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { HOME_QUICK_ACTIONS } from "@/config/appNavigation";
 import {
   useBusinessSettings,
   useCustomers,
   useDomainBundleErrorMessage,
   useDomainBundleLoadState,
+  usePayments,
   useProducts,
-  useSchemes,
+  useSales,
 } from "@/store/domain";
 import { queryClient } from "@/lib/queryClient";
 import { DOMAIN_QUERY_KEY } from "@/lib/live/domainLive";
-import { isLowStock, minStockLabel } from "@/lib/stockAlert";
-import { pickBestScheme, productIdsWithActiveSchemes, schemeSummaryLabel } from "@/lib/schemeApply";
-import {
-  filterHint,
-  matchesCustomerSearch,
-  matchesProductSearch,
-  normalizeCategory,
-  customerAreas,
-  productCategories,
-  sortCustomers,
-  sortProducts,
-  type CustomerSort,
-  type ProductSort,
-} from "@/lib/listFilters";
-import {
-  downloadFilteredCustomers,
-  downloadFilteredProducts,
-  exportFilterSlug,
-} from "@/lib/export/listExport";
-import { usePagination } from "@/lib/usePagination";
-import { browseListSummary } from "@/lib/listBrowseSummary";
-import { SALES_INVOICE_LABEL } from "@/lib/actionLabels";
-import { fmtDateDual, npr, toDateInput } from "@/lib/utils";
-import { toast } from "sonner";
+import { isLowStock } from "@/lib/stockAlert";
+import { npr, toDateInput } from "@/lib/utils";
 
 const TODAY = toDateInput();
 
-type Tab = "customers" | "stock";
-type CustFilter = "all" | "overdue" | "dues";
-type StockFilter = "all" | "low" | "scheme";
-
-function tabFromSearch(raw: string | null): Tab {
-  return raw === "stock" ? "stock" : "customers";
-}
-
 export const HomePage = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const business = useBusinessSettings();
-  const OVERDUE_DAYS = business.overdueDays;
-
   const loadState = useDomainBundleLoadState();
   const loadError = useDomainBundleErrorMessage();
   const CUSTOMERS = useCustomers();
   const PRODUCTS = useProducts();
-  const SCHEMES = useSchemes();
+  const SALES = useSales();
+  const PAYMENTS = usePayments();
 
-  const schemeProductIds = useMemo(
-    () => productIdsWithActiveSchemes(SCHEMES, TODAY),
-    [SCHEMES],
+  const todaySalesRows = useMemo(
+    () => SALES.filter((s) => s.date === TODAY),
+    [SALES],
   );
-  const stockCategories = useMemo(() => productCategories(PRODUCTS), [PRODUCTS]);
-
-  const [tab, setTab] = useState<Tab>(() => tabFromSearch(searchParams.get("tab")));
-
-  useEffect(() => {
-    const next = tabFromSearch(searchParams.get("tab"));
-    setTab((prev) => (prev === next ? prev : next));
-  }, [searchParams]);
-  const [search, setSearch] = useState("");
-  const [custFilter, setCustFilter] = useState<CustFilter>("all");
-  const [custArea, setCustArea] = useState("all");
-  const custSort: CustomerSort = "dues_desc";
-  const customerAreaList = useMemo(() => customerAreas(CUSTOMERS), [CUSTOMERS]);
-  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [stockCategory, setStockCategory] = useState<string>("all");
-  const stockSort: ProductSort = "stock_asc";
-
-  const custSearchMatched = useMemo(
-    () => CUSTOMERS.filter((c) => matchesCustomerSearch(c, search)),
-    [CUSTOMERS, search],
+  const todaySales = todaySalesRows.reduce((a, s) => a + s.grandTotal, 0);
+  const todayCollection = useMemo(
+    () => PAYMENTS.filter((p) => p.date === TODAY).reduce((a, p) => a + p.amount, 0),
+    [PAYMENTS],
   );
 
-  const customers = useMemo(() => {
-    let list = custSearchMatched;
-    if (custFilter === "overdue") {
-      list = list.filter((c) => c.oldestBillDays > OVERDUE_DAYS && c.outstanding > 0);
-    }
-    if (custFilter === "dues") list = list.filter((c) => c.outstanding > 0);
-    if (custArea !== "all") {
-      list = list.filter((c) => (c.area ?? "").trim() === custArea);
-    }
-    return sortCustomers(list, custSort);
-  }, [custSearchMatched, custFilter, custArea, custSort, OVERDUE_DAYS]);
-
-  const custResetKey = `${tab}|${search}|${custFilter}|${custArea}|${custSort}`;
-  const custPage = usePagination(customers, undefined, custResetKey);
-  const { visible: visibleCustomers, total: totalCustomers } = custPage;
-
-  const stockSearchMatched = useMemo(
-    () => PRODUCTS.filter((p) => matchesProductSearch(p, search)),
-    [PRODUCTS, search],
+  const overdueCount = useMemo(
+    () =>
+      CUSTOMERS.filter(
+        (c) => c.oldestBillDays > business.overdueDays && c.outstanding > 0,
+      ).length,
+    [CUSTOMERS, business.overdueDays],
+  );
+  const lowStockCount = useMemo(() => PRODUCTS.filter(isLowStock).length, [PRODUCTS]);
+  const outstandingTotal = useMemo(
+    () => CUSTOMERS.reduce((a, c) => a + c.outstanding, 0),
+    [CUSTOMERS],
   );
 
-  const products = useMemo(() => {
-    let list = stockSearchMatched;
-    if (stockFilter === "low") list = list.filter(isLowStock);
-    if (stockFilter === "scheme") list = list.filter((p) => schemeProductIds.has(p.id));
-    if (stockCategory !== "all") {
-      list = list.filter((p) => normalizeCategory(p.category) === stockCategory);
-    }
-    return sortProducts(list, stockSort);
-  }, [stockSearchMatched, stockFilter, stockCategory, stockSort, schemeProductIds]);
-
-  const stockResetKey = `${tab}|${search}|${stockFilter}|${stockCategory}|${stockSort}`;
-  const stockPage = usePagination(products, undefined, stockResetKey);
-  const { visible: visibleProducts, total: totalProducts } = stockPage;
-
-  const custEmptyHint = useMemo(() => {
-    if (customers.length > 0 || CUSTOMERS.length === 0) return null;
-    return filterHint([
-      search.trim() ? `search “${search.trim()}”` : "",
-      custFilter === "overdue" ? "overdue only" : "",
-      custFilter === "dues" ? "on credit only" : "",
-      custArea !== "all" ? `area “${custArea}”` : "",
-    ]);
-  }, [customers.length, CUSTOMERS.length, search, custFilter, custArea]);
-
-  const stockEmptyHint = useMemo(() => {
-    if (products.length > 0 || PRODUCTS.length === 0) return null;
-    return filterHint([
-      search.trim() ? `search “${search.trim()}”` : "",
-      stockFilter === "low" ? "low stock only" : "",
-      stockFilter === "scheme" ? "on scheme only" : "",
-      stockCategory !== "all" ? `category “${stockCategory}”` : "",
-    ]);
-  }, [products.length, PRODUCTS.length, search, stockFilter, stockCategory]);
-
-  const custFilterOptions = useMemo((): BrowseFilterOption[] => {
-    return (["all", "overdue", "dues"] as CustFilter[]).map((f) => {
-      const count =
-        f === "all"
-          ? custSearchMatched.length
-          : f === "overdue"
-            ? custSearchMatched.filter(
-                (c) => c.oldestBillDays > OVERDUE_DAYS && c.outstanding > 0,
-              ).length
-            : custSearchMatched.filter((c) => c.outstanding > 0).length;
-      const name = f === "all" ? "All" : f === "overdue" ? "Overdue" : "On credit";
-      return { value: f, label: `${name} (${count})` };
-    });
-  }, [custSearchMatched, OVERDUE_DAYS]);
-
-  const custAreaOptions = useMemo((): BrowseFilterOption[] => {
-    const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All areas (${custSearchMatched.length})` },
-    ];
-    for (const area of customerAreaList) {
-      const n = custSearchMatched.filter((c) => (c.area ?? "").trim() === area).length;
-      opts.push({ value: area, label: `${area} (${n})` });
-    }
-    return opts;
-  }, [custSearchMatched, customerAreaList]);
-
-  const stockStatusOptions = useMemo((): BrowseFilterOption[] => {
-    const lowCount = stockSearchMatched.filter(isLowStock).length;
-    const schemeCount = stockSearchMatched.filter((p) => schemeProductIds.has(p.id)).length;
-    return [
-      { value: "all", label: `All (${stockSearchMatched.length})` },
-      { value: "low", label: `Low stock (${lowCount})` },
-      { value: "scheme", label: `On scheme (${schemeCount})` },
-    ];
-  }, [stockSearchMatched, schemeProductIds]);
-
-  const stockCategoryOptions = useMemo((): BrowseFilterOption[] => {
-    const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All (${stockSearchMatched.length})` },
-    ];
-    for (const cat of stockCategories) {
-      const n = stockSearchMatched.filter((p) => normalizeCategory(p.category) === cat).length;
-      opts.push({ value: cat, label: `${cat} (${n})` });
-    }
-    return opts;
-  }, [stockSearchMatched, stockCategories]);
-
-  const handleTabChange = (t: Tab) => {
-    setTab(t);
-    setSearch("");
-    setStockCategory("all");
-    setCustFilter("all");
-    setCustArea("all");
-    setStockFilter("all");
-    setSearchParams(t === "customers" ? {} : { tab: t }, { replace: true });
-  };
+  const recentBills = useMemo(
+    () =>
+      [...SALES]
+        .sort((a, b) => b.date.localeCompare(a.date) || b.billNo.localeCompare(a.billNo))
+        .slice(0, 5),
+    [SALES],
+  );
 
   return (
     <PageShell>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="min-w-0 text-sm font-semibold text-foreground tabular-nums leading-snug">
-          {fmtDateDual(TODAY)}
-        </p>
-        <Button
-          type="button"
-          size="sm"
-          className="shrink-0 gap-1.5 shadow-sm"
-          onClick={() => navigate("/app/sales/new")}
-        >
-          <FilePlus size={15} aria-hidden />
-          {SALES_INVOICE_LABEL}
-        </Button>
+      <div className="mb-5 border-b border-border-subtle pb-3">
+        <DateDisplay iso={TODAY} dual size="md" />
       </div>
 
-      <SegmentedTabs
-        className="mb-3"
-        value={tab}
-        onChange={handleTabChange}
-        options={[
-          { id: "customers", label: `Customers (${CUSTOMERS.length})` },
-          { id: "stock", label: `Stock (${PRODUCTS.length} SKUs)` },
-        ]}
-      />
-
-      {loadState === "error" && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-900">
-          <p className="font-semibold">Could not load shop data.</p>
-          {loadError ? <p className="mt-1 text-xs">{loadError}</p> : null}
+      {loadState === "error" && loadError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {loadError}{" "}
           <button
             type="button"
-            className="mt-2 text-xs font-semibold text-teal-800 underline"
+            className="font-semibold underline"
             onClick={() => void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY })}
           >
             Try again
@@ -244,257 +83,101 @@ export const HomePage = () => {
         </div>
       )}
 
-      {tab === "customers" && (
-        <>
-          <ListBrowsePanel
-            search={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search customer name, area, or phone…"
-            filterValue={custFilter}
-            filterOptions={custFilterOptions}
-            filterLabel="Status"
-            onFilterChange={(v) => setCustFilter(v as CustFilter)}
-            extraFilter={{
-              label: "Area",
-              value: custArea,
-              options: custAreaOptions,
-              onChange: setCustArea,
-            }}
-            summary={
-              customers.length > 0
-                ? browseListSummary(customers.length, custPage.showingLabel)
-                : undefined
-            }
-            exportCount={customers.length}
-            onExport={() => {
-              if (customers.length === 0) {
-                toast.error("Nothing to export — adjust filters.");
-                return;
-              }
-              downloadFilteredCustomers(
-                customers,
-                exportFilterSlug([
-                  search.trim() || undefined,
-                  custFilter !== "all" ? custFilter : undefined,
-                  custArea !== "all" ? custArea : undefined,
-                ]),
-              );
-              toast.success(`Exported ${customers.length} customers`);
-            }}
-            exportDisabled={customers.length === 0}
-          />
+      <SectionHeader title="Today" className="mb-2" />
+      <div className="mb-5 grid grid-cols-2 gap-3">
+        <KpiCard
+          label="Sales"
+          value={npr(todaySales)}
+          sub={`${todaySalesRows.length} bills`}
+          onClick={() => navigate("/app/home/period/today-sales")}
+        />
+        <KpiCard
+          label="Collection"
+          value={npr(todayCollection)}
+          onClick={() => navigate("/app/home/period/today-collection")}
+        />
+      </div>
 
-          {loadState === "loading" && CUSTOMERS.length === 0 ? (
-            <div className="py-10 text-center px-4">
-              <p className="text-sm text-muted">Loading customers…</p>
-            </div>
-          ) : customers.length === 0 ? (
-            <div className="py-10 text-center px-4">
-              <p className="text-sm text-muted">
-                {loadState === "error"
-                  ? "Customers could not be loaded."
-                  : CUSTOMERS.length === 0
-                    ? "No customers yet."
-                    : "No customers match."}
-              </p>
-              {custEmptyHint && loadState !== "error" ? (
-                <p className="mt-2 text-xs text-muted">{custEmptyHint}</p>
-              ) : null}
-            </div>
-          ) : (
-            <>
-              <Card>
-                <CardContent className="p-0 px-4">
-                  {visibleCustomers.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => navigate(`/app/customers/${c.id}`)}
-                      className="flex w-full items-center justify-between border-b border-border-subtle py-3.5 last:border-0 text-left"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
-                        <p className="text-xs text-muted">{c.area}</p>
-                      </div>
-                      <div className="ml-3 flex shrink-0 items-center gap-0.5">
-                        {c.outstanding > 0 ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <span
-                              className={`text-sm font-bold ${
-                                c.oldestBillDays > 7 ? "text-danger" : "text-warning"
-                              }`}
-                            >
-                              {npr(c.outstanding)}
-                            </span>
-                            <Badge
-                              variant={
-                                c.oldestBillDays > 30
-                                  ? "danger"
-                                  : c.oldestBillDays > 7
-                                    ? "warning"
-                                    : "teal"
-                              }
-                              className="text-[10px] px-1.5 py-0"
-                            >
-                              {c.oldestBillDays}d
-                            </Badge>
-                          </div>
-                        ) : (
-                          <span className="flex items-center text-xs font-semibold text-teal-600">
-                            Clear
-                            <ChevronRight size={14} className="-mr-0.5" aria-hidden />
-                          </span>
-                        )}
-                        {c.outstanding > 0 && (
-                          <ChevronRight size={14} className="ml-1 shrink-0 text-muted" aria-hidden />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </CardContent>
-              </Card>
-              <ListPagination
-                page={custPage.page}
-                totalPages={custPage.totalPages}
-                total={totalCustomers}
-                hasPrev={custPage.hasPrev}
-                hasNext={custPage.hasNext}
-                onPrev={custPage.goPrev}
-                onNext={custPage.goNext}
-                showingLabel={custPage.showingLabel}
-              />
-            </>
-          )}
+      <SectionHeader title="Needs attention" className="mb-2" />
+      <div className="mb-5 grid grid-cols-2 gap-3">
+        <KpiCard
+          label="Overdue"
+          value={String(overdueCount)}
+          sub="customers"
+          variant={overdueCount > 0 ? "danger" : "default"}
+          onClick={() => navigate("/app/home/overdue")}
+        />
+        <KpiCard
+          label="Low stock"
+          value={String(lowStockCount)}
+          sub="products"
+          variant={lowStockCount > 0 ? "danger" : "default"}
+          onClick={() => navigate("/app/products?filter=low")}
+        />
+        <KpiCard
+          label="Outstanding"
+          value={npr(outstandingTotal)}
+          sub="customer dues"
+          variant={outstandingTotal > 0 ? "warning" : "default"}
+          className="col-span-2"
+          onClick={() => navigate("/app/home/outstanding")}
+        />
+      </div>
+
+      <SectionHeader title="Quick actions" className="mb-2" />
+      <div className="mb-5 grid grid-cols-3 gap-2">
+        {HOME_QUICK_ACTIONS.map((action) => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.to}
+              type="button"
+              onClick={() => navigate(action.to)}
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-border-subtle bg-white p-3 shadow-card active:scale-[0.98] transition-transform"
+            >
+              <span className={`flex h-10 w-10 items-center justify-center rounded-full ${action.color}`}>
+                <Icon size={18} />
+              </span>
+              <span className="text-center text-[11px] font-semibold text-foreground leading-tight">
+                {action.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {recentBills.length > 0 && (
+        <>
+          <SectionHeader title="Recent bills" className="mb-2" />
+          <Card className="mb-4">
+            <CardContent className="divide-y divide-border-subtle p-0">
+              {recentBills.map((s) => (
+                <button
+                  key={s.billNo}
+                  type="button"
+                  onClick={() => navigate(`/app/bills/${encodeURIComponent(s.billNo)}`)}
+                  className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left active:bg-slate-50/80"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-semibold text-foreground">{s.billNo}</p>
+                    <p className="truncate text-[11px] text-muted">
+                      {s.customerName || "—"} · <DateDisplay iso={s.date} dual compact />
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <span className="text-sm font-semibold tabular-nums text-foreground">
+                      {npr(s.grandTotal)}
+                    </span>
+                    <ChevronRight size={14} className="text-muted" />
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
         </>
       )}
 
-      {tab === "stock" && (
-        <>
-          <ListBrowsePanel
-            search={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search product name, category, or unit…"
-            filterValue={stockFilter}
-            filterOptions={stockStatusOptions}
-            filterLabel="Status"
-            onFilterChange={(v) => setStockFilter(v as StockFilter)}
-            extraFilter={{
-              label: "Category",
-              value: stockCategory,
-              options: stockCategoryOptions,
-              onChange: setStockCategory,
-            }}
-            summary={
-              products.length > 0
-                ? browseListSummary(products.length, stockPage.showingLabel)
-                : undefined
-            }
-            exportCount={products.length}
-            onExport={() => {
-              if (products.length === 0) {
-                toast.error("Nothing to export — adjust filters.");
-                return;
-              }
-              downloadFilteredProducts(
-                products,
-                exportFilterSlug([
-                  search.trim() || undefined,
-                  stockFilter !== "all" ? stockFilter : undefined,
-                  stockCategory !== "all" ? stockCategory : undefined,
-                ]),
-              );
-              toast.success(`Exported ${products.length} products`);
-            }}
-            exportDisabled={products.length === 0}
-          />
-
-          {loadState === "loading" && PRODUCTS.length === 0 ? (
-            <div className="py-10 text-center px-4">
-              <p className="text-sm text-muted">Loading stock…</p>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="py-10 text-center px-4">
-              <p className="text-sm text-muted">
-                {loadState === "error"
-                  ? "Stock could not be loaded."
-                  : PRODUCTS.length === 0
-                    ? "No products yet."
-                    : "No products match."}
-              </p>
-              {stockEmptyHint && loadState !== "error" ? (
-                <p className="mt-2 text-xs text-muted">{stockEmptyHint}</p>
-              ) : null}
-            </div>
-          ) : (
-            <>
-              <Card>
-                <CardContent className="p-0 px-4">
-                  {visibleProducts.map((p) => {
-                    const isLow = isLowStock(p);
-                    const scheme = pickBestScheme(SCHEMES, p.id, TODAY);
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => navigate(`/app/products/${p.id}`)}
-                        className="flex w-full items-center justify-between border-b border-border-subtle py-3.5 last:border-0 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
-                            {isLow && (
-                              <Badge variant="danger" className="text-[10px] px-1.5 py-0 shrink-0">
-                                Low
-                              </Badge>
-                            )}
-                            {scheme && (
-                              <Badge className="text-[10px] px-1.5 py-0 shrink-0 bg-pink-100 text-pink-800 border-pink-200">
-                                {schemeSummaryLabel(scheme)}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted">
-                            {p.category} · Min {minStockLabel(p)}
-                            {scheme ? ` · ${scheme.schemeName}` : ""}
-                          </p>
-                        </div>
-                        <div className="ml-3 text-right shrink-0">
-                          <p className={`text-sm font-bold ${isLow ? "text-danger" : "text-foreground"}`}>
-                            {p.onHand} <span className="text-xs font-normal text-muted">{p.uom}</span>
-                          </p>
-                          <p className="text-xs text-muted">
-                            {npr(p.sellingPrice)} / {p.uom}
-                          </p>
-                        </div>
-                        <ChevronRight size={14} className="ml-1 shrink-0 text-muted" />
-                      </button>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-              <ListPagination
-                page={stockPage.page}
-                totalPages={stockPage.totalPages}
-                total={totalProducts}
-                hasPrev={stockPage.hasPrev}
-                hasNext={stockPage.hasNext}
-                onPrev={stockPage.goPrev}
-                onNext={stockPage.goNext}
-                showingLabel={stockPage.showingLabel}
-              />
-            </>
-          )}
-
-          <div className="mt-3 rounded-xl bg-surface-card border border-border-subtle px-4 py-3 flex items-center justify-between">
-            <p className="text-sm text-muted">Total stock value (at cost)</p>
-            <p className="text-sm font-bold text-foreground">
-              {npr(PRODUCTS.reduce((s, p) => s + p.onHand * p.costPrice, 0))}
-            </p>
-          </div>
-        </>
-      )}
-
-      <div className="h-6" />
+      <div className="h-4" />
     </PageShell>
   );
 };

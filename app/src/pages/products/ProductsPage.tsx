@@ -1,100 +1,100 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
+import { EntityList, EntityListCard } from "@/components/app/EntityListCard";
 import { ListPageHeader } from "@/components/app/patterns";
 import { PageShell } from "@/components/app/PageShell";
 import { Badge } from "@/components/ui/badge";
-import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
+import { Button } from "@/components/ui/button";
+import { ListBrowsePanel } from "@/components/app/ListBrowsePanel";
 import { ListPagination } from "@/components/app/ListPagination";
 import { useBusinessSettings, useProducts } from "@/store/domain";
 import { getVatPct } from "@/lib/tax";
 import { productMarkupOnCostPct } from "@/lib/productMarkup";
-import { minStockLabel } from "@/lib/stockAlert";
-import {
-  filterHint,
-  isLowStock,
-  matchesProductSearch,
-  normalizeCategory,
-  productCategories,
-  sortProducts,
-  type ProductSort,
-} from "@/lib/listFilters";
 import { npr } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 import { downloadFilteredProducts, exportFilterSlug } from "@/lib/export/listExport";
-import { usePagination } from "@/lib/usePagination";
+import { isLowStock } from "@/lib/listFilters";
+import { useProductBrowse, type ProductStatusFilter } from "@/lib/useProductBrowse";
 import { browseListSummary } from "@/lib/listBrowseSummary";
 import { toast } from "sonner";
 
-type StatusFilter = "all" | "low_stock";
-
 export const ProductsPage = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const business = useBusinessSettings();
   const vatPct = getVatPct(business);
   const PRODUCTS = useProducts();
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const sort: ProductSort = "name_asc";
+  const lowStockFromUrl = params.get("filter") === "low";
+  const initialStatus: ProductStatusFilter = lowStockFromUrl ? "low_stock" : "all";
 
-  const categories = useMemo(() => productCategories(PRODUCTS), [PRODUCTS]);
+  const {
+    query,
+    setQuery,
+    statusFilter,
+    setStatusFilter,
+    categoryFilter,
+    setCategoryFilter,
+    statusOptions,
+    categoryOptions,
+    filtered,
+    searchMatched,
+    emptyHint,
+    page,
+    lowStockCount,
+    exportSlugParts,
+  } = useProductBrowse("name_asc", initialStatus);
 
-  const searchMatched = useMemo(
-    () => PRODUCTS.filter((p) => matchesProductSearch(p, query)),
-    [PRODUCTS, query],
-  );
-
-  const statusOptions = useMemo((): BrowseFilterOption[] => {
-    return [
-      { value: "all", label: `All (${searchMatched.length})` },
-      {
-        value: "low_stock",
-        label: `Low stock (${searchMatched.filter(isLowStock).length})`,
-      },
-    ];
-  }, [searchMatched]);
-
-  const categoryOptions = useMemo((): BrowseFilterOption[] => {
-    const opts: BrowseFilterOption[] = [
-      { value: "all", label: `All (${searchMatched.length})` },
-    ];
-    for (const c of categories) {
-      const n = searchMatched.filter((p) => normalizeCategory(p.category) === c).length;
-      opts.push({ value: c, label: `${c} (${n})` });
-    }
-    return opts;
-  }, [searchMatched, categories]);
-
-  const filtered = useMemo(() => {
-    let list = searchMatched;
-    if (statusFilter === "low_stock") list = list.filter(isLowStock);
-    if (categoryFilter !== "all") {
-      list = list.filter((p) => normalizeCategory(p.category) === categoryFilter);
-    }
-    return sortProducts(list, sort);
-  }, [searchMatched, statusFilter, categoryFilter, sort]);
-
-  const emptyHint = useMemo(() => {
-    if (filtered.length > 0 || PRODUCTS.length === 0) return null;
-    return filterHint([
-      query.trim() ? `search “${query.trim()}”` : "",
-      statusFilter === "low_stock" ? "low stock only" : "",
-      categoryFilter !== "all" ? `category “${categoryFilter}”` : "",
-    ]);
-  }, [filtered.length, PRODUCTS.length, query, statusFilter, categoryFilter]);
-
-  const resetKey = `${query}|${statusFilter}|${categoryFilter}|${sort}`;
-  const page = usePagination(filtered, undefined, resetKey);
+  const showLowStockBanner = lowStockCount > 0 && statusFilter !== "low_stock";
 
   return (
     <PageShell>
       <ListPageHeader
         showBack
-        title="Products"
+        title="Stock"
         addLabel="Add product"
         onAdd={() => navigate("/app/products/new")}
-      />
+      >
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={() => navigate("/app/purchases/new")}
+        >
+          Add purchase
+        </Button>
+      </ListPageHeader>
+
+      <p className="-mt-2 mb-4 text-sm text-muted">
+        Products and on-hand quantity — add stock via purchase or new product.
+      </p>
+
+      {business.allowStockAdjustment && (
+        <button
+          type="button"
+          onClick={() => navigate("/app/stock-adjustment/new")}
+          className="mb-4 w-full rounded-xl border border-teal-200 bg-teal-50 py-2.5 text-sm font-medium text-teal-700"
+        >
+          Stock adjustment (+/−)
+        </button>
+      )}
+
+      {showLowStockBanner && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle size={18} className="shrink-0 text-danger" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-danger">
+              {lowStockCount} SKU{lowStockCount !== 1 ? "s" : ""} below minimum
+            </p>
+            <p className="text-xs text-red-700/80">Filter to low stock or record a purchase.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("low_stock")}
+            className="shrink-0 text-xs font-semibold text-teal-600 underline"
+          >
+            Show list
+          </button>
+        </div>
+      )}
 
       <ListBrowsePanel
         search={query}
@@ -103,7 +103,7 @@ export const ProductsPage = () => {
         filterValue={statusFilter}
         filterOptions={statusOptions}
         filterLabel="Status"
-        onFilterChange={(v) => setStatusFilter(v as StatusFilter)}
+        onFilterChange={(v) => setStatusFilter(v as ProductStatusFilter)}
         extraFilter={{
           label: "Category",
           value: categoryFilter,
@@ -119,22 +119,17 @@ export const ProductsPage = () => {
             toast.error("No rows to export.");
             return;
           }
-          downloadFilteredProducts(
-            filtered,
-            exportFilterSlug([
-              query.trim() || undefined,
-              statusFilter !== "all" ? statusFilter : undefined,
-              categoryFilter !== "all" ? categoryFilter : undefined,
-            ]),
-          );
+          downloadFilteredProducts(filtered, exportFilterSlug(exportSlugParts()));
           toast.success(`Exported ${filtered.length} products`);
         }}
         exportDisabled={filtered.length === 0}
       />
 
       {filtered.length === 0 ? (
-        <div className="py-16 text-center px-4">
-          <p className="text-sm font-medium text-foreground">No products match.</p>
+        <div className="px-4 py-16 text-center">
+          <p className="text-sm font-medium text-foreground">
+            {PRODUCTS.length === 0 ? "No products yet" : "No products match"}
+          </p>
           {emptyHint && <p className="mt-2 text-xs text-muted">{emptyHint}</p>}
           {searchMatched.length > 0 && categoryFilter !== "all" && (
             <p className="mt-2 text-xs text-muted">
@@ -145,58 +140,29 @@ export const ProductsPage = () => {
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-2.5">
+          <EntityList>
             {page.visible.map((p) => {
               const isLow = isLowStock(p);
               const markupPct = productMarkupOnCostPct(p, vatPct);
 
               return (
-                <button
+                <EntityListCard
                   key={p.id}
-                  type="button"
+                  title={p.name}
+                  subtitle={`${p.category} · ${p.onHand} ${p.uom} · Sell ${npr(p.sellingPrice)} · ${markupPct}%`}
+                  badge={
+                    isLow ? (
+                      <Badge variant="danger" className="shrink-0 px-1 py-0 text-[9px]">
+                        Low
+                      </Badge>
+                    ) : undefined
+                  }
+                  accent={isLow ? "danger" : "teal"}
                   onClick={() => navigate(`/app/products/${p.id}`)}
-                  className="flex items-center gap-3 rounded-2xl border border-border-subtle bg-white p-3.5 text-left shadow-sm hover:shadow-md active:scale-[0.99] transition-all"
-                >
-                  <div
-                    className={cn(
-                      "flex h-12 w-1.5 shrink-0 rounded-full",
-                      isLow ? "bg-red-400" : "bg-teal-400",
-                    )}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
-                      {isLow && (
-                        <Badge variant="danger" className="text-[9px] px-1 py-0 shrink-0">
-                          Low
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-muted">
-                      {p.category} · Stock{" "}
-                      <strong className={isLow ? "text-red-600" : ""}>{p.onHand}</strong> {p.uom} ·
-                      min {minStockLabel(p)}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] flex-wrap">
-                      <span className="text-gray-400">MRP {npr(p.mrp)}</span>
-                      <span className="text-gray-300">·</span>
-                      <span className="font-semibold text-teal-700">Sell {npr(p.sellingPrice)}</span>
-                      <span className="text-gray-300">·</span>
-                      <span
-                        className={cn(
-                          "font-semibold",
-                          markupPct < 10 ? "text-red-500" : markupPct < 20 ? "text-amber-600" : "text-green-600",
-                        )}
-                      >
-                        {markupPct}% markup
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight size={14} className="shrink-0 text-gray-300" />
-                </button>
+                />
               );
             })}
-          </div>
+          </EntityList>
           <ListPagination
             page={page.page}
             totalPages={page.totalPages}

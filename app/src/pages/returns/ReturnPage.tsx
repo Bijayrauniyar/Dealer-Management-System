@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCustomers, useSales, commitReturn } from "@/store/domain";
 import { fetchSaleByBillNoLive } from "@/lib/live/domainLive";
 import { roundMoney } from "@/lib/money";
-import { npr, fmtDate } from "@/lib/utils";
+import { npr, fmtDateDualBs } from "@/lib/utils";
 import { FormPageHeader } from "@/components/app/patterns";
 
 type ReturnLine = {
@@ -43,7 +43,7 @@ export const ReturnPage = () => {
   const billOptions   = customerBills.map((s) => ({
     id:  s.id,
     label: s.billNo,
-    sub: `${fmtDate(s.date)} · ${npr(s.total)}`,
+    sub: `${fmtDateDualBs(s.date)} · ${npr(s.total)}`,
   }));
 
   const selectedBill = SALES.find((s) => s.id === saleId);
@@ -157,7 +157,7 @@ export const ReturnPage = () => {
         {selectedBill && (
           <div className="rounded-lg bg-slate-50 border border-border-subtle px-3 py-2 text-xs text-muted">
             Bill <strong className="text-foreground">{selectedBill.billNo}</strong>
-            {" · "}{fmtDate(selectedBill.date)}
+            {" · "}{fmtDateDualBs(selectedBill.date)}
             {" · "}Total <strong className="text-foreground">{npr(selectedBill.total)}</strong>
           </div>
         )}

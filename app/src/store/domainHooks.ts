@@ -169,6 +169,15 @@ function useMasterCatalogQuery() {
   });
 }
 
+/** Avoid “not found” flash on master detail before catalog fetch completes. */
+export function useMasterCatalogLoadState(): "loading" | "error" | "ready" {
+  const q = useMasterCatalogQuery();
+  if (!isSupabaseConfigured) return "ready";
+  if (q.isError) return "error";
+  if (q.isPending && !q.data) return "loading";
+  return "ready";
+}
+
 /** DEL-1: includes archived masters for list/detail archive UI. */
 export function useProductsCatalog(): Product[] {
   const q = useMasterCatalogQuery();
