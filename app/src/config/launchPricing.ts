@@ -29,3 +29,7 @@ export function formatLaunchTrialLabel(): string {
 /** Subtitle under annual price on landing pricing block. */
 export const LAUNCH_PRICING_TAGLINE =
   "7-day free trial for each new company · annual subscription to keep your account active.";
+
+/** Value line under price — affordable SMB, per company (not per seat). */
+export const LAUNCH_PRICING_VALUE_PROP =
+  "One simple annual plan for the whole company — built for small and mid-size teams, not per-user enterprise pricing.";

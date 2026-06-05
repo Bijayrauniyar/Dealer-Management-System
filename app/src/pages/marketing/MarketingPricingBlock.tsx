@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { formatLaunchPriceNpr, LAUNCH_PRICING_TAGLINE } from "@/config/launchPricing";
+import { formatLaunchPriceNpr, LAUNCH_PRICING_TAGLINE, LAUNCH_PRICING_VALUE_PROP } from "@/config/launchPricing";
 import { PublicSignupCta } from "@/pages/marketing/PublicSignupCta";
 import { platformSupportContacts, telUrl } from "@/config/supportContacts";
 import { PlanIncludesList } from "@/pages/marketing/PlanIncludesList";
@@ -29,6 +29,9 @@ export function MarketingPricingBlock() {
             {formatLaunchPriceNpr()}
           </p>
           <p className="mx-auto mt-2 max-w-md text-pretty text-sm leading-relaxed text-slate-600 sm:max-w-lg sm:text-base">
+            {LAUNCH_PRICING_VALUE_PROP}
+          </p>
+          <p className="mx-auto mt-1.5 max-w-md text-pretty text-xs leading-relaxed text-slate-500 sm:max-w-lg sm:text-sm">
             {LAUNCH_PRICING_TAGLINE}
           </p>
         </div>

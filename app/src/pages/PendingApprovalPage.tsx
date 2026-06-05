@@ -94,7 +94,7 @@ export function PendingApprovalPage() {
                 className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700"
               >
                 <MessageCircle size={18} aria-hidden />
-                WhatsApp BikriKhata
+                WhatsApp {support.whatsapp}
               </a>
             ) : null}
 

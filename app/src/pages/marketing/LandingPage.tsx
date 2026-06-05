@@ -4,7 +4,8 @@ import { PRODUCT_TAGLINE, PRODUCT_TAGLINE_DETAIL } from "@/config/productBrand";
 import { ContactInquiryForm } from "@/pages/marketing/ContactInquiryForm";
 import { ContactSupportChannels } from "@/pages/marketing/ContactSupportChannels";
 import { HeroMarketingScreenshot } from "@/pages/marketing/HeroMarketingScreenshot";
-import { KeyFeaturesSection } from "@/pages/marketing/KeyFeaturesSection";
+import { ProductModuleGrid } from "@/pages/marketing/ProductModuleGrid";
+import { FEATURE_SECTION } from "@/pages/marketing/landingContent";
 import { LandingHowItWorks } from "@/pages/marketing/LandingHowItWorks";
 import { LandingPainPoints } from "@/pages/marketing/LandingPainPoints";
 import { MarketingShell } from "@/pages/marketing/MarketingShell";
@@ -55,7 +56,7 @@ export function LandingPage() {
                 href="#product"
                 className="font-medium text-teal-700 underline-offset-2 hover:underline"
               >
-                See key features ↓
+                See features ↓
               </a>
             </p>
           </div>
@@ -75,7 +76,16 @@ export function LandingPage() {
         </div>
       </section>
 
-      <KeyFeaturesSection />
+      <LandingSection
+        id="product"
+        centered
+        eyebrow={FEATURE_SECTION.eyebrow}
+        title={FEATURE_SECTION.title}
+        subtitle={FEATURE_SECTION.subtitle}
+        className="border-b border-slate-200/80 bg-slate-50/40"
+      >
+        <ProductModuleGrid />
+      </LandingSection>
 
       <LandingHowItWorks />
 

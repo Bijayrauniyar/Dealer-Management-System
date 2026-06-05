@@ -391,6 +391,12 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
+- **2026-05-26** — Contact form success: **Send on WhatsApp** with pre-filled inquiry (`inquiryWhatsappPrefill`); renewal-specific thank-you copy; gate pages show WhatsApp number.
+- **2026-05-26** — L8 contact email: migration `0033` + `npm run setup:contact-email` (optional inbox alert alongside form + WhatsApp button).
+- **2026-05-26** — Landing: 6 feature cards (added **Reports and analytics**); `PLAN_INCLUDES` adds salesman + dashboard/analytics line.
+- **2026-05-26** — Landing Features footer: **See pricing** link only (NPR amount stays on `#pricing` block).
+- **2026-05-26** — Landing copy pass: B2B once in hero; removed Who/Roadmap band and How-it-works trial box; phone-first wording (`productBrand`, `marketingAudience`, FAQ).
+- **2026-05-26** — Landing restructure: outcome pillars (`ProductModuleGrid`), generic B2B/units/audit copy; `PLAN_INCLUDES` + `launchPricing.ts` value prop; removed `KeyFeaturesSection` from page.
 - **2026-05-26** — Marketing layout: tighter section spacing, centered FAQ/contact columns, `scroll-padding-top` + hash scroll fix for nav jumps.
 - **2026-05-26** — Landing pain cards: full-sentence copy, **customers** not dealers/pasal; section eyebrow “Why teams switch”.
 - **2026-05-26** — Auth copy unified: **Log in** / **Log out** everywhere (login, register, marketing, license gate, settings); FAQ updated.

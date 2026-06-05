@@ -1,9 +1,11 @@
+import { MessageCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/app/FormField";
+import { inquiryWhatsappPrefill, platformSupportContacts, whatsappUrl } from "@/config/supportContacts";
 import { submitPlatformInquiry } from "@/lib/submitPlatformInquiry";
 import { LAUNCH_TRIAL_CTA_HEADLINE } from "@/config/launchPricing";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -45,6 +47,7 @@ export function ContactInquiryForm() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sentWhatsappPrefill, setSentWhatsappPrefill] = useState<string | null>(null);
 
   useEffect(() => {
     setInquiryPurpose(defaultPurpose(searchParams));
@@ -65,7 +68,7 @@ export function ContactInquiryForm() {
 
     setLoading(true);
     try {
-      await submitPlatformInquiry({
+      const payload = {
         fullName,
         email,
         phone,
@@ -79,7 +82,9 @@ export function ContactInquiryForm() {
             : isDemo
               ? "demo"
               : "landing",
-      });
+      };
+      await submitPlatformInquiry(payload);
+      setSentWhatsappPrefill(inquiryWhatsappPrefill(payload));
       setSent(true);
       toast.success("Thank you. We will be in touch soon.");
     } catch (err) {
@@ -90,13 +95,46 @@ export function ContactInquiryForm() {
   };
 
   if (sent) {
+    const support = platformSupportContacts();
+    const prefill =
+      sentWhatsappPrefill ??
+      inquiryWhatsappPrefill({
+        fullName,
+        email,
+        phone,
+        businessName,
+        businessType,
+        inquiryPurpose,
+        message,
+      });
+    const wa = support.whatsappDigits ? whatsappUrl(support.whatsappDigits, prefill) : null;
+
+    const isRenewal = inquiryPurpose === "Subscription renewal";
+
     return (
       <div className={`${marketingCard} flex h-full min-h-[280px] flex-col items-center justify-center p-8 text-center sm:p-10`}>
         <p className="text-xl font-semibold text-slate-900">Thank you</p>
         <p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-600">
-          We received your request. Our team will call or email you, then set up your company
-          account and send login details.
+          {isRenewal
+            ? "We received your renewal request. Our team will contact you to confirm payment and reactivate your account."
+            : "We received your request. Our team will contact you within one business day."}
         </p>
+        {wa ? (
+          <div className="mt-6 w-full max-w-sm">
+            <p className="mb-2.5 text-sm text-slate-600">
+              {isRenewal ? "Need a quicker response?" : "For a faster reply, WhatsApp us:"}
+            </p>
+            <a
+              href={wa}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700"
+            >
+              <MessageCircle size={18} aria-hidden />
+              WhatsApp — {support.whatsapp}
+            </a>
+          </div>
+        ) : null}
       </div>
     );
   }

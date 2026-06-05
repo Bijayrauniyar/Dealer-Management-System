@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
-import { FileDown, Package, Receipt, Users } from "lucide-react";
-import { LAUNCH_PRICING_TAGLINE, LAUNCH_TRIAL_CTA_HEADLINE } from "@/config/launchPricing";
+import { BarChart3, FileDown, Package, Receipt, UserRound, Users } from "lucide-react";
+import { LAUNCH_TRIAL_CTA_HEADLINE } from "@/config/launchPricing";
 
 export const LANDING_NAV = [
   { label: "Features", href: "/#product" },
@@ -11,7 +11,7 @@ export const LANDING_NAV = [
 ] as const;
 
 export const LANDING_PAIN_SECTION = {
-  eyebrow: "Why teams switch",
+  eyebrow: "Why businesses switch",
   title: "Three problems we hear every week",
 } as const;
 
@@ -48,9 +48,7 @@ export const LANDING_PAIN_POINTS: {
 export const HOW_IT_WORKS_SECTION = {
   eyebrow: "How it works",
   title: "Get started in 4 easy steps",
-  subtitle: LAUNCH_PRICING_TAGLINE,
-  trialNote:
-    "Use the contact form on the Pricing section to start your free week. When it ends, subscription payment is required to continue using the app for that shop.",
+  subtitle: "We set up your company login, you add products and customers, then bill and track stock from your phone.",
 } as const;
 
 export const HOW_IT_WORKS_STEPS: { step: string; title: string; detail: string }[] = [
@@ -72,7 +70,7 @@ export const HOW_IT_WORKS_STEPS: { step: string; title: string; detail: string }
   {
     step: "4",
     title: "Review & grow",
-    detail: "Check overdue customers and export CSV from Settings when you close the month.",
+    detail: "Check overdue customers and download registers from Settings when you close the month or need figures for audit.",
   },
 ];
 
@@ -222,8 +220,7 @@ export const ESSENTIAL_SCREENS: EssentialScreen[] = [
 
 export type FeaturePillar = {
   icon: LucideIcon;
-  /** Workflow order on the Features section (1–4). */
-  step: string;
+  id: string;
   /** Outcome headline — benefit, not a module name. */
   name: string;
   /** One-sentence outcome under the headline. */
@@ -232,23 +229,22 @@ export type FeaturePillar = {
   highlights: string[];
 };
 
-/** Features section header (outcome-led, not a feature dump). */
+/** Features section header (#product) — B2B positioning once; price on #pricing. */
 export const FEATURE_SECTION = {
   eyebrow: "Features",
-  title: "One app for billing, stock, and dealer credit",
+  title: "What BikriKhata does for your business",
   subtitle:
-    "Follow the same flow your team already runs — bill, update godown, collect udhar, then export when your CA needs registers.",
-  workflowLabel: "Your day in four steps",
+    "Purchase, stock, billing, and customer credit in one place. Fits any business that buys stock, generates bills, gives credit, and works with salesmen — especially distributors and dealers.",
 } as const;
 
-/** Outcome pillars — Features grid + Pricing showcase (same four stories). */
+/** Feature cards (#product) — not sequential steps; onboarding steps live under How it works. */
 export const FEATURE_PILLARS: FeaturePillar[] = [
   {
-    step: "1",
+    id: "invoices",
     icon: Receipt,
-    name: "Issue PAN/VAT tax invoices",
+    name: "Issue tax invoices",
     detail:
-      "Turn counter and godown sales into tax bills with customer PAN/VAT, schemes, and 13% VAT — print, PDF, or WhatsApp from the phone.",
+      "Turn godown and counter sales into PAN/VAT bills with discounts and schemes — print, PDF, or share from your phone.",
     highlights: [
       "Tax and sales invoice layouts",
       "Line discounts, schemes, credit-limit warning",
@@ -256,69 +252,93 @@ export const FEATURE_PILLARS: FeaturePillar[] = [
     ],
   },
   {
-    step: "2",
+    id: "stock",
     icon: Package,
-    name: "Keep godown stock accurate",
+    name: "Keep stock accurate",
     detail:
-      "Purchases stock in; sales, returns, and damage stock out — one on-hand number per SKU after every movement.",
+      "Purchases stock in; sales, returns, and damage stock out — one on-hand number per product after every movement.",
     highlights: [
       "Supplier bills with VAT and payments",
-      "Live stock list with pack/PCS",
+      "Categories and units you set per product",
       "Returns, damage, and adjustments",
     ],
   },
   {
-    step: "3",
+    id: "credit",
     icon: Users,
-    name: "Track dealer credit & overdue",
+    name: "Track customer credit",
     detail:
-      "Per-shop balance, payments against open bills, and aging — see who is overdue before the next dispatch.",
+      "Per-customer balance, payments against open bills, and aging — see who is overdue before the next dispatch.",
     highlights: [
-      "Customer ledger with PAN/VAT on file",
+      "Customer ledger with tax IDs on file",
       "Allocate receipts to open bills",
       "Overdue list and aging buckets",
     ],
   },
   {
-    step: "4",
+    id: "audit",
     icon: FileDown,
-    name: "Reports when your CA asks",
+    name: "Help at audit & month-end",
     detail:
-      "Dashboard for the day; CSV sales, purchase, stock, outstanding, and VAT summary when books close — not your daily billing screen.",
+      "Download registers and backup when you need figures for audit, accounts, or month-end reconciliation.",
     highlights: [
-      "Company overview and reports hub",
-      "Registers by date range",
-      "Backup ZIP for your accountant",
+      "Sales, purchase, and stock registers by date",
+      "Outstanding and VAT summary exports",
+      "Backup ZIP for your records",
+    ],
+  },
+  {
+    id: "salesman",
+    icon: UserRound,
+    name: "Salesman & field orders",
+    detail:
+      "For businesses with salesmen who take orders in the field. Owner sees who sold what and which bills were created.",
+    highlights: [
+      "Salesman on each sales invoice",
+      "Sales orders before billing",
+      "Sales by salesman and open orders",
+      "Each salesman signs in on their phone",
+    ],
+  },
+  {
+    id: "analytics",
+    icon: BarChart3,
+    name: "Reports and analytics",
+    detail:
+      "See how the business is doing — today’s sales and collections, outstanding, and trends over a date range.",
+    highlights: [
+      "Home dashboard with today KPIs",
+      "Company overview and outstanding bills",
+      "Top products and period totals",
     ],
   },
 ];
 
-/**
- * Full plan checklist on pricing — keep in sync with app routes (appNavigation, Export, RPCs).
- * Wording: short lead + em dash detail; no features the app does not ship.
- */
+/** Full plan checklist on pricing only — single source for “included now”. */
 export const PLAN_INCLUDES: string[] = [
   "Sales invoices — create & edit, VAT & discount, schemes, credit-limit alert",
   "Purchase invoices — supplier bill no., VAT, create & edit, stock in",
-  "Products & pricing — categories, pack/PCS units, markup from buy price",
-  "Customers & suppliers — PAN/VAT on parties, credit limits, contact details",
+  "Products & pricing — your categories, multiple units per product, purchase and sell prices",
+  "Customers & suppliers — tax IDs on parties, credit limits, contact details",
   "Godown stock — live qty from opening, sales, purchases, returns & damage",
   "Stock adjustment — manual qty correction when enabled in Settings",
   "Customer credit — balance, overdue list, aging, payments to open bills",
   "Supplier payables — amount due and payments against purchase bills",
-  "Returns & damage — posts update customer credit and godown stock",
+  "Returns & damage — updates customer credit and godown stock",
   "Schemes — buy-X-get-Y tracker linked to products",
   "Expenses & cash book — shop expenses, daily cash, capital entries",
-  "Dashboard & reports — today KPIs, outstanding bills, company overview",
+  "Dashboard & analytics — today KPIs, outstanding bills, company overview, top products",
+  "Salesman & field orders — salesman on bills, orders before billing, sales by salesman",
   "Bill output — print, PDF download, and Share on sales invoices",
-  "Settings export — registers, stock, outstanding, VAT summary, backup ZIP",
-  "Browser app — phone or laptop; one company account (no install)",
+  "Settings export — period registers, stock, outstanding, VAT summary, backup ZIP for audit & accounts",
+  "Phone-first — same login on laptop; one company account",
 ];
 
 export const LANDING_AUDIENCE = [
-  "FMCG & ice-cream distributors",
-  "Dealers & stockists",
-  "Godown + counter traders",
+  "Distributors & dealers",
+  "Stockists & wholesalers",
+  "Godown + counter businesses",
+  "B2B on credit",
 ];
 
 export const INQUIRY_PURPOSES = [

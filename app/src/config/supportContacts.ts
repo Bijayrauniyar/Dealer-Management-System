@@ -51,3 +51,27 @@ export function mailtoUrl(email: string): string | null {
   const e = email.trim();
   return e ? `mailto:${e}` : null;
 }
+
+/** Pre-filled WhatsApp text after contact form submit (user still opens WhatsApp and taps Send). */
+export function inquiryWhatsappPrefill(input: {
+  fullName: string;
+  phone: string;
+  email: string;
+  businessName: string;
+  businessType: string;
+  inquiryPurpose?: string;
+  message?: string;
+}): string {
+  const lines = [
+    `Hi ${PLATFORM_SUPPORT.productName},`,
+    "",
+    `Purpose: ${input.inquiryPurpose?.trim() || "General message"}`,
+    `Name: ${input.fullName.trim()}`,
+    `Phone: ${input.phone.trim()}`,
+    `Email: ${input.email.trim()}`,
+    `Business: ${input.businessName.trim()} (${input.businessType.trim()})`,
+  ];
+  const note = input.message?.trim();
+  if (note) lines.push(`Message: ${note}`);
+  return lines.join("\n");
+}

@@ -29,13 +29,6 @@ export function LandingHowItWorks() {
           </li>
         ))}
       </ol>
-
-      <p
-        className={`${marketingCard} mx-auto mt-8 max-w-2xl border-teal-100/80 bg-teal-50/50 px-4 py-3.5 text-pretty text-center text-sm leading-relaxed text-teal-950 sm:mt-10 sm:px-6`}
-      >
-        {HOW_IT_WORKS_SECTION.trialNote}
-      </p>
-
     </LandingSection>
   );
 }

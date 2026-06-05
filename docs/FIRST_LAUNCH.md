@@ -38,7 +38,7 @@ When an item is **deferred**, copy its ID to [BACKLOG.md](BACKLOG.md) and set St
 | L5  | `npm run e2e:phase0` (+ `:live` on prod tenant)                               | **done**  | Source gate green; run `:live` before ads if creds available                                              |
 | L6  | **One pilot shop** live ~1 week (real bills)                                  | **ready** | Owner runs [ONBOARDING_FIRST_SHOP](ONBOARDING_FIRST_SHOP.md) — sign-off when week complete                |
 | L7  | Founding **price** on website (one package for all)                           | **done**  | `app/src/config/launchPricing.ts` → landing `#pricing`, license gate, FAQ, terms |
-| L8  | Contact form **email alerts** (Resend + Edge Function + webhook)              | **deferred** | **Do later** — leads already in DB; steps in [CONTACT_FORM_EMAIL_SETUP](CONTACT_FORM_EMAIL_SETUP.md) + [BACKLOG § L8](BACKLOG.md#l8--contact-form-email-alerts-deferred) |
+| L8  | Contact form **email alerts** (Resend + Edge Function + migration 0033)     | **ready** | Run [CONTACT_FORM_EMAIL_SETUP](CONTACT_FORM_EMAIL_SETUP.md): 0033 + `npm run setup:contact-email` |
 
 
 ---

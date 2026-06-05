@@ -46,7 +46,7 @@ Inbound leads from the public landing **Contact** form (`/#contact`). **No `tena
 | `source` | `landing`, `demo`, … |
 
 **Write:** RPC `submit_platform_inquiry` (preferred), else PostgREST `insert` (**0027**–**0028**).  
-**Read:** Supabase → Table Editor. Email alerts: [CONTACT_FORM_EMAIL_SETUP.md](../CONTACT_FORM_EMAIL_SETUP.md) (Resend + Edge Function `notify-platform-inquiry` + Database Webhook).
+**Read:** Supabase → Table Editor. **Email alerts:** migration **0033** + Edge Function `notify-platform-inquiry` + Resend — [CONTACT_FORM_EMAIL_SETUP.md](../CONTACT_FORM_EMAIL_SETUP.md) (`npm run setup:contact-email`). Trigger table: `platform_system_config` key `supabase_project_url`.
 
 ---
 

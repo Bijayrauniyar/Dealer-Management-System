@@ -15,13 +15,13 @@ export var BRAND_LOGO_LOCKUP_SRC = "/icons/logo-lockup.png";
 export var BRAND_ICON_MARK_SRC = "/icons/icon-mark.png";
 /** Retina nav icon (same crop as icon-mark.png) */
 export var BRAND_ICON_MARK_SRC_2X = "/icons/icon-mark@2x.png";
-/** Login / register — main tagline */
-export var PRODUCT_TAGLINE = "Manage Stock, Sales, Credit & Customers in One Place";
-/** Login / register — supporting line */
-export var PRODUCT_TAGLINE_DETAIL = "Sales, purchase, stock and customer credit for Nepal distributors, dealers & stockists. Mobile-first in your browser — desktop optional.";
+/** Login / register / hero — main tagline */
+export var PRODUCT_TAGLINE = "Billing, stock & credit — built for your phone";
+/** Login / register / hero — supporting line (B2B positioning lives here once) */
+export var PRODUCT_TAGLINE_DETAIL = "B2B software for Nepal businesses that purchase, manage stock, bill customers, and track credit. Especially popular with distributors and dealers. One affordable plan per company.";
 /** Browser tab title and PWA name */
 export var BRAND_HTML_TITLE = PRODUCT_DISPLAY_NAME;
 /** PWA install / manifest */
-export var PWA_DESCRIPTION = "Sales, purchase, stock and credit — for Nepal distributors, dealers & stockists.";
+export var PWA_DESCRIPTION = "Billing, stock, and customer credit for Nepal businesses — built for your phone.";
 /** App chrome (header, theme-color meta, PWA theme_color) — keep in sync */
 export var BRAND_THEME_COLOR = "#0d9488";

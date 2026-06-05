@@ -63,8 +63,13 @@ if (landing) {
   else r.fail("LandingPage demo CTA", "missing");
   if (landing.includes("MarketingFaq")) r.pass("LandingPage renders MarketingFaq");
   else r.fail("LandingPage FAQ", "missing MarketingFaq");
-  if (landing.includes("KeyFeaturesSection")) r.pass("Landing section product (key features)");
-  else r.fail("Landing section product", "missing KeyFeaturesSection");
+  if (landing.includes("ProductModuleGrid") && landing.includes('id="product"')) {
+    r.pass("Landing section product (feature pillars)");
+  } else {
+    r.fail("Landing section product", "missing ProductModuleGrid / #product");
+  }
+  if (!landing.includes("LandingAudienceRoadmap")) r.pass("Landing without separate who/roadmap band");
+  else r.fail("Landing audience", "remove LandingAudienceRoadmap — positioning in Features");
   if (landing.includes("MarketingPricingBlock")) r.pass("Landing pricing block");
   const pricing = readSrc("pages/marketing/MarketingPricingBlock.tsx");
   if (pricing && pricing.includes("PlanIncludesList") && !pricing.includes("<details")) {
@@ -108,20 +113,33 @@ if (landing) {
   const missing = shots.filter((f) => !existsSync(resolve(pub, f)));
   if (missing.length === 0) r.pass("Marketing PNG screenshots present");
   else r.fail("Marketing screenshots", `missing: ${missing.join(", ")} — run npm run capture:marketing`);
-  if (landing.includes("KeyFeaturesSection")) r.pass("Landing key features section");
-  else r.fail("Landing features", "missing KeyFeaturesSection");
+  if (!landing.includes("KeyFeaturesSection")) r.pass("Landing without heavy KeyFeaturesSection");
+  else r.fail("Landing features", "remove KeyFeaturesSection — use ProductModuleGrid");
   const landingContent = readSrc("pages/marketing/landingContent.ts");
-  if (landing.includes("PRODUCT_TAGLINE") && landingContent.includes("KEY_FEATURES")) {
-    r.pass("Landing KEY_FEATURES content");
+  if (
+    landing.includes("PRODUCT_TAGLINE") &&
+    landingContent.includes("FEATURE_PILLARS") &&
+    landingContent.includes("Salesman & field orders") &&
+    landingContent.includes("Reports and analytics")
+  ) {
+    r.pass("Landing FEATURE_PILLARS incl. salesman + analytics cards");
   } else {
-    r.fail("Landing KEY_FEATURES", "missing KEY_FEATURES in landingContent");
+    r.fail("landingContent", "missing FEATURE_PILLARS, salesman, or analytics pillar");
+  }
+  if (
+    landingContent.includes("Salesman & field orders — salesman on bills") &&
+    landingContent.includes("Dashboard & analytics")
+  ) {
+    r.pass("PLAN_INCLUDES salesman + analytics lines");
+  } else {
+    r.fail("PLAN_INCLUDES", "missing salesman or dashboard/analytics in pricing checklist");
   }
   if (!landing.includes("EssentialAppScreens") && !landing.includes("DistributorOfferSection")) {
     r.pass("Landing without duplicate screen/distributor sections");
   } else {
     r.fail("Landing simplify", "remove EssentialAppScreens and DistributorOfferSection from page");
   }
-  const keyFeatures = readSrc("pages/marketing/KeyFeaturesSection.tsx");
+  const productGrid = readSrc("pages/marketing/ProductModuleGrid.tsx");
   const howItWorks = readSrc("pages/marketing/LandingHowItWorks.tsx");
   const ctaBand = readSrc("pages/marketing/MarketingCtaBand.tsx");
   if (landing.includes("PublicSignupCta") && landing.includes('trial className')) {
@@ -134,15 +152,20 @@ if (landing) {
   } else {
     r.fail("Pricing trial CTA", "missing");
   }
-  if (keyFeatures && !keyFeatures.includes("PublicSignupCta")) {
-    r.pass("Key features without duplicate trial button");
-  } else if (keyFeatures) {
-    r.fail("KeyFeaturesSection", "remove duplicate PublicSignupCta trial");
+  if (productGrid && !productGrid.includes("PublicSignupCta")) {
+    r.pass("Product grid without duplicate trial button");
+  } else if (productGrid) {
+    r.fail("ProductModuleGrid", "remove duplicate PublicSignupCta trial");
   }
-  if (howItWorks && !howItWorks.includes("PublicSignupCta")) {
-    r.pass("How-it-works without duplicate trial button");
+  if (productGrid && !productGrid.includes("Step ") && productGrid.includes("See pricing") && !productGrid.includes("formatLaunchPriceNpr")) {
+    r.pass("Product grid links See pricing without duplicating NPR amount");
+  } else if (productGrid) {
+    r.fail("ProductModuleGrid", "no Step labels; See pricing link only (price on #pricing section)");
+  }
+  if (howItWorks && !howItWorks.includes("PublicSignupCta") && !howItWorks.includes("trialNote")) {
+    r.pass("How-it-works without duplicate trial button or trial note box");
   } else if (howItWorks) {
-    r.fail("LandingHowItWorks", "remove duplicate PublicSignupCta trial");
+    r.fail("LandingHowItWorks", "remove duplicate PublicSignupCta trial and trial note box");
   }
   if (ctaBand && !ctaBand.includes("PublicSignupCta")) {
     r.pass("CTA band without duplicate trial button");
@@ -170,6 +193,16 @@ if (landing) {
     r.pass("Landing contact form + support channels");
   } else {
     r.fail("Landing contact", "missing form or support channels");
+  }
+  const contactForm = readSrc("pages/marketing/ContactInquiryForm.tsx");
+  if (
+    contactForm &&
+    contactForm.includes("setSentWhatsappPrefill") &&
+    contactForm.includes("For a faster reply, WhatsApp us")
+  ) {
+    r.pass("Contact form sets WhatsApp prefill on success");
+  } else if (contactForm) {
+    r.fail("ContactInquiryForm", "missing setSentWhatsappPrefill or faster-reply WhatsApp CTA");
   }
   if (!landing.includes("all users in your shop")) {
     r.pass("Landing pricing without awkward shop-users copy");
@@ -208,10 +241,10 @@ if (
 } else {
   r.fail("landingContent pillars", "expected FEATURE_PILLARS + FEATURE_SECTION");
 }
-if (content && content.includes("workflowLabel") && content.includes("step:")) {
-  r.pass("landingContent feature workflow steps");
+if (content && !content.includes("workflowLabel") && content.includes('id: "invoices"')) {
+  r.pass("landingContent feature cards without fake step labels");
 } else if (content) {
-  r.fail("landingContent workflow", "missing step labels on FEATURE_PILLARS");
+  r.fail("landingContent workflow", "remove step/workflow labels from FEATURE_PILLARS — steps live in How it works");
 }
 if (content && content.includes("highlights:") && !content.includes("FEATURE_SETTINGS_NOTE")) {
   r.pass("landingContent pillar highlights (no settings footnote)");

@@ -150,11 +150,11 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Verify: cd app && npm run test:contact-form
    - Leads: Table Editor → platform_inquiries
 
-31. CONTACT FORM EMAIL (deferred — inbox alerts when ready)
-   - Checklist: docs/BACKLOG.md § L8 (copy-paste steps)
+31. CONTACT FORM EMAIL (inbox alerts — Resend)
+   - Migration: app/supabase/migrations/0033_platform_inquiry_email_notify.sql
+   - Setup: cd app && RESEND_API_KEY=re_… npm run setup:contact-email
+   - Health: npm run test:contact-email
    - Full guide: docs/CONTACT_FORM_EMAIL_SETUP.md
-   - Deploy: cd app && npm run deploy:contact-email
-   - Dashboard → Database → Webhooks → INSERT platform_inquiries → notify-platform-inquiry
 
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql

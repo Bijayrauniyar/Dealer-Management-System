@@ -1,25 +1,48 @@
 # Contact form email — Resend + Supabase Edge Function
 
-> **Status: deferred (do later).** Form already saves leads to Supabase. When you are ready, follow **“What you need to do”** below (~20 min). Also indexed as **L8** in [FIRST_LAUNCH.md](FIRST_LAUNCH.md) and [BACKLOG.md § L8](BACKLOG.md#l8--contact-form-email-alerts-deferred).
+> **Status: ready to enable (~20 min).** Form saves leads to Supabase; this turns on **inbox email** via Resend. Indexed as **L8** in [FIRST_LAUNCH.md](FIRST_LAUNCH.md).
 
 Submissions save to **`platform_inquiries`** automatically.  
 This guide turns on **email to your inbox** when a row is inserted.
+
+### WhatsApp after form submit (main UX)
+
+After a successful submit, **ContactInquiryForm** shows **Send on WhatsApp** with name, phone, business, and purpose pre-filled (`inquiryWhatsappPrefill` in `supportContacts.ts`). The user taps the button → WhatsApp opens → they press **Send** once. You receive it in your WhatsApp inbox.
+
+This is **not** automatic — Meta does not allow websites to send WhatsApp silently.
+
+| Channel | When you get it |
+|---------|-----------------|
+| **Supabase** (`platform_inquiries`) | Immediately on submit |
+| **WhatsApp** (optional button) | When the user taps Send in WhatsApp |
+| **Email** (L8, below) | Inbox alert via Resend |
 
 **Inbox:** `support.bikrikhata@gmail.com` (change via `INQUIRY_NOTIFY_TO` secret).
 
 ---
 
-## What you need to do (~20 minutes)
+## Quick setup (recommended)
 
-Code is already in the repo. **You** must wire secrets, deploy, and the webhook (cannot be done from git alone).
+| Step | Command / place |
+|------|-----------------|
+| 1 | Resend API key → [resend.com](https://resend.com) → API Keys → `re_…` |
+| 2 | `supabase login` → `cd app && supabase link --project-ref YOUR_REF` |
+| 3 | SQL Editor → run `app/supabase/migrations/0033_platform_inquiry_email_notify.sql` |
+| 4 | `cd app && RESEND_API_KEY=re_… npm run setup:contact-email` |
+| 5 | `npm run test:contact-email` → submit contact form → check Gmail + Resend Logs |
+
+`setup:contact-email` sets Resend secrets, deploys `notify-platform-inquiry`, and (with `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`) sets `platform_system_config.supabase_project_url` so the **pg_net trigger** calls the function on every insert — **no Dashboard webhook required**.
+
+## Manual steps (alternative)
 
 | Step | You do | Command / place |
 |------|--------|-----------------|
 | 1 | Create **Resend** account + API key | [resend.com](https://resend.com) → API Keys → `re_…` |
 | 2 | Link this repo to **your** Supabase project | `supabase login` then `cd app && supabase link --project-ref YOUR_REF` |
-| 3 | Set Edge Function secrets | See [§4 Secrets](#4-secrets-production--not-in-git) below |
-| 4 | Deploy the function | `cd app && npm run deploy:contact-email` |
-| 5 | Create **Database webhook** | Dashboard → Database → Webhooks → INSERT `platform_inquiries` → `notify-platform-inquiry` |
+| 3 | Run migration **0033** | SQL Editor or `supabase db push` |
+| 4 | Set Edge Function secrets | See [§4 Secrets](#4-secrets-production--not-in-git) below |
+| 5 | Deploy the function | `cd app && npm run deploy:contact-email` |
+| 6 | Set project URL for trigger | `insert into platform_system_config (key, value) values ('supabase_project_url', 'https://YOUR_REF.supabase.co') on conflict (key) do update set value = excluded.value;` |
 
 **Project ref:** subdomain in `VITE_SUPABASE_URL` (e.g. `https://luvjcpawlteawovjmeuw.supabase.co` → `luvjcpawlteawovjmeuw`).
 
@@ -53,11 +76,13 @@ Supabase does **not** include a general “send email when table X gets a row”
 | File | Role |
 |------|------|
 | `app/supabase/functions/notify-platform-inquiry/index.ts` | Sends HTML email via Resend API |
-| `app/supabase/config.toml` | `verify_jwt = false` for webhook calls |
-| `app/scripts/deploy-contact-email.sh` | Deploy helper |
+| `app/supabase/migrations/0033_platform_inquiry_email_notify.sql` | pg_net trigger on `platform_inquiries` INSERT |
+| `app/supabase/config.toml` | `verify_jwt = false` for trigger/webhook calls |
+| `app/scripts/setup-contact-email.mjs` | Secrets + deploy + config URL (`npm run setup:contact-email`) |
+| `app/scripts/deploy-contact-email.sh` | Deploy only |
 | `RUN_ONCE_contact_form.sql` | Table + RPC (run once in SQL Editor) |
 
-You still must: Resend account, `supabase secrets set`, deploy, **Database Webhook** in Dashboard.
+You still must: Resend account, migration **0033**, `npm run setup:contact-email` (or secrets + deploy + config row).
 
 ---
 
@@ -132,24 +157,19 @@ Or:
 supabase functions deploy notify-platform-inquiry --no-verify-jwt
 ```
 
-### 6. Database webhook (Dashboard — required)
+### 6. Trigger URL (migration 0033)
 
-1. [Supabase Dashboard](https://supabase.com/dashboard) → your project.
-2. **Database** → **Webhooks** → **Create a new hook**.
-3. Settings:
+Migration **0033** enqueues email on every `platform_inquiries` insert via `pg_net`. It needs one config row:
 
-| Field | Value |
-|-------|--------|
-| Name | `platform_inquiry_email` |
-| Table | `platform_inquiries` |
-| Events | **Insert** only |
-| Type | **Supabase Edge Functions** |
-| Function | `notify-platform-inquiry` |
-| Method | POST |
+```sql
+insert into platform_system_config (key, value)
+values ('supabase_project_url', 'https://YOUR_REF.supabase.co')
+on conflict (key) do update set value = excluded.value;
+```
 
-4. **Create webhook**.
+`npm run setup:contact-email` does this automatically when `SUPABASE_SERVICE_ROLE_KEY` is in `.env.local`.
 
-Without this step, rows save but **no email** is sent.
+**Optional:** Dashboard → Database → Webhooks still works if you prefer; disable the trigger to avoid duplicate emails.
 
 ### 7. Test
 
@@ -184,7 +204,7 @@ curl -X POST http://localhost:54321/functions/v1/notify-platform-inquiry \
 
 | Problem | Fix |
 |---------|-----|
-| Row in DB, no email | Webhook missing or function not deployed |
+| Row in DB, no email | Migration 0033 not run, `supabase_project_url` missing, or function not deployed |
 | `RESEND_API_KEY not set` | Run `supabase secrets set` |
 | Resend domain error | Use `onboarding@resend.dev` for testing or verify domain |
 | Webhook 401 | Deploy with `--no-verify-jwt`; `config.toml` has `verify_jwt = false` |

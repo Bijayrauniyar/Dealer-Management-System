@@ -61,31 +61,25 @@
 | **INV-1** | Block oversell in DB | 0 | — | **done** | 0024 |
 | **EXP-1** | Export Tier A registers | 0 | — | **done** | partial ZIP |
 | **BRAND-1** | BikriKhata rebrand | 0 | — | **done** | |
-| **L8** | Contact form email alerts (Resend) | 0 ops | ~20 min | **deferred** | [FIRST_LAUNCH L8](FIRST_LAUNCH.md); full guide + checklist below |
+| **L8** | Contact form email alerts (Resend) | 0 ops | ~20 min | **ready** | Run migration 0033 + `npm run setup:contact-email` |
 
 ---
 
-## L8 — Contact form email alerts (deferred)
+## L8 — Contact form email alerts (ready to enable)
 
-**Now:** Website contact form → **`platform_inquiries`** in Supabase (Table Editor). No inbox email yet.
+**Now:** Form → **`platform_inquiries`**. Email needs one-time setup (~20 min).
 
-**When ready (~20 min):** Full guide [CONTACT_FORM_EMAIL_SETUP.md](CONTACT_FORM_EMAIL_SETUP.md). Repo code: `app/supabase/functions/notify-platform-inquiry/`.
+**Guide:** [CONTACT_FORM_EMAIL_SETUP.md](CONTACT_FORM_EMAIL_SETUP.md)
 
 ### Copy-paste checklist
 
 1. **Resend** — [resend.com](https://resend.com) → API key `re_…`
-2. **Link Supabase** — `supabase login` → `cd app` → `supabase link --project-ref YOUR_REF`  
-   (`YOUR_REF` = subdomain in `VITE_SUPABASE_URL`, same project as Netlify prod)
-3. **Secrets**
-   ```bash
-   supabase secrets set RESEND_API_KEY=re_your_key_here
-   supabase secrets set INQUIRY_NOTIFY_TO=support.bikrikhata@gmail.com
-   supabase secrets set RESEND_FROM="BikriKhata <onboarding@resend.dev>"
-   ```
-4. **Deploy** — `cd app && npm run deploy:contact-email`
-5. **Webhook** — Dashboard → Database → Webhooks → **Insert** on `platform_inquiries` → Edge Function `notify-platform-inquiry` (POST)
+2. **Link Supabase** — `supabase login` → `cd app` → `supabase link --project-ref YOUR_REF`
+3. **Migration 0033** — SQL Editor → `app/supabase/migrations/0033_platform_inquiry_email_notify.sql`
+4. **Setup** — `cd app && RESEND_API_KEY=re_… npm run setup:contact-email`
+5. **Verify** — `npm run test:contact-email` → submit form → Gmail + Resend logs
 
-**Test:** `npm run test:contact-form` → submit form → row in table → email at support.bikrikhata@gmail.com + Resend/Edge Function logs.
+No Dashboard webhook required (pg_net trigger on insert).
 
 **Production sender:** verify `bikrikhata.com` on Resend, then change `RESEND_FROM` to e.g. `BikriKhata <notifications@bikrikhata.com>`.
 

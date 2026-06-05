@@ -1,10 +1,10 @@
 /**
- * Nepal ICP wording for marketing — broader than “wholesalers” alone.
- * Covers distributors, dealers, stockists, and godown+counter traders.
+ * Nepal ICP wording for marketing — B2B bulk/credit; not retail POS.
  */
-export const MARKETING_NEPAL_ICP = "distributors, dealers & stockists";
+export const MARKETING_NEPAL_ICP = "distributors, dealers, stockists & godown-led B2B teams";
 
-export const MARKETING_VALUE_LINE = `Sales, purchase, stock and customer credit for Nepal ${MARKETING_NEPAL_ICP}.`;
+export const MARKETING_VALUE_LINE =
+  "Billing, stock, and customer credit in one place — sized for small and mid-size Nepal businesses.";
 
 export const MARKETING_MOBILE_FIRST =
-  "Mobile-first — use the full app in your phone browser. No install required; a laptop is optional when you want a bigger screen.";
+  "Built for your phone — bill and check stock from mobile. Same account on computer when you need a bigger screen.";

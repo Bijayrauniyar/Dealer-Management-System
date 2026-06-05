@@ -1,4 +1,4 @@
-/** FAQ copy — BikriKhata only (wholesale billing). Not IRD e-billing. */
+/** FAQ copy — BikriKhata only (B2B billing). Not IRD e-billing. */
 
 import {
   LAUNCH_TRIAL_DAYS,
@@ -19,50 +19,64 @@ export const LANDING_FAQ: LandingFaqItem[] = [
   {
     question: "What is BikriKhata?",
     answer:
-      "BikriKhata is billing and stock software for Nepal distributors, dealers, and stockists. You issue sales and purchase invoices, track stock in the godown, follow customer credit, and export month-end registers for your accountant — in one place instead of notebooks and spreadsheets.",
+      "BikriKhata is B2B billing and stock software for Nepal businesses that buy and sell in bulk on credit. You issue sales and purchase invoices, track godown stock, follow customer balances, and download registers when audit or accounts need figures — in one workspace instead of notebooks and spreadsheets.",
   },
   {
     question: "Who is BikriKhata for?",
     answer:
-      "Businesses that buy and sell in bulk, often on credit, from a godown or counter — FMCG distributors, ice-cream dealers, stockists, and dealers who need accurate stock and clear balances per shop.",
+      "Small and mid-size B2B businesses — distributors, dealers, stockists, and godown-led traders that purchase, manage stock, bill customers, and track credit. We help you set up categories and units to match how your business trades.",
   },
   {
-    question: "What can I do with BikriKhata?",
-    answer: "Core modules included in your subscription:",
+    question: "Is this B2B software or a retail POS?",
+    answer:
+      "B2B. BikriKhata is for bulk buying and selling, godown stock, customer credit, and tax invoices — not a kirana-style counter POS.",
+  },
+  {
+    question: "What can I do with BikriKhata today?",
+    answer: "Included in your subscription now:",
     bullets: [
-      "Sales invoices — create & edit, VAT, schemes, print, PDF, and share",
-      "Purchase invoices — supplier bill reference, VAT, stock in",
-      "Stock on hand — opening, sales, purchases, returns, damage, adjustments",
-      "Customers — credit balance, overdue, aging, payments against bills",
+      "Sales and purchase invoices with VAT, print, PDF, and share",
+      "Products with your categories and units, purchase and sell prices",
+      "Godown stock — opening, sales, purchases, returns, damage, adjustments",
+      "Customer credit — balance, overdue, aging, payments against bills",
       "Suppliers — invoices and supplier payments",
       "Returns, damage, expenses, daily cash, and capital entries",
-      "Home dashboard, reports, and Settings export for your CA",
+      "Export registers and backup ZIP from Settings for audit and accounts",
     ],
+  },
+  {
+    question: "Can salesmen take orders on the phone?",
+    answer:
+      "Yes — salesman on bills, field orders, and sales by salesman are part of BikriKhata. Contact us if you want help setting up salesman logins on phone.",
   },
   {
     question: "How does stock and customer credit work?",
     answer:
-      "Every saved sales invoice reduces stock and updates the customer balance. When the customer pays, record a payment and allocate it to open bills. Example: you bill 15 shops in a week — each bill lowers on-hand quantity and adds to that shop’s due amount. Home shows who is overdue before the next dispatch.",
+      "Every saved sales invoice reduces stock and updates the customer balance. When the customer pays, record a payment and allocate it to open bills. Home shows who is overdue before the next dispatch.",
   },
   {
     question: "Can I customize tax invoices and bill layout?",
     answer:
-      "Yes. In Settings you set your business name, address, PAN, and VAT details on bills. Choose tax or sales invoice layout. Customer PAN and VAT can print on B2B invoices where required.",
+      "Yes. In Settings you set your business name, address, PAN, and VAT details on bills. Choose tax or sales invoice layout. Customer tax IDs can print on B2B invoices where required.",
   },
   {
-    question: "Can I use BikriKhata on my phone and computer?",
+    question: "Do I need a computer?",
     answer:
-      "Yes. Log in at bikrikhata.com/login on a phone browser or laptop — same company, same data. Many teams bill on the phone at the counter and review stock or reports on a larger screen at the office.",
+      "No. Use BikriKhata on your phone for daily billing and stock. Sign in on a laptop with the same account when you want a bigger screen.",
   },
   {
-    question: "How does my accountant get reports?",
+    question: "How do I get data for audit or accounts?",
     answer:
-      "In the app, open Export (under Settings). Choose From/To dates, then download sales register, purchase register, stock snapshot, customer outstanding, and VAT period summary as CSV — or one backup ZIP with the main files bundled. Your accountant opens them in Excel for books and VAT prep. BikriKhata does not file with IRD for you.",
+      "Open Export under Settings. Pick a date range and download sales, purchase, stock, outstanding, and VAT summary registers as CSV, or a backup ZIP with the main files. BikriKhata does not file with IRD for you.",
   },
   {
     question: "Does BikriKhata file taxes with IRD?",
     answer:
-      "No. You print or share invoices from BikriKhata and send the export files to your accountant for IRD filing. BikriKhata is wholesale billing and stock software, not government e-billing submission.",
+      "No. You print or share invoices from BikriKhata and use exports for your books and IRD filing. BikriKhata is billing and stock software, not government e-billing submission.",
+  },
+  {
+    question: "How is pricing calculated?",
+    answer: `One annual subscription per company (${launchPrice} at launch) — not per salesman seat. ${LAUNCH_PRICING_TAGLINE}`,
   },
   {
     question: "Is my business data secure?",
@@ -76,11 +90,11 @@ export const LANDING_FAQ: LandingFaqItem[] = [
   },
   {
     question: "Is there a free trial?",
-    answer: `Yes. ${LAUNCH_PRICING_TAGLINE} After we onboard your company from the contact form, you get a ${LAUNCH_TRIAL_DAYS}-day trial. When it ends, a paid annual subscription (${launchPrice} per company, on our Pricing page) is required to keep using the app. Contact us before the trial ends if you need help.`,
+    answer: `Yes. ${LAUNCH_PRICING_TAGLINE} After we onboard your company from the contact form, you get a ${LAUNCH_TRIAL_DAYS}-day trial. When it ends, a paid annual subscription (${launchPrice} per company) is required to keep using the app.`,
   },
   {
     question: "How do I get started?",
     answer:
-      "On bikrikhata.com, open Pricing and submit the contact form for a free trial (or use Contact with Book a demo). We create your company login and send details. Then add products, customers, opening stock, and issue your first sales invoice.",
+      "Open Pricing and submit the contact form for a free trial, or book a demo. We create your company login and send details. Then add products, customers, opening stock, and issue your first sales invoice.",
   },
 ];
