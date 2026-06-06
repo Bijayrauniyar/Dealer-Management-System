@@ -18,6 +18,7 @@ import {
   LogOut,
   BarChart2,
   Lock,
+  Archive,
 } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { useAuth } from "@/lib/auth";
@@ -43,6 +44,9 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { label: "Supplier pay", icon: Truck, to: "/app/supplier-payments/new", color: "bg-purple-100 text-purple-700" },
       { label: "Expense", icon: DollarSign, to: "/app/expenses/new", color: "bg-orange-100 text-orange-700" },
       { label: "Daily cash", icon: Calculator, to: "/app/daily-cash", color: "bg-slate-100 text-slate-600" },
+      { label: "New product", icon: LayoutDashboard, to: "/app/products/new", color: "bg-teal-100 text-teal-700" },
+      { label: "New customer", icon: Users, to: "/app/customers/new", color: "bg-blue-100 text-blue-700" },
+      { label: "New supplier", icon: Truck, to: "/app/suppliers/new", color: "bg-purple-100 text-purple-700" },
       { label: "Scheme", icon: Tag, to: "/app/schemes/new", color: "bg-pink-100 text-pink-700" },
     ],
   },
@@ -53,6 +57,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { label: "Customers", icon: Users, to: "/app/customers", color: "bg-blue-100 text-blue-700" },
       { label: "Suppliers", icon: Truck, to: "/app/suppliers", color: "bg-purple-100 text-purple-700" },
       { label: "Stock", icon: Box, to: "/app/stock", color: "bg-orange-100 text-orange-700" },
+      { label: "Archives", icon: Archive, to: "/app/archives", color: "bg-slate-100 text-slate-600" },
     ],
   },
   {

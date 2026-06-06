@@ -46,6 +46,11 @@ Agents: see `.cursor/rules/docs-on-change.mdc` (always applied).
 | `0024` applied (Tier B) | **INV-1** oversell guard on `create_sales_bill` / `update_sales_bill`. README step 25. Required for `e2e:stock:live` oversell check. |
 | `0025`–`0026` applied (Tier C) | **Support** fields on `tenant_settings`; **customer** `pan_number` / `vat_number`. README steps 26–27. |
 | `0008`–`0010` applied | Matrix **`uom.*`** cases: pack sale (2 Box → 20 PCS stock), `sales_items.unit`, `update_sales_bill` with `unit`. |
+| `0034` applied (P1) | **`products.hsn_code`** — HSN-1 product form + export CSV. README step 33. |
+| `0035`–`0036` applied (P1) | **PRICE-DISP-1** print modes + **BILL-QR-1** payment QR/bank on sales bills. README steps 34–35. |
+| `0037` applied (P1) | **DEL-1** archive/restore RPCs; `is_active` on masters. README step 35. |
+| `0038` applied (P1) | **UNITS-1** `tenant_settings.product_units`. README step 35. |
+| `0039` applied (P1) | **PRICE-4DEC** `products.purchase_price` / `sale_price` / `mrp` as `numeric(12,4)`. README step 36. |
 
 ---
 
@@ -102,8 +107,8 @@ Credentials: `app/.e2e-credentials.local` (from `node scripts/create-e2e-user-an
 |----|----------|---------|-----|----------|
 | M1 | Tenant active | Login | `tenants.status = active` | Reach `/app/home` |
 | M2 | Settings load/save | Settings → Save | `tenant_settings` | Header name/region/footer update after save |
-| M3 | Add product | Products → New | `products` | Row with code, prices, `is_active` |
-| M4 | Edit product | Products → edit | `products` | `sale_price` / `purchase_price` updated |
+| M3 | Add product | Products → New | `products` | Row with code, prices, `is_active`; optional `hsn_code` (`0034`) |
+| M4 | Edit product | Products → edit | `products` | `sale_price` / `purchase_price` updated; HSN optional |
 | M5 | Add customer | Customers → New | `customers` | Row; appears in sale picker |
 | M6 | Add supplier | Table Editor / API | `suppliers` | Row; appears on purchase |
 | M7 | List reads | Home, Customers, Stock | views + tables | RLS: only current tenant |

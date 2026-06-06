@@ -14,7 +14,7 @@
 | 4 | [backend/data-model.md](backend/data-model.md) | Schema / migrations |
 | 5 | [backend/phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md) | `npm run e2e:*` |
 
-**Humans — quick status:** [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md) (Phase 0 complete) · [README.md](README.md) (full index)
+**Humans — quick status:** [FIRST_LAUNCH.md](FIRST_LAUNCH.md) (P1 product complete; ads blocked on L2 + L6) · [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md) · [README.md](README.md)
 
 **Strategy / market:** [PHASE_ROADMAP.md](PHASE_ROADMAP.md) · [GTM_NEPAL.md](GTM_NEPAL.md)
 
@@ -62,8 +62,8 @@ docs/
   archive/             ← old docs (archive first; delete later)
 ```
 
-**Product:** BikriKhata · **Phase 0:** complete · **Launch:** finish P0 in FIRST_LAUNCH.
+**Product:** BikriKhata · **Phase 0:** complete · **P1 product:** complete (2026-06-05) · **Launch:** L2 prod smoke + L6 pilot week → see FIRST_LAUNCH.
 
 ---
 
-*Last updated: 2026-05-26*
+*Last updated: 2026-06-05*

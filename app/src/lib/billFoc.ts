@@ -1,5 +1,5 @@
 import type { SaleLine } from "@/domain/types";
-import { billLineAmount } from "@/lib/saleLineMath";
+import { billLineAmount, saleLineDisplayMrp } from "@/lib/saleLineMath";
 
 /** Strip old UI suffix from product name when re-saving or reprinting. */
 export function stripFocSuffixFromName(name: string): string {
@@ -29,10 +29,10 @@ export function billLineParticulars(line: SaleLine): { title: string; subtitle?:
 /** MRP column on printed bill. */
 export function billLineMrpDisplay(line: SaleLine): string {
   if (isFocSaleLine(line)) {
-    const mrp = Number(line.mrp) || 0;
+    const mrp = saleLineDisplayMrp(line);
     return mrp > 0 ? String(mrp) : "FOC";
   }
-  const mrp = Number(line.mrp) || 0;
+  const mrp = saleLineDisplayMrp(line);
   return mrp > 0 ? String(mrp) : "—";
 }
 

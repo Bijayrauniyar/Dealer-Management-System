@@ -10,9 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useCustomers, useSales, commitReturn } from "@/store/domain";
+import { fetchSaleByBillNoLive } from "@/lib/live/domainLive";
 import { roundMoney } from "@/lib/money";
-import { npr, fmtDate } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { npr, fmtDateDualBs } from "@/lib/utils";
+import { FormPageHeader } from "@/components/app/patterns";
 
 type ReturnLine = {
   productId:   string;
@@ -33,6 +34,7 @@ export const ReturnPage = () => {
   const [lines, setLines]           = useState<ReturnLine[]>([]);
   const [reason, setReason]         = useState("");
   const [saving, setSaving]         = useState(false);
+  const [loadingLines, setLoadingLines] = useState(false);
 
   const customerOptions = CUSTOMERS.map((c) => ({ id: c.id, label: c.name, sub: c.area }));
 
@@ -41,26 +43,42 @@ export const ReturnPage = () => {
   const billOptions   = customerBills.map((s) => ({
     id:  s.id,
     label: s.billNo,
-    sub: `${fmtDate(s.date)} · ${npr(s.total)}`,
+    sub: `${fmtDateDualBs(s.date)} · ${npr(s.total)}`,
   }));
 
   const selectedBill = SALES.find((s) => s.id === saleId);
 
-  // When a bill is selected, populate return lines from its line items
-  const handleBillSelect = (id: string) => {
+  const mapBillToReturnLines = (billLines: { productId: string; productName: string; qty: number; rate: number; discountPct?: number }[]) =>
+    billLines.map((l) => ({
+      productId: l.productId,
+      productName: l.productName,
+      soldQty: l.qty,
+      rate: l.rate,
+      discountPct: l.discountPct ?? 0,
+      returnQty: 0,
+    }));
+
+  // Bill list is header-only (PERF-0); load line items when a bill is picked.
+  const handleBillSelect = async (id: string) => {
     setSaleId(id);
+    setLines([]);
     const bill = SALES.find((s) => s.id === id);
-    if (!bill) { setLines([]); return; }
-    setLines(
-      bill.lines.map((l) => ({
-        productId:   l.productId,
-        productName: l.productName,
-        soldQty:     l.qty,
-        rate:        l.rate,
-        discountPct: l.discountPct ?? 0,   // carry from original bill
-        returnQty:   0,
-      })),
-    );
+    if (!bill) return;
+    setLoadingLines(true);
+    try {
+      const full = await fetchSaleByBillNoLive(bill.billNo);
+      if (!full?.lines.length) {
+        toast.error("No products on this bill.");
+        setSaleId("");
+        return;
+      }
+      setLines(mapBillToReturnLines(full.lines));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not load bill lines");
+      setSaleId("");
+    } finally {
+      setLoadingLines(false);
+    }
   };
 
   const setReturnQty = (productId: string, delta: number) =>
@@ -82,10 +100,11 @@ export const ReturnPage = () => {
   const handleSave = async () => {
     if (!customerId)              { toast.error("Choose a customer."); return; }
     if (!saleId)                  { toast.error("Select a bill."); return; }
-    if (returnLines.length === 0) { toast.error("Select at least one product to return."); return; }
+    if (loadingLines) { toast.error("Still loading bill lines…"); return; }
+    if (lines.length === 0) { toast.error("Could not load products for this bill — pick the bill again."); return; }
+    if (returnLines.length === 0) { toast.error("Use + on at least one product to set return qty."); return; }
     setSaving(true);
     try {
-      await new Promise((r) => setTimeout(r, 200));
       const bill = SALES.find((s) => s.id === saleId);
       await commitReturn({
         customerId,
@@ -93,6 +112,7 @@ export const ReturnPage = () => {
         billNo:       bill?.billNo ?? "",
         creditAmount,
         lines:        returnLines.map((l) => ({ productId: l.productId, returnQty: l.returnQty })),
+        reason:       reason.trim() || undefined,
       });
       toast.success(`Return saved · ${totalReturnQty} item(s) · credit ${npr(creditAmount)}`);
       navigate(-1);
@@ -105,8 +125,7 @@ export const ReturnPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-5 text-lg font-semibold">Return entry</h1>
+      <FormPageHeader title="Return entry" subtitle="Credit customer and restore stock from a prior bill." />
 
       <div className="space-y-4">
         {/* ── Customer ── */}
@@ -138,9 +157,19 @@ export const ReturnPage = () => {
         {selectedBill && (
           <div className="rounded-lg bg-slate-50 border border-border-subtle px-3 py-2 text-xs text-muted">
             Bill <strong className="text-foreground">{selectedBill.billNo}</strong>
-            {" · "}{fmtDate(selectedBill.date)}
+            {" · "}{fmtDateDualBs(selectedBill.date)}
             {" · "}Total <strong className="text-foreground">{npr(selectedBill.total)}</strong>
           </div>
+        )}
+
+        {loadingLines && (
+          <p className="text-sm text-muted">Loading bill products…</p>
+        )}
+
+        {saleId && !loadingLines && lines.length === 0 && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            No products loaded for this bill. Clear and select the bill again.
+          </p>
         )}
 
         {/* ── Product lines from bill ── */}
@@ -227,7 +256,7 @@ export const ReturnPage = () => {
         action="Save return"
         onAction={handleSave}
         loading={saving}
-        disabled={returnLines.length === 0}
+        disabled={loadingLines || lines.length === 0 || returnLines.length === 0}
       />
     </PageShell>
   );

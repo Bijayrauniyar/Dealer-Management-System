@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { EXPENSE_CATEGORIES } from "@/domain/catalogs";
 import { commitExpenseEntry } from "@/store/domain";
 import { npr, toDateInput } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
@@ -46,11 +47,10 @@ export const ExpensePage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-1 text-lg font-semibold">Expense entry</h1>
-      <p className="mb-5 text-sm text-muted">
-        Day-to-day running costs (fuel, salary, rent, utilities). Not for buying assets or owner investment — use Capital for those.
-      </p>
+      <FormPageHeader
+        title="Expense entry"
+        subtitle="Day-to-day running costs (fuel, salary, rent). Use Capital for assets or owner investment."
+      />
       <div className="space-y-4">
         <FormField label="Category" required>
           <Select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>
@@ -65,7 +65,7 @@ export const ExpensePage = () => {
             onChange={(v) => setAmount(v === 0 ? "" : String(v))}
           />
         </FormField>
-        <FormField label="Date"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></FormField>
+        <DateFormField label="Date" value={date} onChange={setDate} />
         <FormField label="Notes"><Textarea placeholder="Details" value={notes} onChange={(e) => setNotes(e.target.value)} /></FormField>
       </div>
       <StickyBar rows={amount ? [["Amount", npr(Number(amount))]] : undefined} action="Save expense" onAction={handleSave} loading={saving} />

@@ -6,13 +6,15 @@ import { printBill } from "@/lib/printBill";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
+import { DateFormField } from "@/components/app/DateFormField";
 import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { BillPrintView } from "@/components/app/BillPrintView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
-import { lineAmountFromMrp } from "@/lib/saleLineMath";
+import { effectiveRateForRpcWithMode, saleEntryLineAmount } from "@/lib/saleLineMath";
+import { SaleLinePricingBlock } from "@/components/app/SaleLinePricingBlock";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,14 +31,11 @@ import {
 } from "@/store/domain";
 import { getVatPct, tenantChargesVat } from "@/lib/billDisplay";
 import { numericMoneyProps, numericPercentProps, numericQtyProps, roundMoney } from "@/lib/money";
-import { addVatToExcl } from "@/lib/tax";
 import { buildSaleProductPickerOptions } from "@/lib/stockAlert";
 import { stripFocSuffixFromName } from "@/lib/billFoc";
 import {
   SAVE_INVOICE_ACTION,
   UPDATE_INVOICE_ACTION,
-  SAVE_INVOICE_PRINT_ACTION,
-  UPDATE_INVOICE_PRINT_ACTION,
   SALES_INVOICE_LABEL,
 } from "@/lib/actionLabels";
 import { syncSchemeFreeLines, schemeHintForLine, type SaleDraftLine } from "@/lib/schemeApply";
@@ -111,8 +110,6 @@ export const SaleEntryPage = () => {
   const [saving, setSaving]   = useState(false);
   const [previewing, setPrev] = useState(false);
   const [exportingPreview, setExportingPreview] = useState(false);
-  const [showDealerPricing, setShowDealerPricing] = useState(false);
-
   const setLinesWithSchemes = useCallback(
     (updater: (ls: Line[]) => Line[]) => {
       setLines((ls) => {
@@ -162,7 +159,10 @@ export const SaleEntryPage = () => {
   const lineAmount = (l: Line) =>
     l.isSchemeFree
       ? 0
-      : lineAmountFromMrp({ qty: l.qty, mrp: l.mrp, rate: l.rate, discountPct: l.discountPct });
+      : saleEntryLineAmount(
+          { qty: l.qty, mrp: l.mrp, rate: l.rate, discountPct: l.discountPct },
+          business.salesBillPriceMode,
+        );
   const subtotal   = lines.reduce((s, l) => s + lineAmount(l), 0);
 
   const discountAmt = (() => {
@@ -285,7 +285,12 @@ export const SaleEntryPage = () => {
         uom: l.uom,
         qty: l.qty,
         mrp: displayMrp,
-        rate: isFoc ? 0 : l.rate,
+        rate: isFoc
+          ? 0
+          : effectiveRateForRpcWithMode(
+              { qty: l.qty, mrp: displayMrp, rate: l.rate, discountPct: l.discountPct ?? 0 },
+              business.salesBillPriceMode,
+            ),
         discountPct: l.discountPct ?? 0,
         amount: lineAmount(l),
         isFoc,
@@ -337,23 +342,6 @@ export const SaleEntryPage = () => {
           ? `Bill ${finalBillNo} updated · ${npr(grandTotal)}${balanceDue > 0 ? ` · ${npr(balanceDue)} due` : ""}`
           : `Bill ${finalBillNo} saved · ${npr(grandTotal)}${balanceDue > 0 ? ` · ${npr(balanceDue)} due` : " · Fully paid"}`,
       );
-    } catch (e) {
-      toast.error(saleSaveErrorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveAndPrint = async () => {
-    if (!validate()) return;
-    maybeWarnCreditLimit();
-    setSaving(true);
-    try {
-      await new Promise((r) => setTimeout(r, 200));
-      const sale = buildSale();
-      const finalBillNo = await commitSale(sale);
-      navigate(`/app/bills/${encodeURIComponent(finalBillNo)}?print=1`, { state: { sale: { ...sale, billNo: finalBillNo } } });
-      toast.success(isEdit ? "Bill updated — opening print view…" : "Bill saved — opening print view…");
     } catch (e) {
       toast.error(saleSaveErrorMessage(e));
     } finally {
@@ -446,23 +434,12 @@ export const SaleEntryPage = () => {
               {billNo}
             </div>
           </FormField>
-          <FormField label="Date">
-            <Input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} />
-          </FormField>
+          <DateFormField label="Date" value={billDate} onChange={setBillDate} />
         </div>
 
         {/* ── Line items ── */}
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">Items</p>
-            <button
-              type="button"
-              onClick={() => setShowDealerPricing((v) => !v)}
-              className="text-xs font-medium text-teal-600 underline"
-            >
-              {showDealerPricing ? "Hide dealer pricing" : "Show dealer pricing"}
-            </button>
-          </div>
+          <p className="mb-2 text-sm font-medium text-foreground">Items</p>
           <div className="space-y-3">
             {lines.map((line) =>
               line.isSchemeFree ? (
@@ -493,7 +470,8 @@ export const SaleEntryPage = () => {
                   />
                   {line.productId && (line.discountPct ?? 0) > 0 && (
                     <p className="text-[11px] text-amber-700">
-                      Line discount {line.discountPct}% applied on MRP
+                      Line discount {line.discountPct}% on{" "}
+                      {business.salesBillPriceMode === "selling_price" ? "rate" : "MRP"}
                     </p>
                   )}
                   {line.productId && (() => {
@@ -519,7 +497,7 @@ export const SaleEntryPage = () => {
                     );
                   })()}
 
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <FormField label="UOM" hint={line.productId ? "Only units set on product" : undefined}>
                       <Select
                         value={line.uom || "PCS"}
@@ -547,45 +525,24 @@ export const SaleEntryPage = () => {
                         onChange={(v) => updateLine(line.id, { qty: v > 0 ? v : 0 })}
                       />
                     </FormField>
-                    <FormField
-                      label={`MRP (NPR)`}
-                      hint={line.productId ? `Per ${line.uom || "unit"} · on bill` : "On printed bill"}
-                    >
-                      <NumericInput
-                        {...numericMoneyProps}
-                        min={0}
-                        value={line.mrp}
-                        onChange={(v) => updateLine(line.id, { mrp: v })}
-                      />
-                    </FormField>
                     <FormField label="Amount">
                       <div className="flex h-11 flex-col justify-center rounded-lg bg-slate-50 px-3">
-                        <span className="text-sm font-medium">{nprNum(lineAmount(line))}</span>
+                        <span className="text-sm font-semibold">{nprNum(lineAmount(line))}</span>
                       </div>
                     </FormField>
                   </div>
 
-                  {showDealerPricing && line.productId && (
-                    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-muted">
-                      <p className="font-medium text-slate-600">Dealer pricing (not on customer bill)</p>
-                      <p className="mt-1">
-                        Sell price: <strong className="text-teal-700">{nprNum(line.rate)}</strong>
-                        {tenantVat && (
-                          <> · Incl. {vatPct}% VAT: {nprNum(addVatToExcl(line.rate, vatPct))}</>
-                        )}
-                      </p>
-                      <div className="mt-2">
-                        <FormField label="Dealer rate (NPR)">
-                          <NumericInput
-                            {...numericMoneyProps}
-                            min={0}
-                            value={line.rate}
-                            onChange={(v) => updateLine(line.id, { rate: v })}
-                          />
-                        </FormField>
-                      </div>
-                    </div>
-                  )}
+                  {line.productId ? (
+                    <SaleLinePricingBlock
+                      line={line}
+                      priceMode={business.salesBillPriceMode}
+                      lineAmount={lineAmount(line)}
+                      tenantVat={tenantVat}
+                      vatPct={vatPct}
+                      onMrpChange={(v) => updateLine(line.id, { mrp: v })}
+                      onRateChange={(v) => updateLine(line.id, { rate: v })}
+                    />
+                  ) : null}
                   {lines.filter((l) => !l.isSchemeFree).length > 1 && (
                     <button onClick={() => removeLine(line.id)} className="flex items-center gap-1 text-xs text-danger">
                       <Trash2 size={12} /> Remove
@@ -698,22 +655,13 @@ export const SaleEntryPage = () => {
 
         {/* ── Balance due ── */}
         {balanceDue > 0 && (
-          <Card className="border-warning/30 bg-warning-light">
-            <CardContent className="space-y-3 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-warning-foreground">Balance due</p>
-                <Badge variant="warning">{npr(balanceDue)}</Badge>
-              </div>
-              <FormField label="Due date" required>
-                <Input
-                  type="date"
-                  value={dueDate}
-                  min={toDateInput()}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </FormField>
-            </CardContent>
-          </Card>
+          <div className="rounded-xl border border-warning/30 bg-warning-light px-3 py-2.5">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-warning-foreground">Balance due</span>
+              <span className="text-sm font-bold tabular-nums text-warning-foreground">{npr(balanceDue)}</span>
+            </div>
+            <DateFormField label="Due date" required dense value={dueDate} onChange={setDueDate} />
+          </div>
         )}
 
         {balanceDue === 0 && grandTotal > 0 && (
@@ -795,8 +743,6 @@ export const SaleEntryPage = () => {
           isEdit ? `Update ${SALES_INVOICE_LABEL.toLowerCase()}` : `Save ${SALES_INVOICE_LABEL.toLowerCase()}`
         }
         onAction={handleSave}
-        secondaryAction={isEdit ? UPDATE_INVOICE_PRINT_ACTION : SAVE_INVOICE_PRINT_ACTION}
-        onSecondaryAction={handleSaveAndPrint}
         loading={saving}
         disabled={!customerId || lines.every((l) => !l.productId)}
       />

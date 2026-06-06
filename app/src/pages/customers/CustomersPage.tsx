@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {Plus} from "lucide-react";
+import { ListPageHeader } from "@/components/app/patterns";
 import { PageShell } from "@/components/app/PageShell";
-import { ListRow } from "@/components/app/ListRow";
+import { EntityList, EntityListCard } from "@/components/app/EntityListCard";
 import { EmptyState } from "@/components/app/EmptyState";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useCustomers } from "@/store/domain";
+import { useBusinessSettings, useCustomers } from "@/store/domain";
 import { npr } from "@/lib/utils";
 import { ListBrowsePanel, type BrowseFilterOption } from "@/components/app/ListBrowsePanel";
 import { ListPagination } from "@/components/app/ListPagination";
@@ -21,10 +19,14 @@ export const CustomersPage = () => {
   const navigate  = useNavigate();
   const [params]  = useSearchParams();
   const [query, setQuery] = useState("");
+  const business = useBusinessSettings();
   const CUSTOMERS = useCustomers();
 
   const outstandingOnly = params.get("filter") === "outstanding";
-  const [listFilter, setListFilter] = useState<"all" | "credit">(outstandingOnly ? "credit" : "all");
+  const overdueOnly = params.get("filter") === "overdue";
+  const [listFilter, setListFilter] = useState<"all" | "credit" | "overdue">(
+    overdueOnly ? "overdue" : outstandingOnly ? "credit" : "all",
+  );
   const [areaFilter, setAreaFilter] = useState("all");
   const areaList = useMemo(() => customerAreas(CUSTOMERS), [CUSTOMERS]);
 
@@ -37,6 +39,9 @@ export const CustomersPage = () => {
         c.area.toLowerCase().includes(query.toLowerCase());
       if (!matchesQuery) return false;
       if (listFilter === "credit") return c.outstanding > 0;
+      if (listFilter === "overdue") {
+        return c.outstanding > 0 && c.oldestBillDays > business.overdueDays;
+      }
       if (areaFilter !== "all" && (c.area ?? "").trim() !== areaFilter) return false;
       return true;
     });
@@ -58,11 +63,15 @@ export const CustomersPage = () => {
 
   const filterOptions = useMemo((): BrowseFilterOption[] => {
     const creditCount = searchMatched.filter((c) => c.outstanding > 0).length;
+    const overdueCount = searchMatched.filter(
+      (c) => c.outstanding > 0 && c.oldestBillDays > business.overdueDays,
+    ).length;
     return [
       { value: "all", label: `All (${searchMatched.length})` },
       { value: "credit", label: `On credit (${creditCount})` },
+      { value: "overdue", label: `Overdue (${overdueCount})` },
     ];
-  }, [searchMatched]);
+  }, [searchMatched, business.overdueDays]);
 
   const areaOptions = useMemo((): BrowseFilterOption[] => {
     const opts: BrowseFilterOption[] = [
@@ -80,15 +89,14 @@ export const CustomersPage = () => {
 
   return (
     <PageShell>
-      <div className="mb-4 flex items-center justify-between">
-        <Button size="sm" onClick={() => navigate("/app/customers/new")}>
-          <Plus size={14} /> New
-        </Button>
-      </div>
-      <h1 className="mb-4 text-lg font-semibold">
-        Customers
-        {outstandingOnly && <span className="ml-2 text-sm font-normal text-muted">(with balance)</span>}
-      </h1>
+      <ListPageHeader
+        showBack
+        title={
+          outstandingOnly ? "Customers (with balance)" : "Customers"
+        }
+        addLabel="Add customer"
+        onAdd={() => navigate("/app/customers/new")}
+      />
 
       <ListBrowsePanel
         search={query}
@@ -97,7 +105,8 @@ export const CustomersPage = () => {
         filterValue={listFilter}
         filterOptions={filterOptions}
         filterLabel="Status"
-        onFilterChange={(v) => setListFilter(v as "all" | "credit")}
+        filterVariant={listFilter === "overdue" ? "danger" : "default"}
+        onFilterChange={(v) => setListFilter(v as "all" | "credit" | "overdue")}
         extraFilter={{
           label: "Area",
           value: areaFilter,
@@ -130,19 +139,30 @@ export const CustomersPage = () => {
         <EmptyState title="No customers found" />
       ) : (
         <>
-          <Card>
-            <CardContent className="p-0 px-4">
-              {page.visible.map((c) => (
-                <ListRow
+          <EntityList>
+            {page.visible.map((c) => {
+              const isOverdue =
+                c.outstanding > 0 && c.oldestBillDays > business.overdueDays;
+              return (
+                <EntityListCard
                   key={c.id}
-                  left={c.name}
-                  right={c.outstanding > 0 ? <Badge variant="warning">{npr(c.outstanding)}</Badge> : <span className="text-xs text-success-foreground">Clear</span>}
-                  sub={`${c.area} · limit ${npr(c.creditLimit)}`}
+                  title={c.name}
+                  subtitle={`${c.area || "—"} · limit ${npr(c.creditLimit)}`}
+                  accent={isOverdue ? "danger" : "teal"}
+                  trailing={
+                    c.outstanding > 0 ? (
+                      <Badge variant={isOverdue ? "danger" : "warning"} className="text-[11px]">
+                        {npr(c.outstanding)}
+                      </Badge>
+                    ) : (
+                      <span className="text-[11px] font-medium text-success-foreground">Clear</span>
+                    )
+                  }
                   onClick={() => navigate(`/app/customers/${c.id}`)}
                 />
-              ))}
-            </CardContent>
-          </Card>
+              );
+            })}
+          </EntityList>
           <ListPagination
             page={page.page}
             totalPages={page.totalPages}

@@ -69,14 +69,14 @@ export const AppShell = () => {
       active: isHomeTabActive(location.pathname, location.search),
     },
     {
-      to: "/app/home?tab=customers",
+      to: "/app/customers",
       label: "Customers",
       icon: Users,
       active: isCustomersTabActive(location.pathname, location.search),
     },
     {
-      to: "/app/home?tab=stock",
-      label: "Inventory",
+      to: "/app/products",
+      label: "Stock",
       icon: Box,
       active: isInventoryTabActive(location.pathname, location.search),
     },
@@ -175,7 +175,7 @@ export const AppShell = () => {
                 <X size={18} />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid max-h-[min(70dvh,28rem)] grid-cols-2 gap-3 overflow-y-auto overscroll-contain pb-1">
               {QUICK_ENTRY_ACTIONS.map((a) => (
                 <button
                   key={a.to}

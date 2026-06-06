@@ -15,8 +15,10 @@ import { Badge } from "@/components/ui/badge";
 import { PAYMENT_MODES } from "@/domain/catalogs";
 import type { Supplier } from "@/domain/types";
 import { useSuppliers, commitSupplierPayment } from "@/store/domain";
-import { npr, fmtDate, toDateInput } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { npr, toDateInput } from "@/lib/utils";
+import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 /** Single allocation bucket from live supplier outstanding (Supabase); not a separate invoice table in v1. */
 type OpenInvoice = {
@@ -146,8 +148,10 @@ export const SupplierPaymentPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-5 text-lg font-semibold">Supplier payment</h1>
+      <FormPageHeader
+        title="Supplier payment"
+        subtitle="Pay supplier outstanding from purchases."
+      />
 
       <div className="space-y-4">
         {/* ── Supplier ── */}
@@ -217,7 +221,9 @@ export const SupplierPaymentPage = () => {
                           <span className="text-sm font-medium text-foreground">{inv.invoiceNo}</span>
                           <span className="text-sm font-semibold text-foreground">{npr(inv.outstanding)}</span>
                         </div>
-                        <p className="text-xs text-muted">{fmtDate(inv.date)} · invoice total {npr(inv.total)}</p>
+                        <p className="text-xs text-muted">
+                          <DateDisplay iso={inv.date} dual compact /> · {npr(inv.total)}
+                        </p>
 
                         {isSelected && enteredAmt > 0 && (
                           <div className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${fullyPaid ? "bg-success-light text-success-foreground" : partial ? "bg-warning-light text-warning-foreground" : "bg-slate-100 text-slate-500"}`}>
@@ -280,14 +286,14 @@ export const SupplierPaymentPage = () => {
         </FormField>
 
         {mode === "Cheque" && (
-          <FormField label="Expected clearing date">
-            <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} />
-          </FormField>
+          <DateFormField
+            label="Expected clearing date"
+            value={chequeDate}
+            onChange={setChequeDate}
+          />
         )}
 
-        <FormField label="Payment date">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </FormField>
+        <DateFormField label="Payment date" value={date} onChange={setDate} />
       </div>
 
       <StickyBar

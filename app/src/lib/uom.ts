@@ -1,11 +1,28 @@
 import type { Product, ProductUomConversion, ProductUomPrice } from "@/domain/types";
 import { roundMoney } from "@/lib/money";
-import { effectiveRateForRpc } from "@/lib/saleLineMath";
+import { effectiveRateForRpcWithMode } from "@/lib/saleLineMath";
+import type { SalesBillPriceMode } from "@/lib/billPriceDisplay";
 
-/** Standard units — pick when adding extra prices on product master. */
-export const UOM_OPTIONS = ["PCS", "Pkt", "Box", "Ctn", "Doz", "Ltr", "Kg"] as const;
+/** Default units when tenant has no custom list (UNITS-1). */
+export const DEFAULT_UOM_OPTIONS = ["PCS", "Pkt", "Box", "Ctn", "Doz", "Ltr", "Kg"] as const;
 
-export type UomOption = (typeof UOM_OPTIONS)[number];
+/** @deprecated Use `tenantUomOptions(business.productUnits)` */
+export const UOM_OPTIONS = DEFAULT_UOM_OPTIONS;
+
+export type UomOption = (typeof DEFAULT_UOM_OPTIONS)[number];
+
+export function tenantUomOptions(catalog?: string[]): readonly string[] {
+  if (!catalog?.length) return DEFAULT_UOM_OPTIONS;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of catalog) {
+    const u = raw.trim();
+    if (!u || seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+  }
+  return out.length ? out : DEFAULT_UOM_OPTIONS;
+}
 
 type DbUomPriceRow = { mrp?: number; sale_price?: number; sellingPrice?: number };
 
@@ -62,6 +79,7 @@ export function productFromSalesEmbed(row: {
     vatApplicable: false,
     onHand: 0,
     minQty: 0,
+    isActive: true,
   };
 }
 
@@ -206,15 +224,19 @@ export function availableExtraUoms(
   baseUom: string,
   packUom: string,
   existing: { uom: string }[],
+  catalog: readonly string[] = DEFAULT_UOM_OPTIONS,
 ): string[] {
   const used = new Set(
     [baseUom.trim(), packUom.trim(), ...existing.map((r) => r.uom.trim())].filter(Boolean),
   );
-  return UOM_OPTIONS.filter((u) => !used.has(u));
+  return catalog.filter((u) => !used.has(u));
 }
 
-export function packUomOptions(baseUom: string): string[] {
-  return UOM_OPTIONS.filter((u) => u !== baseUom);
+export function packUomOptions(
+  baseUom: string,
+  catalog: readonly string[] = DEFAULT_UOM_OPTIONS,
+): string[] {
+  return catalog.filter((u) => u !== baseUom);
 }
 
 /** Bill qty → base-unit qty for stock (e.g. 2 Box × 10 = 20 PCS). */
@@ -233,24 +255,30 @@ export function billQtyToBaseUnits(
 }
 
 /** RPC line item with unit for bill + stock. */
-export function saleLineToRpcItem(line: {
-  productId: string;
-  qty: number;
-  mrp?: number;
-  rate: number;
-  discountPct?: number;
-  uom: string;
-}): { product_id: string; qty: number; rate: number; unit: string } {
+export function saleLineToRpcItem(
+  line: {
+    productId: string;
+    qty: number;
+    mrp?: number;
+    rate: number;
+    discountPct?: number;
+    uom: string;
+  },
+  priceMode: SalesBillPriceMode = "mrp",
+): { product_id: string; qty: number; rate: number; unit: string } {
   const uom = (line.uom || "PCS").trim() || "PCS";
   return {
     product_id: line.productId,
     qty: line.qty,
-    rate: effectiveRateForRpc({
-      qty: line.qty,
-      mrp: line.mrp ?? line.rate,
-      rate: line.rate,
-      discountPct: line.discountPct,
-    }),
+    rate: effectiveRateForRpcWithMode(
+      {
+        qty: line.qty,
+        mrp: line.mrp ?? line.rate,
+        rate: line.rate,
+        discountPct: line.discountPct,
+      },
+      priceMode,
+    ),
     unit: uom,
   };
 }

@@ -16,7 +16,7 @@ export async function fetchAllPages<T>(buildQuery: () => RangedQuery): Promise<T
   for (;;) {
     const to = from + PAGE_SIZE - 1;
     const { data, error } = await buildQuery().range(from, to);
-    if (error) throw error;
+    if (error) throw new Error(error.message ?? "Database error");
     const batch = (data ?? []) as T[];
     out.push(...batch);
     if (batch.length < PAGE_SIZE) break;

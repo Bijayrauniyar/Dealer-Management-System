@@ -11,7 +11,8 @@ import { useMemo } from "react";
 import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
 import { summarizeCapital } from "@/lib/capitalSummary";
 import { useCapitalEntries, useCustomers, useLatestCashClosing, useProducts, usePnlTotals, useSales, useSuppliers } from "@/store/domain";
-import { npr, fmtDate } from "@/lib/utils";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { npr, fmtDateDualBs } from "@/lib/utils";
 import { PageBackLink } from "@/components/app/PageBackLink";
 
 const categoryLabel = (cat: string) => CAPITAL_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
@@ -93,7 +94,7 @@ export const CompanyOverviewPage = () => {
         <div>
           <h1 className="text-xl font-bold text-foreground">Company overview</h1>
           <p className="text-sm text-muted">
-            From {fmtDate(businessStartDate)} till today.
+            Snapshot only — from {fmtDateDualBs(businessStartDate)} till today. Record operating costs via Expense; assets and loans via Capital.
           </p>
         </div>
         <Button size="sm" onClick={() => navigate("/app/capital/new")}>
@@ -221,7 +222,7 @@ export const CompanyOverviewPage = () => {
                   <Badge variant={categoryBadge(entry.category)} className="text-[10px] px-1.5 py-0">
                     {categoryLabel(entry.category)}
                   </Badge>
-                  <span>{fmtDate(entry.date)}</span>
+                  <DateDisplay iso={entry.date} dual compact />
                 </span>
               }
             />

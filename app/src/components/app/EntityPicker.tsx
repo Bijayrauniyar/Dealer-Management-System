@@ -105,11 +105,17 @@ export const EntityPicker = ({
     return (
       <div
         className={cn(
-          "flex h-11 items-center justify-between rounded-lg border border-border-subtle bg-white px-3 text-sm",
+          "relative flex h-11 items-center justify-between rounded-lg border border-border-subtle bg-white px-3 text-sm",
           disabled ? "opacity-50" : "cursor-pointer hover:bg-slate-50",
           className,
         )}
-        onClick={() => !disabled && setOpen(true)}
+        onClick={() => {
+          if (!disabled) {
+            setQuery("");
+            setOpen(true);
+            requestAnimationFrame(() => inputRef.current?.focus());
+          }
+        }}
       >
         <span className="truncate font-medium text-foreground">{selected.label}</span>
         {!disabled && (
@@ -126,8 +132,8 @@ export const EntityPicker = ({
   }
 
   return (
-    <div className={cn("relative", className)}>
-      <div className="flex h-11 items-center gap-2 rounded-lg border border-border-subtle bg-white px-3 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500">
+    <div className={cn("relative", open && "z-50", className)}>
+      <div className="relative z-50 flex h-11 items-center gap-2 rounded-lg border border-border-subtle bg-white px-3 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500">
         <Search size={14} className="shrink-0 text-muted" />
         <input
           ref={inputRef}

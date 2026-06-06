@@ -61,6 +61,7 @@ function runUnitTests() {
     "bill.amount PCS line",
   );
   r.assertClose(billLineAmount({ qty: 2, rate: 50, mrp: 60, amount: 99 }), 99, "bill.amount prefers stored amount");
+
   r.assertClose(
     billLineAmount({ qty: 3, rate: 10.25, mrp: 0 }),
     30.75,
@@ -170,6 +171,8 @@ function runUnitTests() {
 function runSourceTests() {
   const billView = readFileSync(resolve(SRC, "components/app/BillPrintView.tsx"), "utf8");
   const purchaseBill = readFileSync(resolve(SRC, "components/app/PurchaseBillView.tsx"), "utf8");
+  const billPriceDisplay = readFileSync(resolve(SRC, "lib/billPriceDisplay.ts"), "utf8");
+  const settingsPage = readFileSync(resolve(SRC, "pages/settings/SettingsPage.tsx"), "utf8");
   const saleEntry = readFileSync(resolve(SRC, "pages/sales/SaleEntryPage.tsx"), "utf8");
   const entityPicker = readFileSync(resolve(SRC, "components/app/EntityPicker.tsx"), "utf8");
   const stockAlert = readFileSync(resolve(SRC, "lib/stockAlert.ts"), "utf8");
@@ -189,7 +192,20 @@ function runSourceTests() {
     ["BillPrintView", "lineDiscPct", billView],
     ["BillPrintView", "BillLetterhead", billView],
     ["BillPrintView", "sellerLetterheadFromBusiness", billView],
+    ["BillPrintView", "billLineUnitPriceDisplay", billView],
+    ["BillPrintView", "bill-payment-qr", billView],
+    ["billPriceDisplay", "salesBillUnitPriceHeaderPrint", billPriceDisplay],
+    ["billPriceDisplay", "saleLineDisplayMrp", billPriceDisplay],
+    ["billDisplay", "inferBillDiscountFromStored", readFileSync(resolve(SRC, "lib/billDisplay.ts"), "utf8")],
+    ["domainLive", "inferBillDiscountFromStored", domainLive],
+    ["billPriceDisplay", "showsSalesBillPaymentQr", billPriceDisplay],
+    ["SettingsPage", "sales_bill_price_mode", settingsPage],
+    ["SettingsPage", "sales_bill_qr_enabled", settingsPage],
+    ["SettingsPage", "uploadSalesBillQrImage", settingsPage],
+    ["BillPrintView", "createSalesBillQrSignedUrl", billView],
+    ["salesBillQrStorage", "tenant-assets", readFileSync(resolve(SRC, "lib/salesBillQrStorage.ts"), "utf8")],
     ["PurchaseBillView", "BillLetterhead", purchaseBill],
+    ["PurchaseBillView", "purchaseBillRateHeader", purchaseBill],
     ["billPdfDocument", "sellerLetterheadFromBusiness", billPdf],
     ["billExport", "createBillPdf", billExport],
     ["billPdfDocument", "createBillPdf", billPdf],
@@ -233,6 +249,20 @@ function runSourceTests() {
     r.pass("billExport matches on-screen bill design");
   } else {
     r.fail("billExport", "expected billPdfCapture for styled PDF download");
+  }
+
+  const mig0035 = resolve(APP, "supabase/migrations/0035_sales_print_settings_and_qr.sql");
+  if (existsSync(mig0035)) r.pass("migration 0035_sales_print_settings_and_qr.sql present");
+  else r.fail("migration 0035", "missing");
+
+  const mig0036 = resolve(APP, "supabase/migrations/0036_sales_bill_qr_storage.sql");
+  if (existsSync(mig0036)) r.pass("migration 0036_sales_bill_qr_storage.sql present");
+  else r.fail("migration 0036", "missing");
+
+  if (billPdf.includes("showsSalesBillPaymentQr")) {
+    r.pass("billPdfDocument payment QR fallback text");
+  } else {
+    r.fail("billPdfDocument", "missing showsSalesBillPaymentQr fallback");
   }
 }
 

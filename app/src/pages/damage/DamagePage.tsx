@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { DAMAGE_REASONS } from "@/domain/catalogs";
 import { useProducts, commitDamageEntry } from "@/store/domain";
 import { toDateInput } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 export const DamagePage = () => {
   const navigate  = useNavigate();
@@ -47,8 +48,7 @@ export const DamagePage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-5 text-lg font-semibold">Damage entry</h1>
+      <FormPageHeader title="Damage entry" subtitle="Write off spoiled or broken stock." />
       <div className="space-y-4">
         <FormField label="Product" required>
           <EntityPicker placeholder="Search product" options={PRODUCTS.map((p) => ({ id: p.id, label: p.name }))}
@@ -70,9 +70,7 @@ export const DamagePage = () => {
         <FormField label="Notes (optional)">
           <Textarea placeholder="Any detail" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </FormField>
-        <FormField label="Date">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </FormField>
+        <DateFormField label="Date" value={date} onChange={setDate} />
       </div>
       <StickyBar action="Save damage" onAction={handleSave} loading={saving} />
     </PageShell>

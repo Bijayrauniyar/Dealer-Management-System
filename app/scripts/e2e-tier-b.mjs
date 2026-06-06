@@ -74,6 +74,39 @@ function runSourceChecks() {
     } else {
       r.fail("SaleEntryPage credit", "missing credit handling");
     }
+    if (
+      saleEntry.includes("SaleLinePricingBlock") &&
+      saleEntry.includes("Prints: Rate") &&
+      saleEntry.includes("Bill uses")
+    ) {
+      r.pass("SaleEntryPage line pricing block");
+    } else {
+      r.fail("SaleEntryPage pricing UI", "missing SaleLinePricingBlock");
+    }
+    if (!saleEntry.includes("dealer pricing")) {
+      r.pass("SaleEntryPage no dealer pricing label");
+    } else {
+      r.fail("SaleEntryPage copy", "remove dealer pricing wording");
+    }
+    if (!saleEntry.includes("handleSaveAndPrint") && !saleEntry.includes("SAVE_INVOICE_PRINT_ACTION")) {
+      r.pass("SaleEntryPage no save-and-print shortcut");
+    } else {
+      r.fail("SaleEntryPage save & print", "print only from bill detail");
+    }
+  }
+
+  const billDetail = readSrc("pages/bills/BillDetailPage.tsx");
+  if (billDetail?.includes("bill-print-root") && billDetail?.includes("waitingForSale")) {
+    r.pass("BillDetailPage waits for bill before print");
+  } else {
+    r.fail("BillDetailPage print gate", "missing bill-ready check");
+  }
+
+  const entityPicker = readSrc("components/app/EntityPicker.tsx");
+  if (entityPicker?.includes('open && "z-50"')) {
+    r.pass("EntityPicker search above backdrop");
+  } else {
+    r.fail("EntityPicker z-index", "dropdown backdrop blocks input");
   }
 
   const settings = readSrc("pages/settings/SettingsPage.tsx");

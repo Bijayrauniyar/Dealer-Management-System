@@ -4,7 +4,8 @@ import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useProducts, useSchemes } from "@/store/domain";
+import { commitSetProductActive, useProductsCatalog, useSchemes } from "@/store/domain";
+import { MasterArchiveAction } from "@/components/app/MasterArchiveAction";
 import {
   isLowStock,
   minStockLabel,
@@ -40,7 +41,7 @@ function stockBadgeVariant(status: ReturnType<typeof productStockStatus>) {
 export const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
-  const PRODUCTS = useProducts();
+  const PRODUCTS = useProductsCatalog();
   const SCHEMES = useSchemes();
 
   const product = PRODUCTS.find((p) => p.id === productId);
@@ -164,26 +165,46 @@ export const ProductDetailPage = () => {
 
       <DetailActions
         actions={[
-          {
-            label: salesInvoiceWithProductLabel(),
-            icon: FilePlus,
-            variant: "primary",
-            onClick: () => navigate("/app/sales/new"),
-          },
-          {
-            label: PURCHASE_INVOICE_LABEL,
-            icon: ShoppingCart,
-            variant: "outline",
-            onClick: () => navigate("/app/purchases/new"),
-          },
-          {
-            label: "Edit product",
-            icon: Pencil,
-            variant: "outline",
-            onClick: () => navigate(`/app/products/edit/${product.id}`),
-          },
+          ...(product.isActive
+            ? [
+                {
+                  label: salesInvoiceWithProductLabel(),
+                  icon: FilePlus,
+                  variant: "primary" as const,
+                  onClick: () => navigate("/app/sales/new"),
+                },
+                {
+                  label: PURCHASE_INVOICE_LABEL,
+                  icon: ShoppingCart,
+                  variant: "outline" as const,
+                  onClick: () => navigate("/app/purchases/new"),
+                },
+                {
+                  label: "Edit product",
+                  icon: Pencil,
+                  variant: "outline" as const,
+                  onClick: () => navigate(`/app/products/edit/${product.id}`),
+                },
+              ]
+            : [
+                {
+                  label: "View product",
+                  icon: Package,
+                  variant: "outline" as const,
+                  onClick: () => navigate(`/app/products/edit/${product.id}`),
+                },
+              ]),
         ]}
       />
+
+      <div className="mt-3">
+        <MasterArchiveAction
+          entityLabel="product"
+          isActive={product.isActive}
+          onSetActive={(active) => commitSetProductActive(product.id, active)}
+          onArchived={() => navigate("/app/products")}
+        />
+      </div>
 
       {product.description && (
         <Card className="mt-4">

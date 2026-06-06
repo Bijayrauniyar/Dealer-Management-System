@@ -31,6 +31,8 @@ export type BusinessSettings = {
   defaultMinPackQty: number;
   /** Product form categories (Settings). */
   productCategories: string[];
+  /** Product form unit labels (Settings, UNITS-1). */
+  productUnits: string[];
   /** When true, Stock adjustment entry is available. */
   allowStockAdjustment: boolean;
   /** Rows per page on browse lists (customers, products, stock, …). */
@@ -41,6 +43,18 @@ export type BusinessSettings = {
   supportPhone: string;
   supportEmail: string;
   supportWhatsapp: string;
+  /** Sales invoice print: mrp | selling_price (`0035`). */
+  salesBillPriceMode: "mrp" | "selling_price";
+  /** Purchase invoice print: rate_excl | rate_incl (`0035`). */
+  purchaseBillPriceMode: "rate_excl" | "rate_incl";
+  /** Legacy pasted URL / data URL — prefer `salesBillQrObjectPath` (`0035`). */
+  salesBillQrImageUrl: string;
+  /** Bank name + account line beside payment QR (`0035`). */
+  salesBillQrBankText: string;
+  /** When true, show payment QR on balance-due sales bills (`0036`). */
+  salesBillQrEnabled: boolean;
+  /** Private Storage path in `tenant-assets` bucket (`0036`). */
+  salesBillQrObjectPath: string;
 };
 
 export type Customer = {
@@ -54,6 +68,7 @@ export type Customer = {
   outstanding: number;
   creditLimit: number;
   oldestBillDays: number;
+  isActive: boolean;
 };
 
 /** MRP and dealer sell price for one unit of measure. */
@@ -89,6 +104,9 @@ export type Product = {
   /** Optional alert threshold in pack UOM (e.g. Box); 0 = use base minQty only. */
   minQtyPack?: number;
   description?: string;
+  /** Optional HSN code on the product. */
+  hsnCode?: string;
+  isActive: boolean;
 };
 
 export type Supplier = {
@@ -107,6 +125,7 @@ export type Supplier = {
   paymentTermsDays: number;
   outstanding: number;
   notes: string;
+  isActive: boolean;
 };
 
 export type SaleLine = {

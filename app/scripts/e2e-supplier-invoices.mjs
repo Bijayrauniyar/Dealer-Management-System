@@ -257,6 +257,34 @@ function runSourceChecks() {
     r.fail("ProductFormPage markup", "numericPercentProps / nullable / showZero missing");
   }
 
+  if (
+    productForm?.includes("HSN code (optional)") &&
+    productForm.includes("hsn_code: hsnCode.trim()")
+  ) {
+    r.pass("ProductFormPage optional HSN code field");
+  } else if (productForm) {
+    r.fail("ProductFormPage HSN", "optional HSN field missing");
+  }
+
+  if (domainLive?.includes("hsn_code") && domainLive.includes("hsnCode")) {
+    r.pass("domainLive product hsn_code mapping");
+  } else if (domainLive) {
+    r.fail("domainLive hsn_code", "missing");
+  }
+
+  const columns = readSrc("lib/export/columns.ts");
+  if (columns?.includes('"hsn_code"')) {
+    r.pass("export PRODUCT_COLUMNS includes hsn_code");
+  } else if (columns) {
+    r.fail("export columns hsn_code", "missing");
+  }
+
+  if (existsSync(resolve(APP, "supabase/migrations/0034_product_hsn_code.sql"))) {
+    r.pass("migration 0034_product_hsn_code.sql");
+  } else {
+    r.fail("migration 0034", "missing");
+  }
+
   if (domainLive && domainLive.includes("rate_excl")) {
     r.pass("domainLive purchase lines use rate_excl");
   } else if (domainLive) {

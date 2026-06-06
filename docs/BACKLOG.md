@@ -19,13 +19,15 @@
 
 | ID | Title | Phase | Effort | Status | Notes |
 |----|--------|-------|--------|--------|-------|
-| **UI-1** | Symmetric UI (`patterns.tsx`) | 1.0 | 2–3 d | backlog | [UI_CONSISTENCY_PLAN](UI_CONSISTENCY_PLAN.md) |
-| **DEL-1** | Deactivate masters; cancel draft orders | 1.0 | 3–5 d | backlog | [DELETE_POLICY](DELETE_POLICY.md) |
-| **BILL-QR-1** | Payment QR + bank on sales invoice print | 1.0 | 1–2 d | backlog | Karobar-style static QR |
+| **UI-1** | Symmetric UI (`patterns.tsx`) | 1.0 | 2–3 d | **done** | 2026-06-05 — [UI_CONSISTENCY_PLAN](UI_CONSISTENCY_PLAN.md) |
+| **DEL-1** | Archive/restore masters + list filter; cancel draft orders; no hard delete in shop UI | 1.0 | 3–5 d | **done** | 2026-06-05 — `0037`; [DELETE_POLICY](DELETE_POLICY.md) |
+| **BILL-QR-1** | Payment QR + bank on sales invoice print | 1.0 | 1–2 d | **done** | 2026-06-05 — `0035`–`0036` |
 | **LIC-1** | Trial / license expiry on tenant | 1.0 | 1–2 d | **done** | `0030`, `/license-expired`, `approve_tenant`, `set_tenant_subscription` — see [TENANT_ACTIVATION.md](TENANT_ACTIVATION.md) |
-| **PRICE-DISP-1** | Configurable MRP vs rate on print | 1.0 | 2–4 d | backlog | Settings; tax math unchanged |
-| **UNITS-1** | Custom units catalog in Settings | 1.0 | 2–3 d | backlog | |
-| **HSN-1** | HSN code on products (Settings toggle) | 1.0 | 1–2 d | backlog | See § HSN-1 below |
+| **DATE-BS-1** | BS date picker (day/month/year dropdowns) | 1.0 | ~3 d | backlog | Not full calendar grid — see § DATE-BS-1 |
+| **PRICE-DISP-1** | Configurable MRP vs rate on print | 1.0 | 2–4 d | **done** | 2026-06-05 — `0035` |
+| **PRICE-4DEC** | Product + line prices up to 4 decimals | 1.0 | — | **done** | 2026-06-05 — `0039` on prod |
+| **UNITS-1** | Custom units catalog in Settings | 1.0 | 2–3 d | **done** | 2026-06-05 — `0038` |
+| **HSN-1** | HSN code on products (optional field) | 1.0 | — | **done** | `0034`; no Settings toggle — see § HSN-1 below |
 | **SF-0** | Salesman on invoice only | 1.0 | 3–5 d | backlog | No order tables |
 | **ORD-1** | Sales order draft | 1.0 | 3–4 d | backlog | No stock move |
 | **ORD-2** | Convert order → sales bill (full) | 1.0 | 2–3 d | backlog | |
@@ -54,18 +56,18 @@
 | **TRUST-1** | Bill amendment history UI | 1 | 2 d | backlog | RPC exists |
 | **COMM-1** | Customer price tier | 1 | 3–5 d | backlog | |
 | **COMM-2** | Owner vs staff roles | 1 | 4–7 d | backlog | |
-| **EXP-P1** | Extra export registers | 1 | 2–3 d | backlog | expenses, damages, returns |
-| **NAV-P1** | Delivery note from invoice | 1 | 2–3 d | backlog | |
-| **WEB-1** | Marketing site + `/app` route | 0 launch | 3–5 d | backlog | [FIRST_LAUNCH § Website](FIRST_LAUNCH.md#website-bikrikhatacom--app) |
+| **EXP-P1** | Extra export registers | 1 | 2–3 d | **done** | 2026-06-05 — expenses, damages, returns |
+| **NAV-P1** | Delivery note from invoice | 1 | 2–3 d | backlog | Not shipped — distinct from stock-hub nav (see FIRST_LAUNCH NAV-P1) |
+| **WEB-1** | Marketing site + `/app` route | 0 launch | — | **done** | [FIRST_LAUNCH § Website](FIRST_LAUNCH.md#website-bikrikhatacom--app) |
 | **MIG-0012** | Scheme Box→PCS columns | opt | 10 min | backlog | Only if cross-UOM schemes |
 | **INV-1** | Block oversell in DB | 0 | — | **done** | 0024 |
 | **EXP-1** | Export Tier A registers | 0 | — | **done** | partial ZIP |
 | **BRAND-1** | BikriKhata rebrand | 0 | — | **done** | |
-| **L8** | Contact form email alerts (Resend) | 0 ops | ~20 min | **ready** | Run migration 0033 + `npm run setup:contact-email` |
+| **L8** | Contact form email alerts (Resend) | 0 ops | ~20 min | **deferred** | Code ready; enable later — 0033 + `setup:contact-email` |
 
 ---
 
-## L8 — Contact form email alerts (ready to enable)
+## L8 — Contact form email alerts (deferred — enable when you want inbox alerts)
 
 **Now:** Form → **`platform_inquiries`**. Email needs one-time setup (~20 min).
 
@@ -117,19 +119,36 @@ Sigma-style lite v1: salesman master → sales order → full convert → one sa
 
 ---
 
-## Detail — HSN-1 (product form, configurable in Settings)
+## Detail — HSN-1 (done — optional product field)
 
-**Why:** Some dealers / CAs want **HSN** (harmonized system nomenclature) on product master for VAT returns; many small FMCG shops do not — make it **optional per tenant**.
+**Why:** Some dealers / CAs want **HSN** on product master for VAT returns; field is always visible but **optional** (no Settings toggle).
 
 | Layer | Spec |
 |-------|------|
-| **Settings** | Toggle e.g. **“Show HSN code on products”** (Business or Stock tab); default **off** at launch |
-| **DB** | `products.hsn_code` text nullable; optional `tenant_settings.show_product_hsn` boolean |
-| **Product create/edit** | When toggle on: field **HSN Code**, placeholder `Eg: 345578`; optional, not required to save |
-| **Bill print** | Out of v1 unless CA asks — product master only |
-| **Export** | Add `hsn_code` column to products CSV when column exists |
+| **DB** | `products.hsn_code` text nullable — migration `0034_product_hsn_code.sql` |
+| **Product create/edit** | **HSN code (optional)** on [ProductFormPage](app/src/pages/products/ProductFormPage.tsx); not required to save |
+| **Bill print** | Not on invoice layout yet — product + export only |
+| **Export** | `hsn_code` column on products CSV / backup ZIP |
 
-**Acceptance:** Toggle off → no HSN field on form. Toggle on → save/load HSN on product; existing products unchanged.
+**Acceptance:** Empty HSN saves; edit loads HSN; existing products unchanged (null).
+
+---
+
+## Detail — DATE-BS-1 (Nepali date in picker)
+
+**Problem:** Native `<input type="date">` popup is **English (AD) only** — browsers do not support BS inside the calendar. Today: pick AD → app shows `22/02/2083 (5 Jun 2026)` on a line below (`DateFormField` + `DateDisplay`).
+
+**Goal:** Dealer picks dates in **Bikram Sambat first** (forms, filters, reports, license expiry).
+
+**Chosen approach (not in scope):** ~~Full Nepali calendar month grid~~ — too heavy for mobile; **do not build** grid picker.
+
+**Ship:** **BS dropdowns** — day / month / year `<select>` in Bikram Sambat; compact AD preview on same row (`22/02/2083 · 5 Jun 2026`). Use `bikram-sambat` (or similar) for accurate BS↔ISO; retire approximate `toMiti` in `utils.ts` for form picks.
+
+**Scope when promoted:** `DateFormField` everywhere (sales due date, bill date, purchase, payment, export range, Settings license, list filters). Store **ISO (AD)** in DB unchanged.
+
+**Acceptance:** Pick BS date on phone → correct ISO saved; reopen shows same BS+AD; e2e date conversion tests; manual checklist § dates.
+
+**Current (Phase 0):** AD native picker + BS line below — no custom picker.
 
 ---
 
@@ -161,4 +180,4 @@ Sigma-style lite v1: salesman master → sales order → full convert → one sa
 
 ---
 
-*Last updated: 2026-05-26 — consolidated from DEFERRED_WORK + Phase 1 Tier D scope.*
+*Last updated: 2026-06-05 — P1 items (UI-1, DEL-1, BILL-QR-1, PRICE-DISP-1, UNITS-1, EXP-P1, PRICE-4DEC) marked done; DATE-BS-1 still backlog.*

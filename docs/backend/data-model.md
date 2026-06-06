@@ -97,12 +97,19 @@ One row per tenant — stores the full business profile that appears on invoices
 | default_vat_pct | numeric DEFAULT 13 | Default VAT % for purchase bills and sales when tenant is VAT registered (`0017`). |
 | default_min_qty | integer DEFAULT 20 | Default low-stock threshold applied when creating a new product. Overridable per product. |
 | product_categories | jsonb DEFAULT `["General"]` | Category dropdown options; appended from **product form** Add category (`0019`). |
+| product_units | jsonb (`0038`) | Unit labels on product form (UNITS-1); default PCS, Pkt, Box, Ctn, Doz, Ltr, Kg |
 | allow_stock_adjustment | boolean DEFAULT false | Enables `/app/stock-adjustment/new` (`0021`). |
 | list_page_size | integer DEFAULT 10 | Rows per page on browse lists; Settings → Business tab (`0022`). Allowed: 10, 20, 50, 100. |
 | show_district_province_on_bill | boolean DEFAULT false | When true, bill letterhead adds district · province · country after address lines (`0023`). |
 | support_phone | text | Reserved (`0025`). **App support** for tenant owners = `PLATFORM_SUPPORT` in code, not these columns. |
 | support_email | text | Reserved (`0025`). |
 | support_whatsapp | text | Reserved (`0025`). |
+| sales_bill_price_mode | text DEFAULT `mrp` (`0035`) | `mrp` \| `selling_price` — unit price column on sales invoice print |
+| purchase_bill_price_mode | text DEFAULT `rate_excl` (`0035`) | `rate_excl` \| `rate_incl` — unit rate column on purchase invoice print |
+| sales_bill_qr_image_url | text (`0035`) | Legacy pasted URL / data URL — prefer `sales_bill_qr_object_path` |
+| sales_bill_qr_bank_text | text (`0035`) | Bank name + account line beside payment QR |
+| sales_bill_qr_enabled | boolean (`0036`, default false) | Master toggle for payment QR on balance-due sales bills |
+| sales_bill_qr_object_path | text (`0036`) | One QR per tenant in private `tenant-assets` bucket (`{tenant_id}/sales-bill-payment-qr.*`; upload replaces; max 1 MB) |
 | updated_at | timestamptz | |
 
 > **FE note:** Loaded via `useBusinessSettings()` (React Query); invalidate `DOMAIN_QUERY_KEY` on save from Settings page.
@@ -134,8 +141,8 @@ One row per tenant — stores the full business profile that appears on invoices
 
 **Pricing model (important for billing):**
 - `mrp` — Maximum Retail Price printed on the product by the manufacturer. Displayed on the sales bill for the customer's reference. Never used in calculations.
-- `cost_price` (DB: `purchase_price`) — Buy price from supplier, stored **VAT-inclusive**. **Private — never shown on bills.** The product form lets the dealer type buy price **excl. VAT**; the app converts using `tenant_settings.default_vat_pct` before save. Purchase entry prefills line cost as **excl.** via the same split.
-- `selling_price` — Price charged to customers, **exclusive of VAT** (may be `0` until set). This is the basis for sale line rates when billing.
+- `cost_price` (DB: `purchase_price`) — Buy price from supplier, stored **VAT-inclusive**. **Private — never shown on bills.** The product form lets the dealer type buy price **excl. VAT**; the app converts using `tenant_settings.default_vat_pct` before save. Purchase entry prefills line cost as **excl.** via the same split. **`numeric(12,4)`** after migration `0039` (up to 4 decimals).
+- `selling_price` (DB: `sale_price`) — Price charged to customers, **exclusive of VAT** (may be `0` until set). This is the basis for sale line rates when billing. **`numeric(12,4)`** after `0039`.
 - `discount_pct` — Standard percentage discount auto-applied on new bills for this product (0 = none).
 - `vat_applicable` — If true, VAT at `default_vat_pct` is added at the bill total level (not per line). The `selling_price` is the VAT-exclusive base.
 - **Auto-calculation (FE):** Markup applies to buy **excl.** in the form; `selling_price = buy_excl × (1 + markup_pct / 100)`. `markup_pct` defaults to `default_markup_pct`. Sell price is optional on save; manual sell price back-calculates markup % for display.
@@ -166,14 +173,15 @@ Subtotal (Σ line amounts)
 | category | text | |
 | uom | text DEFAULT 'PCS' | Unit of Measure: PCS, Box, Ltr, Kg, Pkt, Ctn, Doz |
 | description | text | Flavour, size, pack details |
-| mrp | numeric NOT NULL | MRP on product — shown on bill, not used in calc |
-| cost_price | numeric NOT NULL | Buy price (VAT-inclusive in DB); form entry is excl. VAT |
-| selling_price | numeric NOT NULL | Our price to customer, excl. VAT (0 allowed) |
+| mrp | numeric(12,4) NOT NULL (`0039`) | MRP on product — shown on bill, not used in calc |
+| purchase_price | numeric(12,4) NOT NULL (`0039`) | Buy price VAT-inclusive in DB; form entry is excl. VAT |
+| sale_price | numeric(12,4) NOT NULL (`0039`) | Sell price excl. VAT (0 allowed) |
 | discount_pct | numeric DEFAULT 0 | Standard % discount given on this product |
 | vat_applicable | boolean DEFAULT false | If true, VAT at default_vat_pct added at bill footer |
 | on_hand | integer DEFAULT 0 | Updated on each sale/purchase/return/damage |
 | min_qty | integer DEFAULT 0 | Low-stock alert threshold — configurable per product |
 | is_active | boolean DEFAULT true | Soft-delete |
+| hsn_code | text nullable (`0034`) | Optional HSN code; saved on product; included in products export CSV |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
 
@@ -698,7 +706,7 @@ AS retained_earnings;
 | **History** | **Append-only** audit (`*_audit`) is **SELECT-only** for app users. Inserts/updates/deletes on the main table are logged with `before_row` / `after_row` and `changed_by` where implemented. |
 | **Edits — non-amount** | **Allow** direct updates (name, notes, category, dates where allowed). Each change is audited. |
 | **Edits — amounts** | Prefer **adjustment entry** (new row linked to prior entry) **or** an **audited update** behind an RPC that validates business rules. Avoid silent client-only amount changes. |
-| **Delete** | **No hard delete** from the app for financial/historical rows. Use **`deleted_at` soft delete** only; optional RPC `soft_delete_*` so policies stay centralized. |
+| **Delete** | **No hard delete** in the shop app (see [DELETE_POLICY.md](../DELETE_POLICY.md)). Financial/historical rows: soft hide / void / reverse only. Masters: **archive** (`is_active`). Future optional permanent master delete (unused only) is support/RPC — not v1 shop UI. |
 
 **Rollout order**
 

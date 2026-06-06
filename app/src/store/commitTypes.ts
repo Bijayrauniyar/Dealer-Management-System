@@ -14,6 +14,7 @@ export interface CommitReturnOpts {
   billNo: string;
   creditAmount: number;
   lines: { productId: string; returnQty: number }[];
+  reason?: string;
 }
 
 export interface CommitPurchaseOpts {

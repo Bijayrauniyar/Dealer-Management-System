@@ -22,30 +22,38 @@ import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { ProductCategoryField } from "@/components/app/ProductCategoryField";
+import { ProductUnitField } from "@/components/app/ProductUnitField";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
-import { numericMoneyProps, numericPercentProps, numericQtyProps, roundMoney, roundPercent } from "@/lib/money";
+import {
+  numericPercentProps,
+  numericPriceProps,
+  numericQtyProps,
+  PRICE_DECIMAL_PLACES,
+  formatPriceAmount,
+  roundMoney,
+  roundPercent,
+} from "@/lib/money";
 import { Select } from "@/components/ui/select";
-import { useBusinessSettings, useProducts, upsertProductLive } from "@/store/domain";
+import { useBusinessSettings, useProductsCatalog, upsertProductLive } from "@/store/domain";
+import { FormPageHeader } from "@/components/app/patterns";
 import { supabase } from "@/lib/supabase";
-import { addVatToExcl, getVatPct, purchasePriceExclFromProduct } from "@/lib/tax";
+import { addVatToExclPrice, getVatPct, purchasePriceExclFromProduct } from "@/lib/tax";
 import { npr, nprNum } from "@/lib/utils";
 import {
-  UOM_OPTIONS,
   availableExtraUoms,
   conversionLabel,
   mergeUomPricesWithConversion,
   packUomOptions,
+  tenantUomOptions,
   toDbUomConversion,
   toDbUomPrices,
 } from "@/lib/uom";
 import type { Product, ProductUomConversion, ProductUomPrice } from "@/domain/types";
 import { effectiveMinQtyPcs, isLowStock, minStockLabel } from "@/lib/stockAlert";
 import { Button } from "@/components/ui/button";
-import { PageBackLink } from "@/components/app/PageBackLink";
-
 type ExtraUomRow = { id: number; uom: string; mrp: number; sellingPrice: number };
 
 const Section = ({ label }: { label: string }) => (
@@ -55,7 +63,7 @@ const Section = ({ label }: { label: string }) => (
 export const ProductFormPage = () => {
   const navigate      = useNavigate();
   const { productId } = useParams<{ productId?: string }>();
-  const PRODUCTS      = useProducts();
+  const PRODUCTS      = useProductsCatalog();
   const business      = useBusinessSettings();
   const existing      = productId ? PRODUCTS.find((p) => p.id === productId) : undefined;
   const isEdit        = Boolean(existing);
@@ -85,9 +93,30 @@ export const ProductFormPage = () => {
       return merged;
     });
   }, [business.productCategories, existing?.category]);
+
+  const baseUnits = business.productUnits?.length ? business.productUnits : ["PCS", "Pkt", "Box", "Ctn", "Doz", "Ltr", "Kg"];
+  const [units, setUnits] = useState<string[]>(() => {
+    const list = [...baseUnits];
+    if (existing?.uom && !list.includes(existing.uom)) list.push(existing.uom);
+    return list;
+  });
+  useEffect(() => {
+    const list = business.productUnits?.length ? [...business.productUnits] : ["PCS", "Pkt", "Box", "Ctn", "Doz", "Ltr", "Kg"];
+    setUnits((prev) => {
+      const merged = [...list];
+      for (const u of prev) {
+        if (!merged.includes(u)) merged.push(u);
+      }
+      if (existing?.uom && !merged.includes(existing.uom)) merged.push(existing.uom);
+      return merged;
+    });
+  }, [business.productUnits, existing?.uom]);
+  const unitCatalog = tenantUomOptions(units);
+
   const [openingStock, setOpeningStock] = useState(existing?.openingStock ?? 0);
   const [uom,         setUom]         = useState(existing?.uom         ?? "PCS");
   const [description, setDescription] = useState(existing?.description ?? "");
+  const [hsnCode, setHsnCode] = useState(existing?.hsnCode ?? "");
 
   // ── Pricing ───────────────────────────────────────────────────────────────
   const [mrp, setMrp] = useState(existing?.mrp ?? 0);
@@ -145,12 +174,13 @@ export const ProductFormPage = () => {
 
   // ── Linked price calculations ─────────────────────────────────────────────
   const recalcSellFromMarkup = (buy: number, markup: number | null) => {
-    if (buy > 0) setSellPrice(roundMoney(buy * (1 + markupForCalc(markup) / 100)));
+    if (buy > 0) setSellPrice(roundMoney(buy * (1 + markupForCalc(markup) / 100), PRICE_DECIMAL_PLACES));
   };
 
   const handleBuyChange = (v: number) => {
-    setBuyPrice(v);
-    recalcSellFromMarkup(v, markupPct);
+    const rounded = roundMoney(v, PRICE_DECIMAL_PLACES);
+    setBuyPrice(rounded);
+    recalcSellFromMarkup(rounded, markupPct);
   };
 
   const handleMarkupChange = (v: number | null) => {
@@ -160,9 +190,10 @@ export const ProductFormPage = () => {
 
   // If sell price is typed manually, back-calculate markup %
   const handleSellChange = (v: number) => {
-    setSellPrice(v);
-    if (buyPrice > 0 && v > 0) {
-      setMarkupPct(roundPercent(((v - buyPrice) / buyPrice) * 100));
+    const rounded = roundMoney(v, PRICE_DECIMAL_PLACES);
+    setSellPrice(rounded);
+    if (buyPrice > 0 && rounded > 0) {
+      setMarkupPct(roundPercent(((rounded - buyPrice) / buyPrice) * 100));
     }
   };
 
@@ -171,7 +202,7 @@ export const ProductFormPage = () => {
     if (buyPrice <= 0) return;
     const m = markupPct ?? defaultMarkup;
     if (markupPct === null) setMarkupPct(defaultMarkup);
-    setSellPrice(roundMoney(buyPrice * (1 + m / 100)));
+    setSellPrice(roundMoney(buyPrice * (1 + m / 100), PRICE_DECIMAL_PLACES));
   };
 
   // ── Derived preview ───────────────────────────────────────────────────────
@@ -197,7 +228,7 @@ export const ProductFormPage = () => {
   };
 
   const addExtraUomRow = () => {
-    const next = availableExtraUoms(uom, packUom, extraUomRows)[0];
+    const next = availableExtraUoms(uom, packUom, extraUomRows, unitCatalog)[0];
     if (!next) {
       toast.error("All standard units are already added.");
       return;
@@ -239,9 +270,12 @@ export const ProductFormPage = () => {
         name: name.trim(),
         category,
         unit: uom,
-        purchase_price: vatPct > 0 ? addVatToExcl(buyPrice, vatPct) : buyPrice,
-        sale_price: sellPrice,
-        mrp,
+        purchase_price:
+          vatPct > 0
+            ? addVatToExclPrice(buyPrice, vatPct)
+            : roundMoney(buyPrice, PRICE_DECIMAL_PLACES),
+        sale_price: roundMoney(sellPrice, PRICE_DECIMAL_PLACES),
+        mrp: roundMoney(mrp, PRICE_DECIMAL_PLACES),
         uom_prices: buildUomPricesForSave(),
         uom_conversion: toDbUomConversion(uomConversion),
         discount_pct: discountPct,
@@ -249,6 +283,7 @@ export const ProductFormPage = () => {
         min_qty: minQty,
         min_qty_pack: uomConversion && minQtyPack > 0 ? minQtyPack : null,
         opening_stock: isEdit ? (existing?.openingStock ?? 0) : openingStock,
+        hsn_code: hsnCode.trim() || null,
       });
       toast.success(isEdit ? `${name} updated.` : `${name} added.`);
       navigate("/app/products");
@@ -261,11 +296,12 @@ export const ProductFormPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-1 text-lg font-bold">{isEdit ? `Edit ${existing?.name}` : "New product"}</h1>
-      <p className="mb-5 text-sm text-muted">
-        {isEdit ? "Update product details and pricing." : "Add a product to your catalogue."}
-      </p>
+      <FormPageHeader
+        title={isEdit ? `Edit ${existing?.name}` : "New product"}
+        subtitle={
+          isEdit ? "Update product details and pricing." : "Add a product to your catalogue."
+        }
+      />
 
       <div className="space-y-1">
 
@@ -282,19 +318,16 @@ export const ProductFormPage = () => {
             onChange={setCategory}
             onCategoriesChange={setCategories}
           />
-          <FormField label="Base unit">
-            <Select
-              value={uom}
-              onChange={(e) => {
-                const next = e.target.value;
-                setUom(next);
-                if (packUom === next) setPackUom("");
-                setExtraUomRows((rows) => rows.filter((r) => r.uom !== next));
-              }}
-            >
-              {UOM_OPTIONS.map((u) => <option key={u}>{u}</option>)}
-            </Select>
-          </FormField>
+          <ProductUnitField
+            units={units}
+            value={uom}
+            onChange={(next) => {
+              setUom(next);
+              if (packUom === next) setPackUom("");
+              setExtraUomRows((rows) => rows.filter((r) => r.uom !== next));
+            }}
+            onUnitsChange={setUnits}
+          />
 
           <Section label="Pack / conversion" />
           <p className="mb-3 text-xs text-muted">
@@ -313,7 +346,7 @@ export const ProductFormPage = () => {
                 }}
               >
                 <option value="">— Not sold in packs —</option>
-                {packUomOptions(uom).map((u) => (
+                {packUomOptions(uom, unitCatalog).map((u) => (
                   <option key={u} value={u}>
                     {u}
                   </option>
@@ -352,6 +385,14 @@ export const ProductFormPage = () => {
             <Input placeholder="Flavour, size, pack details…" value={description}
               onChange={(e) => setDescription(e.target.value)} />
           </FormField>
+          <FormField label="HSN code (optional)">
+            <Input
+              placeholder="e.g. 21050000"
+              value={hsnCode}
+              maxLength={16}
+              onChange={(e) => setHsnCode(e.target.value.replace(/\s/g, ""))}
+            />
+          </FormField>
         </div>
 
         {/* ── Pricing ── */}
@@ -374,7 +415,7 @@ export const ProductFormPage = () => {
 
         <div className="space-y-4">
           <FormField label="MRP (NPR)" hint="Price on the product label — shown on bill for customer reference">
-            <NumericInput {...numericMoneyProps} min={0} value={mrp} placeholder="0" onChange={setMrp} />
+            <NumericInput {...numericPriceProps} min={0} value={mrp} placeholder="0" onChange={setMrp} />
           </FormField>
 
           {/* Buy price */}
@@ -382,14 +423,14 @@ export const ProductFormPage = () => {
             label="Buy price excl. VAT (NPR)"
             hint={
               buyPrice > 0 && vatPct > 0
-                ? `With VAT (${vatPct}%): ${nprNum(addVatToExcl(buyPrice, vatPct))}`
+                ? `With VAT (${vatPct}%): ${formatPriceAmount(addVatToExclPrice(buyPrice, vatPct))}`
                 : vatPct > 0
                   ? `VAT ${vatPct}% from Settings`
                   : undefined
             }
           >
             <NumericInput
-              {...numericMoneyProps}
+              {...numericPriceProps}
               min={0}
               value={buyPrice}
               placeholder="0"
@@ -417,7 +458,7 @@ export const ProductFormPage = () => {
               label="Sell price excl. VAT (NPR)"
               hint={
                 sellPrice > 0 && vatPct > 0
-                  ? `With VAT (${vatPct}%): ${nprNum(addVatToExcl(sellPrice, vatPct))}`
+                  ? `With VAT (${vatPct}%): ${formatPriceAmount(addVatToExclPrice(sellPrice, vatPct))}`
                   : vatPct > 0
                     ? `VAT ${vatPct}% from Settings`
                     : undefined
@@ -425,7 +466,7 @@ export const ProductFormPage = () => {
             >
               <div className="relative">
                 <NumericInput
-                  {...numericMoneyProps}
+                  {...numericPriceProps}
                   min={0}
                   value={sellPrice}
                   placeholder="0"
@@ -475,6 +516,7 @@ export const ProductFormPage = () => {
                 uom,
                 packUom,
                 extraUomRows.filter((r) => r.id !== row.id),
+                unitCatalog,
               );
               const options = row.uom && !uomPick.includes(row.uom) ? [row.uom, ...uomPick] : uomPick;
               return (
@@ -500,7 +542,7 @@ export const ProductFormPage = () => {
                   </FormField>
                   <FormField label="MRP (NPR)">
                     <NumericInput
-                      {...numericMoneyProps}
+                      {...numericPriceProps}
                       min={0}
                       value={row.mrp}
                       onChange={(v) =>
@@ -512,7 +554,7 @@ export const ProductFormPage = () => {
                   </FormField>
                   <FormField label="Sell excl. VAT">
                     <NumericInput
-                      {...numericMoneyProps}
+                      {...numericPriceProps}
                       min={0}
                       value={row.sellingPrice}
                       onChange={(v) =>
@@ -535,7 +577,7 @@ export const ProductFormPage = () => {
             })}
           </div>
         )}
-        {availableExtraUoms(uom, packUom, extraUomRows).length > 0 && (
+        {availableExtraUoms(uom, packUom, extraUomRows, unitCatalog).length > 0 && (
           <Button type="button" variant="ghost" size="sm" onClick={addExtraUomRow}>
             <Plus size={14} /> Add unit price (e.g. Box)
           </Button>

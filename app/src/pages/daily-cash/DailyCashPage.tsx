@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { commitDailyCashClose, useDailyCashBreakdown } from "@/store/domain";
 import { DOMAIN_QUERY_KEY } from "@/lib/live/domainLive";
 import { npr, toDateInput } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 export const DailyCashPage = () => {
   const navigate = useNavigate();
@@ -145,12 +146,14 @@ export const DailyCashPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Daily cash</h1>
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <FormPageHeader
+          className="mb-0 flex-1"
+          title="Daily cash"
+          subtitle="Close the till — match physical cash to system."
+        />
         {locked && (
-          <Badge variant="default">
+          <Badge variant="default" className="shrink-0">
             <Lock size={11} className="mr-1" />
             Locked
           </Badge>
@@ -165,19 +168,17 @@ export const DailyCashPage = () => {
         </div>
       )}
 
-      <FormField label="Date" className="mb-4">
-        <Input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            setDate(e.target.value);
-            setLocked(false);
-            setPhysicalCount("");
-            setVarianceNote("");
-          }}
-          disabled={locked}
-        />
-      </FormField>
+      <DateFormField
+        label="Date"
+        className="mb-4"
+        value={date}
+        onChange={(v) => {
+          setDate(v);
+          setLocked(false);
+          setPhysicalCount("");
+          setVarianceNote("");
+        }}
+      />
 
       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">Cash in</p>
       <Card className="mb-4">

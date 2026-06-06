@@ -1,5 +1,5 @@
 import type { BusinessSettings } from "@/domain/types";
-import { roundMoney } from "@/lib/money";
+import { MONEY_DECIMAL_PLACES, PRICE_DECIMAL_PLACES, roundMoney } from "@/lib/money";
 
 /** @deprecated Use getVatPct(settings) — kept for gradual migration */
 export const DEFAULT_VAT_PCT = 13;
@@ -11,9 +11,18 @@ export function getVatPct(
   return Number.isFinite(n) && n >= 0 ? n : DEFAULT_VAT_PCT;
 }
 
-export function addVatToExcl(excl: number, vatPct: number): number {
-  if (excl <= 0 || vatPct <= 0) return roundMoney(excl);
-  return roundMoney(excl * (1 + vatPct / 100));
+export function addVatToExcl(
+  excl: number,
+  vatPct: number,
+  decimals = MONEY_DECIMAL_PLACES,
+): number {
+  if (excl <= 0 || vatPct <= 0) return roundMoney(excl, decimals);
+  return roundMoney(excl * (1 + vatPct / 100), decimals);
+}
+
+/** VAT add for product catalog prices (4 decimal places). */
+export function addVatToExclPrice(excl: number, vatPct: number): number {
+  return addVatToExcl(excl, vatPct, PRICE_DECIMAL_PLACES);
 }
 
 export function vatAmountFromExcl(excl: number, vatPct: number): number {
@@ -25,16 +34,21 @@ export function vatAmountFromExcl(excl: number, vatPct: number): number {
 export function splitInclusiveAmount(
   incl: number,
   vatPct: number,
+  decimals = MONEY_DECIMAL_PLACES,
 ): { excl: number; vat: number; incl: number } {
-  const roundedIncl = roundMoney(incl);
+  const roundedIncl = roundMoney(incl, decimals);
   if (roundedIncl <= 0) return { excl: 0, vat: 0, incl: 0 };
   if (vatPct <= 0) return { excl: roundedIncl, vat: 0, incl: roundedIncl };
-  const excl = roundMoney(roundedIncl / (1 + vatPct / 100));
-  const vat = roundMoney(roundedIncl - excl);
+  const excl = roundMoney(roundedIncl / (1 + vatPct / 100), decimals);
+  const vat = roundMoney(roundedIncl - excl, decimals);
   return { excl, vat, incl: roundedIncl };
 }
 
-/** Product purchase_price is stored VAT-inclusive; derive excl for purchase entry. */
-export function purchasePriceExclFromProduct(incl: number, vatPct: number): number {
-  return splitInclusiveAmount(incl, vatPct).excl;
+/** Product purchase_price is stored VAT-inclusive; derive excl for product form. */
+export function purchasePriceExclFromProduct(
+  incl: number,
+  vatPct: number,
+  decimals = PRICE_DECIMAL_PLACES,
+): number {
+  return splitInclusiveAmount(incl, vatPct, decimals).excl;
 }

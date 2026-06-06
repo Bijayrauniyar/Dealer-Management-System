@@ -156,6 +156,35 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Health: npm run test:contact-email
    - Full guide: docs/CONTACT_FORM_EMAIL_SETUP.md
 
+   - Migration 0034 (optional product HSN code on product master — HSN-1)
+   - Open: app/supabase/migrations/0034_product_hsn_code.sql
+   - Copy entire file → Paste → Run → Success.
+
+32. Migration 0035 (sales/purchase print price column + payment QR on sales invoice — PRICE-DISP-1 + BILL-QR-1)
+   - Open: app/supabase/migrations/0035_sales_print_settings_and_qr.sql
+   - Copy entire file → Paste → Run → Success.
+   - Settings → Bills & VAT: sales unit column (MRP / Selling price), purchase rate column, bank text.
+
+33. Migration 0036 (payment QR upload + enable toggle — private Storage bucket)
+   - Open: app/supabase/migrations/0036_sales_bill_qr_storage.sql
+   - Copy entire file → Paste → Run → Success.
+   - Creates private `tenant-assets` bucket + RLS (folder = tenant_id).
+   - Settings → Bills & VAT: enable payment QR, upload QR image, bank details.
+
+34. Migration 0037 (DEL-1 — archive/restore RPCs for products, customers, suppliers)
+   - Open: app/supabase/migrations/0037_master_archive_rpcs.sql
+   - Copy entire file → Paste → Run → Success.
+
+35. Migration 0038 (UNITS-1 — custom product unit labels in Settings)
+   - Open: app/supabase/migrations/0038_tenant_product_units.sql
+   - Copy entire file → Paste → Run → Success.
+   - Settings → Business: Product units list.
+
+36. Migration 0039 (product price precision — buy/sell/MRP up to 4 decimals)
+   - Open: app/supabase/migrations/0039_product_price_precision.sql
+   - Copy entire file → Paste → Run → Success.
+   - Product form accepts e.g. 98.4567 on buy price (stored after migration).
+
    Optional 0004: auto-active tenants on signup (dev only)
    - app/supabase/migrations/0004_dev_signup_active_tenant.sql
 

@@ -46,7 +46,7 @@ Agents: `.cursor/rules/docs-on-change.mdc` enforces doc + e2e + manual checklist
 
 | Item | Action |
 |------|--------|
-| Migrations | `0001`–`0003`, **`0005`**–`0010`, **`0013`–`0017`**, **`0019`–`0026`** per [supabase README](../../app/supabase/README.txt) |
+| Migrations | `0001`–`0003`, **`0005`**–`0010`, **`0013`–`0017`**, **`0019`–`0026`**, **`0034`–`0039`** per [supabase README](../../app/supabase/README.txt) |
 | Env | `app/.env.local` has `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` |
 | Test user | `node scripts/create-e2e-user-and-test.mjs` → `app/.e2e-credentials.local` |
 | Tenant | `tenants.status = 'active'` for your user |
@@ -80,7 +80,7 @@ Check each row after manual testing.
 | G14 | **Opening stock ≠ 0** | Tests assume opening 0 | Product with opening stock; after sale/purchase/damage/return check Stock page |
 | G15 | **Customer credit limit** | — | Sale pushing outstanding over limit (if UI enforces) |
 | G16 | **Customer PAN / VAT on print** | DB + form in `e2e:tier-c:live` | Bill print shows buyer PAN/VAT when filled (0026); layout readable |
-| G17 | **Notifications panel** | Link targets in source | Bell list; tap low-stock → Home stock tab; overdue → sensible route |
+| G17 | **Notifications panel** | Link targets in source | Bell list; tap low-stock → `/app/products?filter=low`; overdue → sensible route |
 | G18 | **Daily cash → Supabase** | Partial wiring | Confirm `daily_cash` row behaviour matches current implementation |
 | G19 | **Scheme → Supabase** | Menu → Entry → Scheme save | Row in `scheme_tracker`; sale qty 10 → free line if buy-10-get-1 |
 | G20 | **Dashboard charts** | — | `/app/dashboard` loads; data matches your tenant (if wired) |
@@ -102,12 +102,13 @@ Check each row after manual testing.
 | Module | Use cases | Route / entry |
 |--------|-----------|----------------|
 | **Auth** | Log in, register, pending tenant, no tenant, log out | `/login`, `/register`, `/pending-approval`, `/no-tenant` |
-| **Home** | Date + Sales invoice; **Customers / Stock** tabs; browse lists; aging/overdue via drawer | `/app/home`, `/app/home?tab=customers`, `/app/home?tab=stock`, `/app/home/overdue`, … |
-| **Settings** | Tabbed: Business, Bills & VAT, Stock, **Export** | `/app/settings` |
-| **Products** | List, search, add, edit, inactive/active | `/app/products`, `/app/products/new`, `.../edit/:id` |
-| **Customers** | List, filter outstanding, add, edit, detail, new bill from customer | `/app/customers`, `.../new`, `.../edit/:id`, `.../:id` |
-| **Suppliers** | List, add/edit, expandable actions | `/app/suppliers`, `…/new`, `…/edit/:id` |
-| **Stock** | On-hand, opening, purchased; optional adjustment | `/app/stock`, `/app/stock-adjustment/new` |
+| **Home** | `DateDisplay` (BS + AD); today KPIs; attention cards; quick actions; recent bills | `/app/home`, `/app/home/overdue`, `/app/home/outstanding`, … |
+| **Stock** | Product/inventory hub — title **Stock**, on-hand qty, **Add purchase** | `/app/products`, `/app/products?filter=low`; `/app/stock` redirects here |
+| **Settings** | Tabbed: Business, Bills & tax, Catalog & stock, Data & account | `/app/settings` |
+| **Customers** | List (`EntityList`), filter outstanding, add, edit, detail, new bill | `/app/customers`, `.../new`, `.../edit/:id`, `.../:id` |
+| **Products** | List, search, add, edit, archive/restore, 4-dec prices | `/app/products`, `/app/products/new`, `.../edit/:id` |
+| **Suppliers** | List, detail, add/edit (`EntityList`) | `/app/suppliers`, `…/new`, `…/:id`, `…/edit/:id` |
+| **Stock adjustment** | Manual +/- qty when enabled | `/app/stock-adjustment/new` |
 | **Sale** | New bill, edit existing (`update_sales_bill`), preview, print | `/app/sales/new`, `/app/sales/edit/:billNo` |
 | **Bill detail** | View, **Share**, Print, PDF, Return, **Collect** (green), Edit | `/app/bills/:billNo` |
 | **Payment** | Customer payment, bill allocation | `/app/payments/new` |
@@ -123,7 +124,7 @@ Check each row after manual testing.
 | **Dashboard** | Private reports | `/app/dashboard` |
 | **Menu (☰)** | Drawer: Masters, Entry, Reports, Support | Header left |
 | **Reports** | Reports hub (replaces old More) | `/app/reports` |
-| **Support** | Help & contact | `/app/support` |
+| **Support** | Inquiry form → `platform_inquiries` + WhatsApp; platform contacts | `/app/support` |
 
 ---
 
@@ -175,16 +176,35 @@ Migrations **0025** (optional), **0026** (customer tax). Automated: `npm run e2e
 
 | # | Step | Pass |
 |---|------|------|
-| T0C1 | Bottom tabs: **Home · Customers · Inventory · Reports**; centre **+** entry sheet | |
-| T0C2 | **Customers** tab → `/app/home?tab=customers`; **Inventory** → `?tab=stock` | |
+| T0C1 | Bottom tabs: **Home · Customers · + · Stock · Reports**; centre **+** opens quick entry sheet | |
+| T0C2 | **Customers** tab → `/app/customers`; **Stock** → `/app/products` (title **Stock**) | |
 | T0C3 | Header **☰** drawer: **Masters**, **Entry**, **Reports**, **Support** links work | |
 | T0C4 | `/app/more` → redirects to **Reports** | |
 | T0C5 | **Help & support** — BikriKhata (platform) contact; not shop retail helpline | |
 | T0C6 | **No Support tab** in Settings (help only via menu) | |
-| T0C7 | Home: **date (EN + BS)**, green **Sales invoice**, **Customers \| Stock** tabs, search/filters | |
+| T0C7 | Home: **DateDisplay** (BS + AD), today strip, attention cards, quick-action grid | |
 | T0C8 | Customer form: optional **PAN / VAT** → save → print bill with customer | |
 | T0C9 | Bill detail: **Share** (outline) + Print + PDF; **Collect** green when balance due | |
 | T0C10 | **Products** / **Suppliers** masters: same **Add** button style ([UI_CONSISTENCY_PLAN](../UI_CONSISTENCY_PLAN.md)) | |
+
+---
+
+### 3.0d P1 product (MAN-P1) — UI, pricing, support
+
+Migrations **0034**–**0039** on prod. Automated: `npm run e2e:tier-c` / `e2e:phase0`.
+
+| # | Step | Pass |
+|---|------|------|
+| T1P1 | **Stock** tab → page title **Stock**; each row shows on-hand qty; **Add purchase** works | |
+| T1P2 | Product form → buy price **98.4567** → save → reopen → value still **98.4567** (`0039`) | |
+| T1P3 | Sales line + purchase line accept 4-decimal rates; bill **grand total** still 2-dec NPR | |
+| T1P4 | **Customers** / **Suppliers** / **Stock** lists — compact divided rows (`EntityList`, 2 lines max) | |
+| T1P5 | Sales invoice due date — AD picker + **BS line below** (`DateFormField`) | |
+| T1P6 | **Support** → submit inquiry → row in `platform_inquiries` → WhatsApp button | |
+| T1P7 | Settings tabs: **Business · Bills & tax · Catalog & stock · Data & account** | |
+| T1P8 | Archive product → **Archives** hub or Active/Archived filter → restore (`0037`) | |
+| T1P9 | Settings → Bills & tax → upload payment QR → balance-due sales bill print shows QR (`0035`–`0036`) | |
+| T1P10 | Settings → Business → custom units → product form unit dropdown (`0038`) | |
 
 ---
 
@@ -262,6 +282,17 @@ Automated: `npm run e2e:p0-public` (included in `e2e:phase0`). Runbook: [P0_LAUN
 | S8 | Default markup % and min qty | New product form pre-fills or hints use these |
 | S9 | **Default VAT %** e.g. 13 | Product buy hint and purchase totals use this rate |
 | S10 | **Edge:** Save with empty trading name | Validation error or safe default |
+| S11 | Settings → **Rate (selling price)** → Save → new sale | Line total = **Qty × Rate**; print column **Rate**; Amt = Rate × Qty |
+| S11b | Settings → **MRP + line discount** → product with line Disc% | Print shows **MRP** + **Disc%**; Amt = MRP × Qty × (1−Disc%) |
+| S11c | Reopen saved bill MXMPRV-28 (or any) → Print | MRP/Rate column matches Amt (no 100 vs 1,500 mismatch) |
+| S12 | Settings → **Purchase bill rate** = **Rate incl. VAT** → Save | Purchase detail print shows incl. rate column |
+| S13 | Settings → enable **payment QR**, **upload QR image** + **Bank details** → Save | Credit bill print shows QR block + bank line + bill ref; toggle off or fully paid bill hides QR |
+| S14 | Settings → **Product units** — add **Bag** → Save → new product form | **Bag** appears in base unit dropdown |
+| S14b | New product → **+ Add unit** → **Drum** → pick as base unit | Unit saved to Settings; product saves with Drum |
+| S17b | Return entry — pick customer + bill → **+** on a line → Save | Return saves; credit shows on customer |
+| S15 | **More → Archives** (or drawer → Archives) → **Products** tab → **Restore** | Product returns to active list and sale picker |
+| S16 | Archive customer (zero balance) → **Archives → Customers** → **Restore** | Customer hidden from sale picker until restored |
+| S17 | Settings → Export → period **Expenses** / **Damages** / **Goods returns** CSV | Files open with dated rows for selected range |
 
 ---
 
@@ -269,7 +300,7 @@ Automated: `npm run e2e:p0-public` (included in `e2e:phase0`). Runbook: [P0_LAUN
 
 | ID | Steps | Expected |
 |----|-------|----------|
-| P1 | Menu → Products → New: name, buy **excl. VAT**, MRP, category, min qty; **opening qty** optional | Saves; opening qty editable only on create |
+| P1 | Menu → Products → New: name, buy **excl. VAT**, MRP, category, min qty; **opening qty** optional; **HSN code** optional (`0034`) | Saves; opening qty editable only on create; HSN blank OK |
 | P1b | Edit same product | Opening qty read-only summary; on-hand shown; corrections via Purchase or Stock adjustment (if enabled) |
 | P2 | Edit product: change sell price | List and sale picker show new price |
 | P3 | Search product by name | Filters list |
@@ -329,7 +360,8 @@ open     = total − paid
 | SA11 | **VAT OFF** | No VAT line; total excludes VAT |
 | SA12 | **Multi-line:** 2 different products | Subtotal = sum of lines; one bill_no |
 | SA13 | **Preview bill** button | Preview modal matches sticky totals |
-| SA14 | **Save & Print** | Print view opens; header/footer from settings |
+| SA14 | **Save** → bill detail → **Print** | Print view opens; header/footer from settings (no print on save) |
+| SA14b | Add product line on sale form | **Rate (sell)** + **Label MRP** side by side; **Bill prints:** badge on Items header |
 | SA15 | **Live edit:** Bill detail → Edit → change qty/rate → Save | `update_sales_bill` succeeds; totals/stock updated in DB |
 | SA16 | **Edit blocked:** reduce total below `paid` | RPC error or validation; bill unchanged |
 | SA17 | Sale without customer | Validation error |
@@ -546,6 +578,7 @@ After manual flows, spot-check in **Table Editor**:
 | §3.0a Tier A (T0A1–T0A10) | — | ☐ | | |
 | §3.0b Tier B (T0B1–T0B8) | — | ☐ | | |
 | §3.0c Tier C (T0C1–T0C10) | — | ☑ | 2026-05-26 prod + deploy | |
+| §3.0d P1 product (T1P1–T1P10) | — | ☐ | 2026-06-05 — after deploy | |
 | API matrix (`e2e:matrix`) | ☐ | — | | |
 | UI script (`e2e:ui`) | ☐ | — | | |
 | Gaps G1–G30 | — | ☐ | | |
@@ -565,7 +598,7 @@ After manual flows, spot-check in **Table Editor**:
 
 ### Phase 1+ (planned)
 
-- [ ] UI-1 full symmetry pass — extend §3.0d UI1 + [UI_CONSISTENCY_PLAN](../UI_CONSISTENCY_PLAN.md)
+- [x] UI-1 full symmetry pass — §3.0d MAN-P1 + [UI_CONSISTENCY_PLAN](../UI_CONSISTENCY_PLAN.md) (2026-06-05)
 - [ ] Sales orders / salesman (SF-0, ORD-*) — new §3.xx
 - [ ] Bill edit audit history  
 - [ ] Live daily cash + schemes tables  

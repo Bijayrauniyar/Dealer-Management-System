@@ -15,8 +15,10 @@ import { Badge } from "@/components/ui/badge";
 import { PAYMENT_MODES } from "@/domain/catalogs";
 import type { Sale } from "@/domain/types";
 import { useCustomers, useSales, commitPayment } from "@/store/domain";
-import { npr, fmtDate } from "@/lib/utils";
-import { PageBackLink } from "@/components/app/PageBackLink";
+import { DateDisplay } from "@/components/app/DateDisplay";
+import { npr } from "@/lib/utils";
+import { FormPageHeader } from "@/components/app/patterns";
+import { DateFormField } from "@/components/app/DateFormField";
 
 /** Open bills for allocation UI — sourced from live `useSales()` (Supabase). */
 type OpenBill = {
@@ -119,8 +121,7 @@ export const PaymentPage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-5 text-lg font-semibold">Payment received</h1>
+      <FormPageHeader title="Payment in" subtitle="Record money received from a customer against open bills." />
 
       <div className="space-y-4">
         {/* ── Customer ── */}
@@ -186,7 +187,9 @@ export const PaymentPage = () => {
                           <span className="text-sm font-medium text-foreground">{bill.billNo}</span>
                           <span className="text-sm font-semibold text-foreground">{npr(bill.outstanding)}</span>
                         </div>
-                        <p className="text-xs text-muted">{fmtDate(bill.date)} · bill total {npr(bill.total)}</p>
+                        <p className="text-xs text-muted">
+                          <DateDisplay iso={bill.date} dual compact /> · {npr(bill.total)}
+                        </p>
 
                         {/* Allocation preview */}
                         {isSelected && enteredAmt > 0 && (
@@ -248,9 +251,11 @@ export const PaymentPage = () => {
         </FormField>
 
         {mode === "Cheque" && (
-          <FormField label="Expected clearing date">
-            <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} />
-          </FormField>
+          <DateFormField
+            label="Expected clearing date"
+            value={chequeDate}
+            onChange={setChequeDate}
+          />
         )}
       </div>
 

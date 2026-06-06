@@ -23,8 +23,12 @@ type Props = {
   filterOptions: BrowseFilterOption[];
   onFilterChange: (value: string) => void;
   filterLabel?: string;
+  /** Highlight filter control — e.g. danger when Overdue selected */
+  filterVariant?: "default" | "danger";
   /** Second dimension — e.g. Area (customers) or Category (stock/products). */
   extraFilter?: BrowseExtraFilter;
+  /** Third dimension on second row — e.g. stock status on products. */
+  secondaryFilter?: BrowseExtraFilter;
   sortValue?: string;
   sortOptions?: FilterSortOption[];
   onSortChange?: (value: string) => void;
@@ -43,20 +47,31 @@ function FilterField({
   options,
   onChange,
   ariaLabel,
+  variant = "default",
 }: {
   label: string;
   value: string;
   options: BrowseFilterOption[];
   onChange: (value: string) => void;
   ariaLabel: string;
+  variant?: "default" | "danger";
 }) {
+  const danger = variant === "danger";
   return (
     <div>
-      <label className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-muted">
+      <label
+        className={cn(
+          "mb-0.5 block text-[10px] font-bold uppercase tracking-wider",
+          danger ? "text-danger" : "text-muted",
+        )}
+      >
         {label}
       </label>
       <Select
-        className="h-9 text-xs"
+        className={cn(
+          "h-9 text-xs",
+          danger && "border-danger/50 text-danger font-semibold focus:ring-danger/30",
+        )}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={ariaLabel}
@@ -80,7 +95,9 @@ export function ListBrowsePanel({
   filterOptions,
   onFilterChange,
   filterLabel = "Filter",
+  filterVariant = "default",
   extraFilter,
+  secondaryFilter,
   sortValue,
   sortOptions,
   onSortChange,
@@ -134,6 +151,7 @@ export function ListBrowsePanel({
             options={filterOptions}
             onChange={onFilterChange}
             ariaLabel={filterLabel}
+            variant={filterVariant}
           />
           {extraFilter ? (
             <FilterField
@@ -153,7 +171,26 @@ export function ListBrowsePanel({
             />
           ) : null}
         </div>
-        {extraFilter && hasSort ? (
+        {secondaryFilter ? (
+          <div className="grid grid-cols-2 gap-2">
+            <FilterField
+              label={secondaryFilter.label}
+              value={secondaryFilter.value}
+              options={secondaryFilter.options}
+              onChange={secondaryFilter.onChange}
+              ariaLabel={secondaryFilter.label}
+            />
+            {extraFilter && hasSort ? (
+              <FilterField
+                label="Sort"
+                value={sortValue}
+                options={sortOptions}
+                onChange={onSortChange}
+                ariaLabel="Sort list"
+              />
+            ) : null}
+          </div>
+        ) : extraFilter && hasSort ? (
           <FilterField
             label="Sort"
             value={sortValue}

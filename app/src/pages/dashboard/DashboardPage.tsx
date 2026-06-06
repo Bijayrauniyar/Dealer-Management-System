@@ -19,8 +19,9 @@ import {
   useSales,
   useSuppliers,
 } from "@/store/domain";
-import { npr, nprNum, fmtDate } from "@/lib/utils";
+import { npr, nprNum, fmtDateDualBs } from "@/lib/utils";
 import { PageBackLink } from "@/components/app/PageBackLink";
+import { DateDisplay } from "@/components/app/DateDisplay";
 
 function defaultPeriodRange() {
   const to = new Date();
@@ -157,6 +158,11 @@ export const DashboardPage = () => {
           <RefreshCw size={14} />
         </button>
       </div>
+      {period.from && period.to ? (
+        <p className="mb-4 text-xs text-muted">
+          <DateDisplay iso={period.from} dual /> → <DateDisplay iso={period.to} dual />
+        </p>
+      ) : null}
 
       <SectionHeader title="Today" className="mb-2" />
       <div className="mb-5 grid grid-cols-2 gap-3">
@@ -174,7 +180,7 @@ export const DashboardPage = () => {
       </div>
 
       <SectionHeader
-        title={`${business.region || "Workspace"} · ${fmtDate(period.from)} – ${fmtDate(period.to)}`}
+        title={`${business.region || "Workspace"} · ${fmtDateDualBs(period.from)} – ${fmtDateDualBs(period.to)}`}
         className="mb-3"
       />
       <div className="mb-5 grid grid-cols-2 gap-3">
@@ -256,7 +262,7 @@ export const DashboardPage = () => {
         </CardContent>
       </Card>
 
-      <SectionHeader title="Top 5 customers (period)" onSeeAll={() => navigate("/app/home?tab=customers")} className="mb-2" />
+      <SectionHeader title="Top 5 customers (period)" onSeeAll={() => navigate("/app/customers")} className="mb-2" />
       <Card className="mb-5">
         <CardContent className="p-0 px-4">
           {topCustomers.length === 0 ? (

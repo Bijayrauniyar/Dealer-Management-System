@@ -1,14 +1,21 @@
 export {
   useDomainBundleLoadState,
   useDomainBundleErrorMessage,
+  useMasterCatalogLoadState,
   useBusinessSettings,
   usePnlTotals,
   useLatestCashClosing,
   useExpensesList,
   usePurchasesList,
   useProducts,
+  useProductsCatalog,
   useCustomers,
+  useCustomersCatalog,
   useSuppliers,
+  useSuppliersCatalog,
+  commitSetProductActive,
+  commitSetCustomerActive,
+  commitSetSupplierActive,
   useCapitalEntries,
   useSales,
   usePayments,
@@ -43,5 +50,9 @@ export type {
   CommitReturnOpts,
   CommitSupplierPaymentOpts,
 } from "./commitTypes";
-export { upsertProductLive, appendProductCategoryLive } from "@/lib/live/domainLive";
-export { commitAppendProductCategory, commitRemoveProductCategory } from "./domainHooks";
+export { upsertProductLive, appendProductCategoryLive, appendProductUnitLive } from "@/lib/live/domainLive";
+export {
+  commitAppendProductCategory,
+  commitRemoveProductCategory,
+  commitAppendProductUnit,
+} from "./domainHooks";

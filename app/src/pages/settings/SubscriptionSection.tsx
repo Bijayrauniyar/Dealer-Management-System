@@ -1,8 +1,8 @@
 import { CalendarClock, MessageCircle, Phone } from "lucide-react";
 import { platformSupportContacts, telUrl, whatsappUrl } from "@/config/supportContacts";
 import { useAuth } from "@/lib/auth";
+import { DateDisplay } from "@/components/app/DateDisplay";
 import {
-  formatLicenseEndDate,
   formatTenantPlanLabel,
   formatTrialEndsLabel,
   formatPaidSubscriptionDaysLabel,
@@ -20,7 +20,7 @@ export function SubscriptionSection() {
   const profile = { plan: tenantPlan, trialEndsAt, subscriptionEndsAt };
   const days = tenantLicenseDaysRemaining(profile);
   const endIso = tenantLicenseEndAt(profile);
-  const endLabel = formatLicenseEndDate(endIso);
+  const endIsoDate = endIso?.slice(0, 10) ?? null;
   const planLabel = formatTenantPlanLabel(tenantPlan);
   const daysLabel =
     tenantPlan === "trial"
@@ -42,10 +42,12 @@ export function SubscriptionSection() {
           <dt className="text-muted">Plan</dt>
           <dd className="font-semibold text-foreground text-right">{planLabel}</dd>
         </div>
-        {endLabel ? (
+        {endIsoDate ? (
           <div className="flex justify-between gap-3">
             <dt className="text-muted">Valid until</dt>
-            <dd className="font-medium text-foreground text-right">{endLabel}</dd>
+            <dd className="font-medium text-foreground text-right">
+              <DateDisplay iso={endIsoDate} dual />
+            </dd>
           </div>
         ) : null}
         {daysLabel ? (

@@ -4,6 +4,7 @@ import {Plus, Trash2} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
+import { DateFormField } from "@/components/app/DateFormField";
 import { EntityPicker } from "@/components/app/EntityPicker";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +22,7 @@ import {
   commitPurchaseUpdate,
 } from "@/store/domain";
 import { getVatPct, addVatToExcl, vatAmountFromExcl, purchasePriceExclFromProduct } from "@/lib/tax";
-import { numericMoneyProps, numericQtyProps, roundMoney } from "@/lib/money";
+import { numericPriceProps, numericQtyProps, roundMoney } from "@/lib/money";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
 import type { Product } from "@/domain/types";
 import {
@@ -31,6 +32,7 @@ import {
   productUomChoices,
 } from "@/lib/uom";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
+import { FormPageHeader } from "@/components/app/patterns";
 import { PageBackLink } from "@/components/app/PageBackLink";
 
 type Line = {
@@ -305,11 +307,14 @@ export const PurchasePage = () => {
 
   return (
     <PageShell stickyBar>
-      <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
-      <h1 className="mb-1 text-lg font-semibold">{isEdit ? "Edit purchase invoice" : "New purchase invoice"}</h1>
-      {isEdit && paidOnPurchase > 0 && (
-        <p className="mb-3 text-sm text-muted">Paid {npr(paidOnPurchase)} on this purchase</p>
-      )}
+      <FormPageHeader
+        title={isEdit ? "Edit purchase invoice" : "New purchase invoice"}
+        subtitle={
+          isEdit && paidOnPurchase > 0
+            ? `Paid ${npr(paidOnPurchase)} on this purchase`
+            : "Record supplier stock inward and VAT."
+        }
+      />
 
       <div className="space-y-3">
         <FormField label="Supplier" required>
@@ -344,17 +349,19 @@ export const PurchasePage = () => {
               onChange={(e) => setInvoiceNo(e.target.value)}
             />
           </FormField>
-          <FormField label="Invoice date">
-            <Input className={inputCompact} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </FormField>
-          <FormField label="Due date" className="col-span-2">
-            <Input
-              className={inputCompact}
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
-          </FormField>
+          <DateFormField
+            label="Invoice date"
+            inputClassName={inputCompact}
+            value={date}
+            onChange={setDate}
+          />
+          <DateFormField
+            label="Due date"
+            className="col-span-2"
+            inputClassName={inputCompact}
+            value={dueDate}
+            onChange={setDueDate}
+          />
         </div>
 
         <div>
@@ -453,7 +460,7 @@ export const PurchasePage = () => {
                       </CompactField>
                       <CompactField label="Buy excl.">
                         <NumericInput
-                          {...numericMoneyProps}
+                          {...numericPriceProps}
                           className={inputCompact}
                           min={0}
                           value={line.cost}

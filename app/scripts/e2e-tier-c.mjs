@@ -59,15 +59,20 @@ function runSourceChecks() {
       if (router.includes(path)) r.pass(`AppRouter ${path}`);
       else r.fail(`AppRouter ${path}`, "missing");
     }
-    if (router.includes('Navigate to="/app/home?tab=customers"')) {
-      r.pass("AppRouter /app/customers → Home customers tab");
+    if (router.includes('path="customers"') && router.includes("CustomersPage")) {
+      r.pass("AppRouter /app/customers → CustomersPage");
     } else {
-      r.fail("AppRouter customers redirect", "missing");
+      r.fail("AppRouter customers route", "expected CustomersPage");
     }
-    if (router.includes('Navigate to="/app/home?tab=stock"')) {
-      r.pass("AppRouter /app/stock → Home stock tab");
+    if (router.includes('Navigate to="/app/products"') && router.includes('path="stock"')) {
+      r.pass("AppRouter /app/stock → /app/products");
     } else {
-      r.fail("AppRouter stock redirect", "missing");
+      r.fail("AppRouter stock redirect", "expected /app/products");
+    }
+    if (router.includes("SupplierDetailPage")) {
+      r.pass("AppRouter supplier detail route");
+    } else {
+      r.fail("AppRouter supplier detail", "missing SupplierDetailPage");
     }
   }
 
@@ -83,6 +88,21 @@ function runSourceChecks() {
     } else {
       r.fail("drawer support link", "missing");
     }
+    if (
+      nav.includes("New product") &&
+      nav.includes("New customer") &&
+      nav.includes("New supplier") &&
+      nav.includes("QUICK_ENTRY_ACTIONS")
+    ) {
+      r.pass("QUICK_ENTRY_ACTIONS includes new masters");
+    } else {
+      r.fail("QUICK_ENTRY_ACTIONS masters", "missing");
+    }
+    if (nav.includes('label: "Stock", to: "/app/products"') && !nav.includes('label: "Products"')) {
+      r.pass("NAV drawer single Stock hub (no duplicate Products)");
+    } else {
+      r.fail("NAV Stock hub", "expected one Stock item to /app/products");
+    }
   }
 
   const shell = readSrc("components/layout/AppShell.tsx");
@@ -92,10 +112,15 @@ function runSourceChecks() {
     } else {
       r.fail("AppShell tabs", "missing labels");
     }
-    if (shell.includes("/app/home?tab=customers") && shell.includes("/app/home?tab=stock")) {
-      r.pass("AppShell Customers + Inventory tab URLs");
+    if (shell.includes('label: "Customers"') && shell.includes('to: "/app/customers"')) {
+      r.pass("AppShell Customers tab → /app/customers");
     } else {
-      r.fail("AppShell tab URLs", "missing query tabs");
+      r.fail("AppShell Customers tab", "missing");
+    }
+    if (shell.includes('label: "Stock"') && shell.includes('to: "/app/products"')) {
+      r.pass("AppShell Stock tab → /app/products");
+    } else {
+      r.fail("AppShell Stock tab", "missing");
     }
     if (shell.includes("AppNavDrawer")) {
       r.pass("AppShell mounts AppNavDrawer");
@@ -109,11 +134,75 @@ function runSourceChecks() {
     r.pass("AppNavDrawer uses NAV_DRAWER_GROUPS");
   }
 
+  const productsPage = readSrc("pages/products/ProductsPage.tsx");
+  if (productsPage?.includes('title="Stock"') && productsPage.includes("Add purchase")) {
+    r.pass("ProductsPage Stock hub + Add purchase");
+  } else if (productsPage) {
+    r.fail("ProductsPage Stock hub", "missing Stock title or Add purchase");
+  }
+  if (productsPage?.includes("useProductBrowse")) {
+    r.pass("ProductsPage shared useProductBrowse hook");
+  }
+
+  const money = readSrc("lib/money.ts");
+  if (money?.includes("numericPriceProps") && money?.includes("PRICE_DECIMAL_PLACES = 4")) {
+    r.pass("numericPriceProps 4-decimal product prices");
+  } else if (money) {
+    r.fail("numericPriceProps", "missing 4-decimal price props");
+  }
+
+  const entityList = readSrc("components/app/EntityListCard.tsx");
+  if (entityList?.includes("EntityList") && entityList.includes("py-2.5")) {
+    r.pass("EntityList compact mobile rows");
+  } else if (entityList) {
+    r.fail("EntityListCard", "missing compact EntityList pattern");
+  }
+
+  const dateDisplay = readSrc("components/app/DateDisplay.tsx");
+  if (dateDisplay?.includes("compact") && dateDisplay.includes("toMiti")) {
+    r.pass("DateDisplay compact dual dates");
+  } else if (dateDisplay) {
+    r.fail("DateDisplay compact", "missing");
+  }
+
+  const dateField = readSrc("components/app/DateFormField.tsx");
+  if (dateField?.includes("DateDisplay") && dateField.includes('type="date"') && dateField.includes("compact")) {
+    r.pass("DateFormField picker + BS/AD line");
+  } else if (dateField) {
+    r.fail("DateFormField", "missing dual date below picker");
+  }
+
+  const tax = readSrc("lib/tax.ts");
+  if (tax?.includes("addVatToExclPrice") && tax?.includes("PRICE_DECIMAL_PLACES")) {
+    r.pass("tax.ts 4-decimal product VAT helpers");
+  } else if (tax) {
+    r.fail("tax.ts price precision", "missing addVatToExclPrice");
+  }
+
+  const saleLinePricing = readSrc("components/app/SaleLinePricingBlock.tsx");
+  if (saleLinePricing?.includes("numericPriceProps")) {
+    r.pass("SaleLinePricingBlock 4-decimal MRP/sell");
+  } else if (saleLinePricing) {
+    r.fail("SaleLinePricingBlock", "expected numericPriceProps");
+  }
+
+  const supportForm = readSrc("components/app/AppSupportInquiryForm.tsx");
+  if (supportForm?.includes("Select") && !supportForm.includes("rounded-xl border px-3.5 py-3")) {
+    r.pass("AppSupportInquiryForm dropdown message type");
+  } else if (supportForm) {
+    r.fail("AppSupportInquiryForm", "expected Select dropdown for message type");
+  }
+
   const supportPage = readSrc("pages/support/SupportPage.tsx");
-  if (supportPage && supportPage.includes("PLATFORM_SUPPORT")) {
+  if (supportPage?.includes("PLATFORM_SUPPORT")) {
     r.pass("SupportPage uses PLATFORM_SUPPORT");
   } else if (supportPage) {
     r.fail("SupportPage", "missing PLATFORM_SUPPORT");
+  }
+  if (supportPage?.includes("PlatformSupportChannels") && supportPage.includes("AppSupportInquiryForm")) {
+    r.pass("SupportPage contact form + channels");
+  } else if (supportPage) {
+    r.fail("SupportPage form", "missing AppSupportInquiryForm or PlatformSupportChannels");
   }
 
   const settings = readSrc("pages/settings/SettingsPage.tsx");
@@ -146,20 +235,20 @@ function runSourceChecks() {
 
   const home = readSrc("pages/home/HomePage.tsx");
   if (home) {
-    if (
-      home.includes("SegmentedTabs") &&
-      home.includes("searchParams") &&
-      home.includes('tab: t')
-    ) {
-      r.pass("HomePage SegmentedTabs + URL sync");
+    if (home.includes("HOME_QUICK_ACTIONS") && home.includes("DateDisplay")) {
+      r.pass("HomePage ops dashboard + quick actions");
     } else {
-      r.fail("HomePage tabs", "missing SegmentedTabs or searchParams tab sync");
+      r.fail("HomePage dashboard", "missing HOME_QUICK_ACTIONS or DateDisplay");
     }
-    if (home.includes("ListBrowsePanel")) {
-      r.pass("HomePage ListBrowsePanel browse");
+    if (home.includes("Needs attention") && home.includes("Today")) {
+      r.pass("HomePage today + attention sections");
     } else {
-      r.fail("HomePage browse", "missing ListBrowsePanel");
+      r.fail("HomePage KPI sections", "missing");
     }
+  }
+
+  if (dateDisplay?.includes("fmtDate")) {
+    r.pass("DateDisplay BS + AD base");
   }
 
   const patterns = readSrc("components/app/patterns.tsx");
@@ -169,6 +258,103 @@ function runSourceChecks() {
     r.fail("patterns.tsx", "incomplete exports");
   }
 
+  const paymentPage = readSrc("pages/payments/PaymentPage.tsx");
+  if (paymentPage?.includes("FormPageHeader")) r.pass("UI-1 PaymentPage FormPageHeader");
+  else r.fail("UI-1 PaymentPage", "missing FormPageHeader");
+
+  const archiveAction = readSrc("components/app/MasterArchiveAction.tsx");
+  if (archiveAction?.includes("ConfirmDialog") && !archiveAction?.includes("window.confirm")) {
+    r.pass("DEL-1 archive ConfirmDialog");
+  } else {
+    r.fail("DEL-1 MasterArchiveAction", "expected ConfirmDialog, not window.confirm");
+  }
+
+  const archivesPage = readSrc("pages/archives/ArchivesPage.tsx");
+  if (archivesPage?.includes("export function ArchivesPage") && archivesPage?.includes("SegmentedTabs")) {
+    r.pass("DEL-1 ArchivesPage");
+  } else {
+    r.fail("DEL-1 ArchivesPage", "missing archives hub");
+  }
+
+  if (readSrc("routes/AppRouter.tsx")?.includes('path="archives"')) {
+    r.pass("route /app/archives");
+  } else {
+    r.fail("AppRouter archives route", "missing");
+  }
+
+  const domainLive = readSrc("lib/live/domainLive.ts");
+  if (domainLive?.includes("CUSTOMER_SELECT_FULL") && domainLive?.includes("is_active")) {
+    r.pass("DEL-1 customer is_active in select");
+  } else {
+    r.fail("DEL-1 customer select", "CUSTOMER_SELECT must include is_active for Archives");
+  }
+
+  if (archiveAction?.includes("onArchived")) {
+    r.pass("DEL-1 archive navigates after success");
+  } else {
+    r.fail("DEL-1 onArchived", "missing post-archive callback");
+  }
+
+  const settingsUnits = readSrc("pages/settings/SettingsPage.tsx");
+  if (settingsUnits?.includes("ProductUnitsSection") && settingsUnits?.includes("product_units")) {
+    r.pass("UNITS-1 Settings product units");
+  } else {
+    r.fail("UNITS-1 Settings", "missing ProductUnitsSection");
+  }
+  if (settingsUnits?.includes("SegmentedTabs") && settingsUnits?.includes('id: "catalog"')) {
+    r.pass("Settings SegmentedTabs + Catalog & stock");
+  } else {
+    r.fail("Settings tabs", "missing SegmentedTabs or catalog tab");
+  }
+  if (settingsUnits?.includes('label: "Business"')) {
+    r.pass("Settings Business tab label");
+  } else {
+    r.fail("Settings Business tab", "missing");
+  }
+  if (nav?.includes("Payment in") && nav?.includes("Payment out")) {
+    r.pass("HOME_QUICK_ACTIONS Payment in/out labels");
+  } else {
+    r.fail("HOME_QUICK_ACTIONS labels", "missing Payment in/out");
+  }
+  if (nav?.includes("Sales invoice") && nav?.includes("/app/sales/new")) {
+    r.pass("HOME_QUICK_ACTIONS includes Sales invoice");
+  } else {
+    r.fail("HOME_QUICK_ACTIONS sales", "missing Sales invoice");
+  }
+  if (readSrc("components/app/DateFormField.tsx")?.includes("DateDisplay")) {
+    r.pass("DateFormField dual date on forms");
+  } else {
+    r.fail("DateFormField", "missing");
+  }
+
+  const reportsHub = readSrc("pages/reports/ReportsHubPage.tsx");
+  if (reportsHub?.includes("Today & period") && reportsHub?.includes("Receivables")) {
+    r.pass("ReportsHub categorized sections");
+  } else {
+    r.fail("ReportsHub sections", "missing");
+  }
+
+  const suppliersPage = readSrc("pages/suppliers/SuppliersPage.tsx");
+  if (suppliersPage?.includes("ListBrowsePanel")) {
+    r.pass("SuppliersPage ListBrowsePanel");
+  } else {
+    r.fail("SuppliersPage browse", "missing ListBrowsePanel");
+  }
+
+  const productForm = readSrc("pages/products/ProductFormPage.tsx");
+  if (productForm?.includes("ProductUnitField") && productForm?.includes("Add unit")) {
+    r.pass("UNITS-1 product form Add unit");
+  } else {
+    r.fail("UNITS-1 ProductFormPage", "missing ProductUnitField");
+  }
+
+  const returnPage = readSrc("pages/returns/ReturnPage.tsx");
+  if (returnPage?.includes("fetchSaleByBillNoLive") && returnPage?.includes("loadingLines")) {
+    r.pass("Return entry loads bill lines");
+  } else {
+    r.fail("ReturnPage", "must fetch full bill lines on select");
+  }
+
   const customerForm = readSrc("pages/customers/CustomerFormPage.tsx");
   if (customerForm) {
     if (customerForm.includes("Customer PAN") && customerForm.includes("Customer VAT")) {
@@ -176,10 +362,10 @@ function runSourceChecks() {
     } else {
       r.fail("CustomerFormPage tax fields", "missing");
     }
-    if (customerForm.includes("/app/home?tab=customers")) {
-      r.pass("CustomerForm save → Home customers tab");
+    if (customerForm.includes("/app/customers")) {
+      r.pass("CustomerForm save → /app/customers");
     } else {
-      r.fail("CustomerForm redirect", "expected /app/home?tab=customers");
+      r.fail("CustomerForm redirect", "expected /app/customers");
     }
   }
 

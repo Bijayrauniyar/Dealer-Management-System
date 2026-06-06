@@ -3,6 +3,7 @@ import { sellerLetterheadFromBusiness } from "@/lib/billDisplay";
 import { BillLetterhead } from "@/components/app/BillLetterhead";
 import { getVatPct } from "@/lib/tax";
 import { purchaseDisplayTitle } from "@/lib/purchaseDisplay";
+import { purchaseBillRateHeader } from "@/lib/billPriceDisplay";
 import { fmtDate, npr, toMiti } from "@/lib/utils";
 
 type Props = {
@@ -43,6 +44,8 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
   const supTax = supplierTaxId(supplier);
   const balance = Math.max(0, purchase.total - purchase.paid);
   const title = purchaseDisplayTitle(purchase);
+  const rateHeader = purchaseBillRateHeader(business, vatPct);
+  const showInclRate = business.purchaseBillPriceMode === "rate_incl";
 
   const supplierAddr = [
     supplier.addressLine1,
@@ -87,7 +90,7 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
                 <th className="px-1 py-1 text-left font-semibold">Item</th>
                 <th className="px-1 py-1 text-right font-semibold">Qty</th>
                 <th className="px-1 py-1 text-left font-semibold">UOM</th>
-                <th className="px-1 py-1 text-right font-semibold">Rate excl</th>
+                <th className="px-1 py-1 text-right font-semibold">{rateHeader}</th>
                 {vatPct > 0 ? (
                   <th className="px-1 py-1 text-right font-semibold">VAT</th>
                 ) : null}
@@ -107,7 +110,9 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
                     <BillCell>{line.uom}</BillCell>
                   </td>
                   <td className="px-1 py-1">
-                    <BillCell align="right">{npr(line.rateExcl)}</BillCell>
+                    <BillCell align="right">
+                      {npr(showInclRate ? line.rateIncl : line.rateExcl)}
+                    </BillCell>
                   </td>
                   {vatPct > 0 ? (
                     <td className="px-1 py-1">

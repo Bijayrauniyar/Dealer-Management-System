@@ -27,12 +27,17 @@ import type {
   BillStatus,
 } from "@/domain/types";
 import { DEFAULT_BUSINESS_SETTINGS } from "@/domain/defaults";
+import {
+  parsePurchaseBillPriceMode,
+  parseSalesBillPriceMode,
+} from "@/lib/billPriceDisplay";
 import { parseListPageSize } from "@/lib/listPageSize";
+import { inferBillDiscountFromStored } from "@/lib/billDisplay";
 import { roundMoney } from "@/lib/money";
 import { normalizeInvoiceNoSpoken } from "@/lib/voiceInvoiceNo";
 import type { DashboardPeriodTotals } from "@/domain/defaults";
 import { isFocSaleLine } from "@/lib/billFoc";
-import { billLineAmount } from "@/lib/saleLineMath";
+import { billLineAmount, saleLineDisplayMrp } from "@/lib/saleLineMath";
 import { linePricingForProduct, productFromSalesEmbed } from "@/lib/uom";
 import { saleLineToRpcItem } from "@/lib/uom";
 import { parseUomConversion, parseUomPrices, toDbUomConversion, toDbUomPrices } from "@/lib/uom";
@@ -40,6 +45,7 @@ import { getTenantIdForCurrentUser } from "@/lib/tenantUser";
 
 /** v2: client tenant_id scope on reads (super_admin RLS no longer merges all shops). */
 export const DOMAIN_QUERY_KEY = ["domain", "v2"] as const;
+export const MASTER_CATALOG_QUERY_KEY = ["domain", "masters", "v1"] as const;
 export const CAPITAL_QUERY_KEY = ["capital", "v1"] as const;
 
 export type DomainBundle = {
@@ -75,6 +81,8 @@ function billStatus(total: number, paid: number): BillStatus {
 }
 
 const PRODUCT_SELECT_FULL =
+  "id, code, name, category, unit, purchase_price, sale_price, opening_stock, mrp, discount_pct, vat_applicable, min_qty, min_qty_pack, is_active, uom_prices, uom_conversion, hsn_code";
+const PRODUCT_SELECT_NO_HSN =
   "id, code, name, category, unit, purchase_price, sale_price, opening_stock, mrp, discount_pct, vat_applicable, min_qty, min_qty_pack, is_active, uom_prices, uom_conversion";
 const PRODUCT_SELECT_LEGACY =
   "id, code, name, category, unit, purchase_price, sale_price, opening_stock, mrp, discount_pct, vat_applicable, min_qty, is_active";
@@ -97,19 +105,35 @@ function purchaseRpcError(err: { message?: string } | null, opts?: { settingInvo
   return new Error(m);
 }
 
-export async function fetchProductsLive(): Promise<Product[]> {
+type MasterFetchOpts = { includeArchived?: boolean };
+
+export async function fetchProductsLive(opts?: MasterFetchOpts): Promise<Product[]> {
   const tenantId = await tenantIdForCurrentUser();
+  const activeOnly = !opts?.includeArchived;
   let rows: Record<string, unknown>[] | null = null;
   let error: { message?: string } | null = null;
 
-  const full = await supabase
+  let fullQ = supabase
     .from("products")
     .select(PRODUCT_SELECT_FULL)
     .eq("tenant_id", tenantId)
-    .eq("is_active", true)
     .order("name");
+  if (activeOnly) fullQ = fullQ.eq("is_active", true);
+  const full = await fullQ;
   rows = full.data;
   error = full.error;
+
+  if (error && isMissingColumnError(error, "hsn_code")) {
+    let noHsnQ = supabase
+      .from("products")
+      .select(PRODUCT_SELECT_NO_HSN)
+      .eq("tenant_id", tenantId)
+      .order("name");
+    if (activeOnly) noHsnQ = noHsnQ.eq("is_active", true);
+    const noHsn = await noHsnQ;
+    rows = noHsn.data;
+    error = noHsn.error;
+  }
 
   if (
     error &&
@@ -117,12 +141,13 @@ export async function fetchProductsLive(): Promise<Product[]> {
       isMissingColumnError(error, "uom_conversion") ||
       isMissingColumnError(error, "min_qty_pack"))
   ) {
-    const legacy = await supabase
+    let legacyQ = supabase
       .from("products")
       .select(PRODUCT_SELECT_LEGACY)
       .eq("tenant_id", tenantId)
-      .eq("is_active", true)
       .order("name");
+    if (activeOnly) legacyQ = legacyQ.eq("is_active", true);
+    const legacy = await legacyQ;
     rows = legacy.data;
     error = legacy.error;
   }
@@ -189,34 +214,42 @@ export async function fetchProductsLive(): Promise<Product[]> {
       minQty: Number(r.min_qty ?? 20),
       minQtyPack: "min_qty_pack" in r && r.min_qty_pack != null ? Number(r.min_qty_pack) : undefined,
       description: undefined,
+      hsnCode:
+        "hsn_code" in r && r.hsn_code != null && String(r.hsn_code).trim() !== ""
+          ? String(r.hsn_code).trim()
+          : undefined,
+      isActive: Boolean(r.is_active ?? true),
     };
   });
 }
 
 const CUSTOMER_SELECT_FULL =
-  "id, name, phone, area, address, credit_limit, opening_balance, pan_number, vat_number";
+  "id, name, phone, area, address, credit_limit, opening_balance, pan_number, vat_number, is_active";
 const CUSTOMER_SELECT_LEGACY =
-  "id, name, phone, area, address, credit_limit, opening_balance";
+  "id, name, phone, area, address, credit_limit, opening_balance, is_active";
 
-export async function fetchCustomersLive(): Promise<Customer[]> {
+export async function fetchCustomersLive(opts?: MasterFetchOpts): Promise<Customer[]> {
   const tenantId = await tenantIdForCurrentUser();
+  const activeOnly = !opts?.includeArchived;
   let cust: Record<string, unknown>[] | null = null;
   let error: { message?: string } | null = null;
-  const full = await supabase
+  let fullQ = supabase
     .from("customers")
     .select(CUSTOMER_SELECT_FULL)
     .eq("tenant_id", tenantId)
-    .eq("is_active", true)
     .order("name");
+  if (activeOnly) fullQ = fullQ.eq("is_active", true);
+  const full = await fullQ;
   cust = full.data;
   error = full.error;
   if (error && (isMissingColumnError(error, "pan_number") || isMissingColumnError(error, "vat_number"))) {
-    const legacy = await supabase
+    let legacyQ = supabase
       .from("customers")
       .select(CUSTOMER_SELECT_LEGACY)
       .eq("tenant_id", tenantId)
-      .eq("is_active", true)
       .order("name");
+    if (activeOnly) legacyQ = legacyQ.eq("is_active", true);
+    const legacy = await legacyQ;
     cust = legacy.data;
     error = legacy.error;
   }
@@ -262,18 +295,16 @@ export async function fetchCustomersLive(): Promise<Customer[]> {
       outstanding,
       creditLimit: Number(c.credit_limit),
       oldestBillDays: outstanding > 0 ? oldestOpen.get(c.id as string) ?? 0 : 0,
+      isActive: Boolean(c.is_active ?? true),
     };
   });
 }
 
-export async function fetchSuppliersLive(): Promise<Supplier[]> {
+export async function fetchSuppliersLive(opts?: MasterFetchOpts): Promise<Supplier[]> {
   const tenantId = await tenantIdForCurrentUser();
-  const { data: sup, error } = await supabase
-    .from("suppliers")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .eq("is_active", true)
-    .order("name");
+  let supQ = supabase.from("suppliers").select("*").eq("tenant_id", tenantId).order("name");
+  if (!opts?.includeArchived) supQ = supQ.eq("is_active", true);
+  const { data: sup, error } = await supQ;
   if (error) throw error;
   const { data: balRows, error: be } = await supabase
     .from("v_supplier_balance")
@@ -299,7 +330,51 @@ export async function fetchSuppliersLive(): Promise<Supplier[]> {
     paymentTermsDays: 30,
     outstanding: balMap.get(s.id as string) ?? Number(s.payable_opening),
     notes: "",
+    isActive: Boolean(s.is_active ?? true),
   }));
+}
+
+export async function fetchMasterCatalogLive(): Promise<{
+  products: Product[];
+  customers: Customer[];
+  suppliers: Supplier[];
+}> {
+  const [products, customers, suppliers] = await Promise.all([
+    fetchProductsLive({ includeArchived: true }),
+    fetchCustomersLive({ includeArchived: true }),
+    fetchSuppliersLive({ includeArchived: true }),
+  ]);
+  return { products, customers, suppliers };
+}
+
+export async function setProductActiveLive(productId: string, active: boolean): Promise<void> {
+  const { error } = await supabase.rpc("set_product_active", {
+    p_product_id: productId,
+    p_active: active,
+  });
+  if (error) throw error;
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  void queryClient.invalidateQueries({ queryKey: MASTER_CATALOG_QUERY_KEY });
+}
+
+export async function setCustomerActiveLive(customerId: string, active: boolean): Promise<void> {
+  const { error } = await supabase.rpc("set_customer_active", {
+    p_customer_id: customerId,
+    p_active: active,
+  });
+  if (error) throw error;
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  void queryClient.invalidateQueries({ queryKey: MASTER_CATALOG_QUERY_KEY });
+}
+
+export async function setSupplierActiveLive(supplierId: string, active: boolean): Promise<void> {
+  const { error } = await supabase.rpc("set_supplier_active", {
+    p_supplier_id: supplierId,
+    p_active: active,
+  });
+  if (error) throw error;
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  void queryClient.invalidateQueries({ queryKey: MASTER_CATALOG_QUERY_KEY });
 }
 
 /** PostgREST may return a single embedded row or a one-element array. */
@@ -409,21 +484,7 @@ export async function fetchSalesLive(): Promise<Sale[]> {
     const sub = Number(b.subtotal);
     const disc = Number(b.discount);
     const afterDisc = sub - disc;
-    let discountType: Sale["discountType"] = "none";
-    let discountValue = 0;
-    if (disc > 0 && sub > 0) {
-      const pct = Math.round((disc / sub) * 100);
-      if (pct >= 1 && pct <= 100 && Math.abs(roundMoney((sub * pct) / 100) - disc) <= 0.01) {
-        discountType = "percent";
-        discountValue = pct;
-      } else {
-        discountType = "flat";
-        discountValue = disc;
-      }
-    } else if (disc > 0) {
-      discountType = "flat";
-      discountValue = disc;
-    }
+    const { discountType, discountValue } = inferBillDiscountFromStored(sub, disc);
     const vatRate = vatAmt > 0 ? 13 : 0;
     const lines: SaleLine[] = items.map((it) => {
       const prod = embedOne(it.products);
@@ -432,9 +493,16 @@ export async function fetchSalesLive(): Promise<Sale[]> {
       const rate = Number(it.rate);
       const uom = ((it.unit as string)?.trim() || prod?.unit) ?? "PCS";
       const amount = billLineAmount({ qty, rate, discountPct });
-      const displayMrp = prod
+      const catalogMrp = prod
         ? linePricingForProduct(productFromSalesEmbed(prod), uom).mrp
         : rate;
+      const displayMrp = saleLineDisplayMrp({
+        qty,
+        rate,
+        mrp: catalogMrp,
+        discountPct,
+        amount,
+      });
       const foc = isFocSaleLine({ rate, qty, amount });
       return {
         productId: it.product_id,
@@ -502,9 +570,14 @@ function mapBillRowToSaleHeader(b: BillRow): Sale {
     customerName: cust?.name ?? "",
     lines: [],
     subtotal: sub,
-    discountType: disc > 0 ? "flat" : "none",
-    discountValue: disc,
-    discountAmount: disc,
+    ...(() => {
+      const inferred = inferBillDiscountFromStored(sub, disc);
+      return {
+        discountType: inferred.discountType,
+        discountValue: inferred.discountValue,
+        discountAmount: disc,
+      };
+    })(),
     afterDiscount: afterDisc,
     billTerms: extra > 0 ? "Charges" : "",
     billTermsAmount: extra,
@@ -563,12 +636,22 @@ export async function fetchSaleByBillNoLive(billNo: string): Promise<Sale | unde
     const uom = ((row.unit as string)?.trim() || prod?.unit) ?? "PCS";
     const discountPct = Number(prod?.discount_pct ?? 0);
     const amount = billLineAmount({ qty, rate, discountPct });
+    const catalogMrp = prod
+      ? linePricingForProduct(productFromSalesEmbed(prod), uom).mrp
+      : rate;
+    const displayMrp = saleLineDisplayMrp({
+      qty,
+      rate,
+      mrp: catalogMrp,
+      discountPct,
+      amount,
+    });
     return {
       productId: row.product_id,
       productName: prod?.name ?? "",
       uom,
       qty,
-      mrp: Number(prod?.mrp ?? rate),
+      mrp: displayMrp > 0 ? displayMrp : rate,
       rate,
       discountPct,
       amount,
@@ -655,17 +738,22 @@ export async function peekNextBillNoLive(): Promise<string> {
 }
 
 export async function commitSaleLive(sale: Sale): Promise<{ billNo: string; id: string }> {
+  const business = await fetchTenantSettingsLive();
+  const priceMode = business.salesBillPriceMode;
   const items = sale.lines
     .filter((l) => l.productId)
     .map((l) =>
-      saleLineToRpcItem({
-        productId: l.productId,
-        qty: l.qty,
-        mrp: l.mrp,
-        rate: l.rate,
-        discountPct: l.discountPct,
-        uom: l.uom,
-      }),
+      saleLineToRpcItem(
+        {
+          productId: l.productId,
+          qty: l.qty,
+          mrp: l.mrp,
+          rate: l.rate,
+          discountPct: l.discountPct,
+          uom: l.uom,
+        },
+        priceMode,
+      ),
     );
 
   const payMode =
@@ -776,6 +864,7 @@ export async function commitReturnLive(opts: {
   billNo: string;
   creditAmount: number;
   lines: { productId: string; returnQty: number }[];
+  reason?: string;
 }): Promise<void> {
   const lines = opts.lines
     .filter((l) => l.returnQty > 0)
@@ -792,9 +881,9 @@ export async function commitReturnLive(opts: {
     p_bill_id: opts.saleId,
     p_credit_amount: opts.creditAmount,
     p_lines: lines,
-    p_notes: null,
+    p_notes: opts.reason?.trim() || null,
   });
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? "Return failed");
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
 }
 
@@ -968,7 +1057,7 @@ export async function upsertCustomerLive(p: {
   if (p.vat_number !== undefined) row.vat_number = p.vat_number?.trim() || null;
 
   if (p.id) {
-    const { tenant_id: _t, ...updateRow } = row;
+    const { tenant_id: _t, is_active: _a, ...updateRow } = row;
     const { error } = await supabase.from("customers").update(updateRow).eq("id", p.id);
     if (error) throw error;
     void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
@@ -997,8 +1086,11 @@ export async function upsertProductLive(p: {
   min_qty: number;
   min_qty_pack?: number | null;
   opening_stock?: number;
+  hsn_code?: string | null;
 }): Promise<void> {
   const tenantId = await tenantIdForCurrentUser();
+  const hsnTrimmed = p.hsn_code?.trim() ?? "";
+  const hsn_code = hsnTrimmed.length > 0 ? hsnTrimmed : null;
 
   const row = {
     tenant_id: tenantId,
@@ -1016,10 +1108,11 @@ export async function upsertProductLive(p: {
     min_qty: p.min_qty,
     min_qty_pack: p.min_qty_pack ?? null,
     opening_stock: p.opening_stock ?? 0,
+    hsn_code,
     is_active: true,
   };
   if (p.id) {
-    const { tenant_id: _t, ...updateRow } = row;
+    const { tenant_id: _t, is_active: _a, ...updateRow } = row;
     const { error } = await supabase.from("products").update(updateRow).eq("id", p.id);
     if (error) throw error;
   } else {
@@ -1190,18 +1283,31 @@ type TenantSettingsRow = {
   default_min_qty: number | null;
   default_min_pack_qty: number | null;
   product_categories?: unknown;
+  product_units?: unknown;
   allow_stock_adjustment?: boolean | null;
   list_page_size?: number | null;
   show_district_province_on_bill?: boolean | null;
   support_phone?: string | null;
   support_email?: string | null;
   support_whatsapp?: string | null;
+  sales_bill_price_mode?: string | null;
+  purchase_bill_price_mode?: string | null;
+  sales_bill_qr_image_url?: string | null;
+  sales_bill_qr_bank_text?: string | null;
+  sales_bill_qr_enabled?: boolean | null;
+  sales_bill_qr_object_path?: string | null;
 };
 
 function parseProductCategories(raw: unknown): string[] {
   if (!Array.isArray(raw)) return DEFAULT_BUSINESS_SETTINGS.productCategories;
   const list = raw.map((x) => String(x).trim()).filter(Boolean);
   return list.length ? list : DEFAULT_BUSINESS_SETTINGS.productCategories;
+}
+
+function parseProductUnits(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return DEFAULT_BUSINESS_SETTINGS.productUnits;
+  const list = raw.map((x) => String(x).trim()).filter(Boolean);
+  return list.length ? list : DEFAULT_BUSINESS_SETTINGS.productUnits;
 }
 
 export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
@@ -1231,6 +1337,7 @@ export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
     defaultMinQty: row.default_min_qty ?? D.defaultMinQty,
     defaultMinPackQty: row.default_min_pack_qty ?? D.defaultMinPackQty,
     productCategories: parseProductCategories(row.product_categories),
+    productUnits: parseProductUnits(row.product_units),
     allowStockAdjustment: row.allow_stock_adjustment ?? D.allowStockAdjustment,
     listPageSize: parseListPageSize(row.list_page_size ?? D.listPageSize),
     showDistrictProvinceOnBill:
@@ -1238,6 +1345,12 @@ export function mapTenantSettingsRow(row: TenantSettingsRow): BusinessSettings {
     supportPhone: row.support_phone ?? D.supportPhone,
     supportEmail: row.support_email ?? D.supportEmail,
     supportWhatsapp: row.support_whatsapp ?? D.supportWhatsapp,
+    salesBillPriceMode: parseSalesBillPriceMode(row.sales_bill_price_mode),
+    purchaseBillPriceMode: parsePurchaseBillPriceMode(row.purchase_bill_price_mode),
+    salesBillQrImageUrl: row.sales_bill_qr_image_url?.trim() ?? D.salesBillQrImageUrl,
+    salesBillQrBankText: row.sales_bill_qr_bank_text?.trim() ?? D.salesBillQrBankText,
+    salesBillQrEnabled: Boolean(row.sales_bill_qr_enabled),
+    salesBillQrObjectPath: row.sales_bill_qr_object_path?.trim() ?? D.salesBillQrObjectPath,
   };
 }
 
@@ -1285,6 +1398,26 @@ export async function removeProductCategoryLive(name: string): Promise<string[]>
     .update({ product_categories: list })
     .eq("tenant_id", tenantId);
   if (error) throw error;
+
+  void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  return list;
+}
+
+/** Append a product unit label to tenant_settings (product form — UNITS-1). */
+export async function appendProductUnitLive(name: string): Promise<string[]> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Unit label is required.");
+
+  const current = await fetchTenantSettingsLive();
+  const list = [...current.productUnits];
+  if (!list.some((u) => u.toLowerCase() === trimmed.toLowerCase())) list.push(trimmed);
+
+  const tenantId = await tenantIdForCurrentUser();
+  const { error } = await supabase
+    .from("tenant_settings")
+    .update({ product_units: list })
+    .eq("tenant_id", tenantId);
+  if (error) throw new Error(error.message ?? "Could not save unit");
 
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
   return list;
