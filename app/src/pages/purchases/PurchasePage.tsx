@@ -31,7 +31,6 @@ import {
   billQtyToBaseUnits,
   conversionLabel,
   lineUomQtyHint,
-  priceForPackFromBase,
   productUomChoices,
 } from "@/lib/uom";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
@@ -120,11 +119,11 @@ function costExclForProductUom(product: Product, uom: string, vatPct: number): n
   const unit = uom.trim() || product.uom || "PCS";
   const baseIncl = product.costPrice;
   const conv = product.uomConversion;
-  let incl = baseIncl;
   if (conv && unit === conv.packUom && baseIncl > 0) {
-    incl = priceForPackFromBase({ mrp: baseIncl, sellingPrice: baseIncl }, conv.piecesPerPack).sellingPrice;
+    const baseExcl = purchasePriceExclFromProduct(baseIncl, vatPct);
+    return baseExcl * conv.piecesPerPack;
   }
-  return purchasePriceExclFromProduct(incl, vatPct);
+  return purchasePriceExclFromProduct(baseIncl, vatPct);
 }
 
 /** Compact label + control (less vertical space than FormField). */
@@ -275,7 +274,7 @@ export const PurchasePage = () => {
     setPendingLineProduct(null);
   }, [pendingLineProduct, PRODUCTS]);
 
-  const lineExcl = (l: Line, qty: number) => qty * l.cost;
+  const lineExcl = (l: Line, qty: number) => roundMoney(qty * l.cost);
   const lineVat = (l: Line, qty: number) => vatAmountFromExcl(lineExcl(l, qty), vatPct);
   const lineIncl = (l: Line, qty: number) => lineExcl(l, qty) + lineVat(l, qty);
   const totalInvoicedExcl = lines.reduce((s, l) => s + lineExcl(l, l.invoiceQty), 0);
@@ -354,7 +353,7 @@ export const PurchasePage = () => {
       product.uom,
       product.uomConversion ?? null,
     );
-    const lineTotalExcl = line.receivedQty * line.cost;
+    const lineTotalExcl = roundMoney(line.receivedQty * line.cost);
     const rateExclPerBase = baseQty > 0 ? roundMoney(lineTotalExcl / baseQty) : line.cost;
     return { receivedQty: baseQty, rateExcl: rateExclPerBase };
   };

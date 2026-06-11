@@ -16,6 +16,7 @@ import {
   RotateCcw,
   ShoppingCart,
   SlidersHorizontal,
+  Tag,
   Truck,
   Users,
 } from "lucide-react";
@@ -122,6 +123,7 @@ export const NAV_DRAWER_GROUPS: NavDrawerGroup[] = [
       { label: "Expense", to: "/app/expenses/new", icon: DollarSign },
       { label: "Payment out", to: "/app/supplier-payments/new", icon: Truck },
       { label: "Daily cash", to: "/app/daily-cash", icon: Calculator },
+      { label: "Scheme", to: "/app/schemes/new", icon: Tag },
     ],
   },
   {
@@ -148,6 +150,7 @@ export const QUICK_ENTRY_ACTIONS: { label: string; to: string }[] = [
   { label: "New product", to: "/app/products/new" },
   { label: "New customer", to: "/app/customers/new" },
   { label: "New supplier", to: "/app/suppliers/new" },
+  { label: "Scheme", to: "/app/schemes/new" },
 ];
 
 export function filterDrawerGroups(
