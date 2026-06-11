@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import {Plus, Trash2} from "lucide-react";
+import {Pencil, Plus, Trash2} from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { DateFormField } from "@/components/app/DateFormField";
 import { EntityPicker } from "@/components/app/EntityPicker";
+import { ProductQuickModal } from "@/components/app/ProductQuickModal";
 import { StickyBar } from "@/components/app/StickyBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,16 +25,25 @@ import {
 import { getVatPct, addVatToExcl, vatAmountFromExcl, purchasePriceExclFromProduct } from "@/lib/tax";
 import { numericPriceProps, numericQtyProps, roundMoney } from "@/lib/money";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
-import type { Product } from "@/domain/types";
+import type { Product, PurchaseDetail } from "@/domain/types";
 import {
+  baseUnitsToBillQty,
   billQtyToBaseUnits,
   conversionLabel,
+  lineUomQtyHint,
   priceForPackFromBase,
   productUomChoices,
 } from "@/lib/uom";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
 import { FormPageHeader } from "@/components/app/patterns";
 import { PageBackLink } from "@/components/app/PageBackLink";
+import { ConfirmDialog } from "@/components/app/ConfirmDialog";
+import {
+  isPurchaseDueDateSettled,
+  purchaseDueDateSettledConfirm,
+  purchasePaidAdjustmentConfirm,
+  type FinancialSaveConfirmConfig,
+} from "@/lib/financialSaveConfirm";
 
 type Line = {
   id: number;
@@ -60,6 +70,49 @@ const inputCompact = "h-9 text-sm";
 /** Detect catalog pricing/UOM changes (for refreshing open purchase lines). */
 function productPurchasePriceSignature(p: Product): string {
   return `${p.costPrice}|${p.uom}|${JSON.stringify(p.uomConversion ?? null)}`;
+}
+
+type DetailLine = PurchaseDetail["lines"][number];
+
+/** Map saved purchase line (base PCS qty) to form row — prefer pack UOM when qty divides evenly. */
+function purchaseLineFromDetail(
+  l: DetailLine,
+  index: number,
+  product: Product | undefined,
+  vatPct: number,
+): Line {
+  const baseQty = l.baseQty ?? l.qty;
+  let uom = l.uom || product?.uom || "PCS";
+  let invoiceQty = l.qty;
+  const conv = product?.uomConversion;
+  if (conv && baseQty > 0 && l.uom === conv.packUom && l.qty > 0) {
+    uom = conv.packUom;
+    invoiceQty = l.qty;
+  } else if (conv && baseQty > 0 && baseQty % conv.piecesPerPack === 0) {
+    const packQty = baseQty / conv.piecesPerPack;
+    if (packQty >= 1) {
+      uom = conv.packUom;
+      invoiceQty = packQty;
+    } else {
+      uom = product?.uom || "PCS";
+      invoiceQty = baseQty;
+    }
+  } else if (!conv) {
+    uom = product?.uom || l.uom || "PCS";
+    invoiceQty = baseQty;
+  }
+  const cost = product
+    ? costExclForProductUom(product, uom, vatPct)
+    : l.rateExcl;
+  return {
+    id: index + 1,
+    productId: l.productId,
+    productName: l.productName,
+    uom,
+    invoiceQty,
+    receivedQty: invoiceQty,
+    cost,
+  };
 }
 
 /** Buy price excl. VAT for line UOM (product.costPrice is stored VAT-inclusive). */
@@ -113,6 +166,17 @@ export const PurchasePage = () => {
   const [dueDate, setDueDate] = useState("");
   const [lines, setLines] = useState<Line[]>([mkLine()]);
   const [saving, setSaving] = useState(false);
+  const [saveConfirm, setSaveConfirm] = useState<FinancialSaveConfirmConfig | null>(null);
+  const [editLinesRaw, setEditLinesRaw] = useState<DetailLine[] | null>(null);
+  const [productModal, setProductModal] = useState<{
+    lineId: number;
+    productId?: string;
+    initialName?: string;
+  } | null>(null);
+  const [pendingLineProduct, setPendingLineProduct] = useState<{
+    lineId: number;
+    productId: string;
+  } | null>(null);
   const prevProductPriceSigRef = useRef<Map<string, string>>(new Map());
   const catalogAtUnmountRef = useRef<Map<string, string>>(new Map());
 
@@ -176,19 +240,9 @@ export const PurchasePage = () => {
         setInvoiceLocked(Boolean(detail.supplierInvoiceNo?.trim()));
         setPaidOnPurchase(detail.paid);
         setDate(detail.date.slice(0, 10));
-        setLines(
-          detail.lines.length
-            ? detail.lines.map((l, i) => ({
-                id: i + 1,
-                productId: l.productId,
-                productName: l.productName,
-                uom: "PCS",
-                invoiceQty: l.qty,
-                receivedQty: l.qty,
-                cost: l.rateExcl,
-              }))
-            : [mkLine()],
-        );
+        setDueDate(detail.dueDate?.slice(0, 10) ?? "");
+        setEditLinesRaw(detail.lines.length ? detail.lines : null);
+        if (!detail.lines.length) setLines([mkLine()]);
       })
       .catch((e) => {
         if (!cancelled) {
@@ -202,6 +256,24 @@ export const PurchasePage = () => {
       cancelled = true;
     };
   }, [isEdit, editPurchaseId]);
+
+  useEffect(() => {
+    if (!editLinesRaw?.length) return;
+    setLines(
+      editLinesRaw.map((l, i) =>
+        purchaseLineFromDetail(l, i, PRODUCTS.find((p) => p.id === l.productId), vatPct),
+      ),
+    );
+    setEditLinesRaw(null);
+  }, [editLinesRaw, PRODUCTS, vatPct]);
+
+  useEffect(() => {
+    if (!pendingLineProduct) return;
+    const product = PRODUCTS.find((p) => p.id === pendingLineProduct.productId);
+    if (!product) return;
+    applyProductToLine(pendingLineProduct.lineId, product.id, product.name);
+    setPendingLineProduct(null);
+  }, [pendingLineProduct, PRODUCTS]);
 
   const lineExcl = (l: Line, qty: number) => qty * l.cost;
   const lineVat = (l: Line, qty: number) => vatAmountFromExcl(lineExcl(l, qty), vatPct);
@@ -231,17 +303,44 @@ export const PurchasePage = () => {
       productId,
       productName,
       uom,
+      invoiceQty: 1,
+      receivedQty: 1,
       cost: costExclForProductUom(product, uom, vatPct),
     });
   };
 
   const handleLineUomChange = (lineId: number, productId: string, newUom: string) => {
+    const line = lines.find((l) => l.id === lineId);
     const product = PRODUCTS.find((p) => p.id === productId);
-    if (!product) {
+    if (!line || !product) {
       updateLine(lineId, { uom: newUom });
       return;
     }
-    updateLine(lineId, { uom: newUom, cost: costExclForProductUom(product, newUom, vatPct) });
+    const baseQty = billQtyToBaseUnits(
+      line.receivedQty,
+      line.uom,
+      product.uom,
+      product.uomConversion ?? null,
+    );
+    const newQty = Math.max(
+      0,
+      baseUnitsToBillQty(baseQty, newUom, product.uom, product.uomConversion ?? null),
+    );
+    const qty = Number.isInteger(newQty) ? newQty : roundMoney(newQty);
+    updateLine(lineId, {
+      uom: newUom,
+      invoiceQty: qty,
+      receivedQty: qty,
+      cost: costExclForProductUom(product, newUom, vatPct),
+    });
+  };
+
+  const openProductModal = (lineId: number, productId?: string, initialName?: string) => {
+    setProductModal({ lineId, productId, initialName });
+  };
+
+  const handleProductSaved = (lineId: number, productId: string) => {
+    setPendingLineProduct({ lineId, productId });
   };
 
   const lineForStockRpc = (line: Line) => {
@@ -260,7 +359,80 @@ export const PurchasePage = () => {
     return { receivedQty: baseQty, rateExcl: rateExclPerBase };
   };
 
-  const handleSave = async () => {
+  const buildRpcLines = () =>
+    lines
+      .filter((l) => l.productId && l.receivedQty > 0)
+      .map((l) => {
+        const { receivedQty, rateExcl } = lineForStockRpc(l);
+        return { productId: l.productId, receivedQty, rateExcl };
+      });
+
+  const paidWillCap = isEdit && totalReceivedIncl + 0.01 < paidOnPurchase;
+
+  const resolveSaveConfirm = (): FinancialSaveConfirmConfig | null => {
+    if (paidWillCap) {
+      return purchasePaidAdjustmentConfirm(totalReceivedIncl, paidOnPurchase);
+    }
+    if (!isEdit && isPurchaseDueDateSettled(dueDate)) {
+      return purchaseDueDateSettledConfirm(totalReceivedIncl, dueDate);
+    }
+    return null;
+  };
+
+  const performSave = async () => {
+    const normalizedInvoice = normalizeInvoiceNoSpoken(invoiceNo);
+    const rpcLines = buildRpcLines();
+    setSaving(true);
+    try {
+      if (isEdit && editPurchaseId) {
+        await commitPurchaseUpdate({
+          purchaseId: editPurchaseId,
+          supplierId,
+          purchaseDate: date,
+          dueDate: dueDate || null,
+          lines: rpcLines,
+          ...(!invoiceLocked && normalizedInvoice
+            ? { supplierInvoiceNo: normalizedInvoice }
+            : {}),
+        });
+        if (!invoiceLocked && normalizedInvoice) setInvoiceLocked(true);
+        const label = normalizedInvoice || "Purchase";
+        toast.success(
+          paidWillCap
+            ? `${label} updated. Recorded payment adjusted to the revised total.`
+            : `${label} updated.`,
+        );
+        navigate(`/app/purchases/${editPurchaseId}`, { replace: true });
+      } else {
+        const { purchaseId } = await commitPurchase({
+          supplierId,
+          purchaseDate: date,
+          supplierInvoiceNo: normalizedInvoice,
+          dueDate: dueDate || null,
+          totalReceived: totalReceivedIncl,
+          lines: rpcLines,
+        });
+        const label = normalizedInvoice;
+        toast.success(
+          hasShort
+            ? `Invoice ${label} saved. ${shortLines.length} short line(s) noted.`
+            : `Invoice ${label} saved.`,
+        );
+        if (purchaseId) {
+          navigate(`/app/purchases/${purchaseId}`, { replace: true });
+          return;
+        }
+        navigate(-1);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Purchase failed");
+    } finally {
+      setSaving(false);
+      setSaveConfirm(null);
+    }
+  };
+
+  const handleSave = () => {
     if (!supplierId) {
       toast.error("Choose a supplier.");
       return;
@@ -274,61 +446,13 @@ export const PurchasePage = () => {
       toast.error("Enter invoice number from the supplier bill.");
       return;
     }
-    const rpcLines = lines
-      .filter((l) => l.productId && l.receivedQty > 0)
-      .map((l) => {
-        const { receivedQty, rateExcl } = lineForStockRpc(l);
-        return { productId: l.productId, receivedQty, rateExcl };
-      });
 
-    if (isEdit && totalReceivedIncl < paidOnPurchase) {
-      toast.error(
-        `Received total (${npr(totalReceivedIncl)}) cannot be less than already paid (${npr(paidOnPurchase)}).`,
-      );
+    const confirm = resolveSaveConfirm();
+    if (confirm) {
+      setSaveConfirm(confirm);
       return;
     }
-
-    setSaving(true);
-    try {
-      if (isEdit && editPurchaseId) {
-        await commitPurchaseUpdate({
-          purchaseId: editPurchaseId,
-          supplierId,
-          purchaseDate: date,
-          lines: rpcLines,
-          ...(!invoiceLocked && normalizedInvoice
-            ? { supplierInvoiceNo: normalizedInvoice }
-            : {}),
-        });
-        if (!invoiceLocked && normalizedInvoice) setInvoiceLocked(true);
-        const label = normalizedInvoice || "Purchase";
-        toast.success(`${label} updated. Stock adjusted.`);
-        navigate(`/app/purchases/${editPurchaseId}`, { replace: true });
-      } else {
-        const { purchaseId } = await commitPurchase({
-          supplierId,
-          purchaseDate: date,
-          supplierInvoiceNo: normalizedInvoice,
-          totalReceived: totalReceivedIncl,
-          lines: rpcLines,
-        });
-        const label = normalizedInvoice;
-        toast.success(
-          hasShort
-            ? `Invoice ${label} saved. Stock updated. ${shortLines.length} short line(s).`
-            : `Invoice ${label} saved. Stock updated.`,
-        );
-        if (purchaseId) {
-          navigate(`/app/purchases/${purchaseId}`, { replace: true });
-          return;
-        }
-        navigate(-1);
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Purchase failed");
-    } finally {
-      setSaving(false);
-    }
+    void performSave();
   };
 
   if (isEdit && loadingEdit) {
@@ -351,6 +475,8 @@ export const PurchasePage = () => {
   return (
     <PageShell stickyBar>
       <FormPageHeader
+        backTo="/app/purchases"
+        backLabel="Purchases"
         title={isEdit ? "Edit purchase invoice" : "New purchase invoice"}
         subtitle={
           isEdit && paidOnPurchase > 0
@@ -402,18 +528,14 @@ export const PurchasePage = () => {
             label="Due date"
             className="col-span-2"
             inputClassName={inputCompact}
+            hint="Due today or earlier = paid (cash). Leave empty for credit."
             value={dueDate}
             onChange={setDueDate}
           />
         </div>
 
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">Items</p>
-            <Button variant="ghost" size="sm" onClick={addLine}>
-              <Plus size={14} /> Add
-            </Button>
-          </div>
+          <p className="mb-2 text-sm font-medium text-foreground">Items</p>
           <p className="mb-2 text-[11px] text-muted leading-snug">
             Inv. vs received qty for short delivery. UOM from product; stock in base units.
           </p>
@@ -431,25 +553,43 @@ export const PurchasePage = () => {
               return (
                 <Card key={line.id} className={isShort ? "border-warning/50" : ""}>
                   <CardContent className="space-y-1.5 p-2.5">
-                    <EntityPicker
-                      placeholder="Search product"
-                      options={PRODUCTS.map((p) => ({
-                        id: p.id,
-                        label: p.name,
-                        sub: `${p.uom} · buy ${npr(p.costPrice)}`,
-                      }))}
-                      value={line.productId}
-                      onChange={(id, opt) => applyProductToLine(line.id, id, opt.label)}
-                      onClear={() =>
-                        updateLine(line.id, {
-                          productId: "",
-                          productName: "",
-                          uom: "PCS",
-                          cost: 0,
-                        })
-                      }
-                      entityLabel="product"
-                    />
+                    <div className="flex items-start gap-1.5">
+                      <div className="min-w-0 flex-1">
+                        <EntityPicker
+                          placeholder="Search product"
+                          options={PRODUCTS.map((p) => ({
+                            id: p.id,
+                            label: p.name,
+                            sub: `${p.uom} · buy ${npr(p.costPrice)}`,
+                          }))}
+                          value={line.productId}
+                          onChange={(id, opt) => applyProductToLine(line.id, id, opt.label)}
+                          onClear={() =>
+                            updateLine(line.id, {
+                              productId: "",
+                              productName: "",
+                              uom: "PCS",
+                              invoiceQty: 1,
+                              receivedQty: 1,
+                              cost: 0,
+                            })
+                          }
+                          entityLabel="product"
+                          onCreateNew={() => openProductModal(line.id)}
+                          onCreateNewWithQuery={(q) => openProductModal(line.id, undefined, q)}
+                        />
+                      </div>
+                      {line.productId ? (
+                        <button
+                          type="button"
+                          title="Edit product"
+                          className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-muted hover:bg-slate-50 hover:text-teal-600"
+                          onClick={() => openProductModal(line.id, line.productId)}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      ) : null}
+                    </div>
                     {product?.uomConversion ? (
                       <p className="text-[10px] font-medium text-emerald-700">
                         {conversionLabel(product.uomConversion, product.uom)}
@@ -512,6 +652,12 @@ export const PurchasePage = () => {
                       </CompactField>
                     </div>
 
+                    {product && line.receivedQty > 0 ? (
+                      <p className="text-[10px] text-teal-700">
+                        {lineUomQtyHint(line.receivedQty, line.uom, product)}
+                      </p>
+                    ) : null}
+
                     {line.productId && line.cost > 0 ? (
                       <p className="text-[10px] text-muted">
                         Incl. VAT ({vatPct}%):{" "}
@@ -571,6 +717,9 @@ export const PurchasePage = () => {
               );
             })}
           </div>
+          <Button variant="ghost" size="sm" className="mt-2" onClick={addLine}>
+            <Plus size={14} /> Add item
+          </Button>
         </div>
 
         {hasShort && (
@@ -617,6 +766,29 @@ export const PurchasePage = () => {
           </div>
         )}
       </div>
+
+      {productModal ? (
+        <ProductQuickModal
+          open
+          productId={productModal.productId}
+          initialName={productModal.initialName}
+          onClose={() => setProductModal(null)}
+          onSaved={(id) => handleProductSaved(productModal.lineId, id)}
+        />
+      ) : null}
+
+      <ConfirmDialog
+        open={saveConfirm !== null}
+        title={saveConfirm?.title ?? ""}
+        description={saveConfirm?.content}
+        confirmLabel={saveConfirm?.confirmLabel ?? "Confirm"}
+        cancelLabel="Cancel"
+        loading={saving}
+        onConfirm={() => void performSave()}
+        onCancel={() => {
+          if (!saving) setSaveConfirm(null);
+        }}
+      />
 
       <StickyBar
         compact

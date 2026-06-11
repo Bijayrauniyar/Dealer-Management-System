@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import {Plus, TrendingUp, TrendingDown} from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
 import { SectionHeader } from "@/components/app/SectionHeader";
 import { KpiCard } from "@/components/app/KpiCard";
 import { ListRow } from "@/components/app/ListRow";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { AddEntityButton } from "@/components/app/patterns";
 import { useMemo } from "react";
 import { CAPITAL_CATEGORIES } from "@/domain/catalogs";
 import { summarizeCapital } from "@/lib/capitalSummary";
@@ -68,6 +68,10 @@ export const CompanyOverviewPage = () => {
   const stockValueAtCost = products.reduce((s, p) => s + p.onHand * p.costPrice, 0);
 
   const customerOutstanding = customers.reduce((s, c) => s + c.outstanding, 0);
+  const customersWithCredit = useMemo(
+    () => customers.filter((c) => c.outstanding < -0.01).sort((a, b) => a.outstanding - b.outstanding),
+    [customers],
+  );
   const supplierPayable = suppliers.reduce((s, u) => s + u.outstanding, 0);
 
   const businessStartDate = useMemo(() => {
@@ -97,9 +101,7 @@ export const CompanyOverviewPage = () => {
             Snapshot only — from {fmtDateDualBs(businessStartDate)} till today. Record operating costs via Expense; assets and loans via Capital.
           </p>
         </div>
-        <Button size="sm" onClick={() => navigate("/app/capital/new")}>
-          <Plus size={14} /> Add entry
-        </Button>
+        <AddEntityButton label="Add capital" onClick={() => navigate("/app/capital/new")} />
       </div>
 
       <div className={`mb-5 rounded-2xl px-5 py-4 ${netWorth >= 0 ? "bg-teal-600" : "bg-danger"}`}>
@@ -183,7 +185,29 @@ export const CompanyOverviewPage = () => {
           />
           <Row label="Cash in hand (latest daily close)" value={latestCashClosing} sub="From daily_cash closing balance" />
           <Row label="Bank balance" value={0} sub="Not stored yet — add in a future release" />
-          <Row label="Customer outstanding" value={customerOutstanding} sub="Receivable" />
+          <div className="border-b border-border-subtle py-2.5 last:border-0">
+            <Row
+              label={customerOutstanding < -0.01 ? "Customer credit (net)" : "Customer outstanding"}
+              value={customerOutstanding}
+              sub={
+                customerOutstanding < -0.01
+                  ? customersWithCredit.length
+                    ? `Advance/overpayment — ${customersWithCredit.map((c) => `${c.name} ${npr(c.outstanding)}`).join(" · ")}`
+                    : "Advance or overpayment (no open bills)"
+                  : "Receivable from customers on credit"
+              }
+              color={customerOutstanding < -0.01 ? "text-info-foreground" : undefined}
+            />
+            {customersWithCredit.length > 0 && (
+              <button
+                type="button"
+                className="mt-1 text-xs font-medium text-teal-600"
+                onClick={() => navigate("/app/customers?filter=advance")}
+              >
+                View customers with advance/credit →
+              </button>
+            )}
+          </div>
           <Row label="Total assets" value={totalAssets} bold color="text-teal-600" />
         </CardContent>
       </Card>

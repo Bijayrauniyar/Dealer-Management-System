@@ -235,10 +235,14 @@ function runSourceChecks() {
 
   const home = readSrc("pages/home/HomePage.tsx");
   if (home) {
-    if (home.includes("HOME_QUICK_ACTIONS") && home.includes("DateDisplay")) {
+    if (
+      home.includes("HOME_QUICK_ACTIONS") &&
+      home.includes("HOME_OVERVIEW_SECTIONS") &&
+      home.includes("DateDisplay")
+    ) {
       r.pass("HomePage ops dashboard + quick actions");
     } else {
-      r.fail("HomePage dashboard", "missing HOME_QUICK_ACTIONS or DateDisplay");
+      r.fail("HomePage dashboard", "missing HOME_QUICK_ACTIONS, HOME_OVERVIEW_SECTIONS, or DateDisplay");
     }
     if (home.includes("Needs attention") && home.includes("Today")) {
       r.pass("HomePage today + attention sections");
@@ -261,6 +265,35 @@ function runSourceChecks() {
   const paymentPage = readSrc("pages/payments/PaymentPage.tsx");
   if (paymentPage?.includes("FormPageHeader")) r.pass("UI-1 PaymentPage FormPageHeader");
   else r.fail("UI-1 PaymentPage", "missing FormPageHeader");
+  if (paymentPage?.includes("Advance only") && paymentPage?.includes("commitAdvancePayment")) {
+    r.pass("ADV-1 PaymentPage advance tab + commitAdvancePayment");
+  } else {
+    r.fail("ADV-1 PaymentPage", "missing advance tab or commitAdvancePayment");
+  }
+
+  const customerDetail = readSrc("pages/customers/CustomerDetailPage.tsx");
+  if (customerDetail?.includes("useCustomerBills") && customerDetail?.includes("reversePayment")) {
+    r.pass("ADV-1 CustomerDetailPage bills history + reverse payment");
+  } else {
+    r.fail("ADV-1 CustomerDetailPage", "missing useCustomerBills or reversePayment");
+  }
+
+  const domainLiveAdv = readSrc("lib/live/domainLive.ts");
+  if (
+    domainLiveAdv?.includes("record_customer_advance") &&
+    domainLiveAdv?.includes("reverse_customer_payment") &&
+    domainLiveAdv?.includes("advance_applied")
+  ) {
+    r.pass("ADV-1 domainLive advance + reverse RPCs");
+  } else {
+    r.fail("ADV-1 domainLive", "missing advance/reverse RPC wiring");
+  }
+
+  if (readSrc("components/app/PaymentReverseDialog.tsx")?.includes("paymentReversalConfirm")) {
+    r.pass("ADV-1 PaymentReverseDialog");
+  } else {
+    r.fail("ADV-1 PaymentReverseDialog", "missing reversal confirm");
+  }
 
   const archiveAction = readSrc("components/app/MasterArchiveAction.tsx");
   if (archiveAction?.includes("ConfirmDialog") && !archiveAction?.includes("window.confirm")) {
@@ -316,6 +349,16 @@ function runSourceChecks() {
   } else {
     r.fail("HOME_QUICK_ACTIONS labels", "missing Payment in/out");
   }
+  if (nav?.includes("HOME_OVERVIEW_SECTIONS") && nav?.includes('title: "Receivables"') && nav?.includes('title: "Payables"')) {
+    r.pass("HOME_OVERVIEW_SECTIONS Receivables + Payables");
+  } else {
+    r.fail("HOME_OVERVIEW_SECTIONS", "missing categorized overview sections");
+  }
+  if (nav?.includes('label: "Return"') && nav?.includes('label: "Company"') && nav?.includes('label: "Reports hub"')) {
+    r.pass("Home Return quick action + Company/Reports in overview");
+  } else {
+    r.fail("Home nav split", "Return in quick actions; Company/Reports in overview");
+  }
   if (nav?.includes("Sales invoice") && nav?.includes("/app/sales/new")) {
     r.pass("HOME_QUICK_ACTIONS includes Sales invoice");
   } else {
@@ -346,6 +389,14 @@ function runSourceChecks() {
     r.pass("UNITS-1 product form Add unit");
   } else {
     r.fail("UNITS-1 ProductFormPage", "missing ProductUnitField");
+  }
+  if (
+    productForm?.includes("useMasterCatalogLoadState") &&
+    productForm?.includes("business.defaultMarkupPct")
+  ) {
+    r.pass("ProductForm edit catalog wait + Settings markup default");
+  } else {
+    r.fail("ProductFormPage load/markup", "missing catalog wait or markup default");
   }
 
   const returnPage = readSrc("pages/returns/ReturnPage.tsx");

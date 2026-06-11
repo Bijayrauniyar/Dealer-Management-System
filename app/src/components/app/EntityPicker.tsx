@@ -38,6 +38,8 @@ type Props = {
   onClear?: () => void;
   entityLabel?: string;
   onCreateNew?: () => void;
+  /** When search has no match — create with typed name (standard POS pattern). */
+  onCreateNewWithQuery?: (query: string) => void;
   disabled?: boolean;
   className?: string;
 };
@@ -50,6 +52,7 @@ export const EntityPicker = ({
   onClear,
   entityLabel = "item",
   onCreateNew,
+  onCreateNewWithQuery,
   disabled,
   className,
 }: Props) => {
@@ -170,20 +173,43 @@ export const EntityPicker = ({
                 )}
               </li>
             ))}
-            {filtered.length === 0 && (
+            {filtered.length === 0 && !query.trim() && (
               <li className="px-4 py-3 text-sm text-muted">No results</li>
             )}
+            {filtered.length === 0 && query.trim() && onCreateNewWithQuery && (
+              <li>
+                <button
+                  type="button"
+                  className="flex w-full flex-col px-4 py-2.5 text-left hover:bg-teal-50"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const q = query.trim();
+                    setQuery("");
+                    setOpen(false);
+                    onCreateNewWithQuery(q);
+                  }}
+                >
+                  <span className="text-sm font-medium text-teal-700">
+                    <Plus size={14} className="mr-1 inline" />
+                    Create &ldquo;{query.trim()}&rdquo;
+                  </span>
+                  <span className="text-xs text-muted">Add new {entityLabel} to catalog</span>
+                </button>
+              </li>
+            )}
           </ul>
-          {onCreateNew && (
+          {(onCreateNew || (query.trim() && onCreateNewWithQuery)) && (
             <div className="border-t border-border-subtle p-1">
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => { setOpen(false); onCreateNew(); }}
-              >
-                <Plus size={14} /> Add new {entityLabel}
-              </button>
+              {onCreateNew && (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { setOpen(false); onCreateNew(); }}
+                >
+                  <Plus size={14} /> Add new {entityLabel}
+                </button>
+              )}
             </div>
           )}
         </div>

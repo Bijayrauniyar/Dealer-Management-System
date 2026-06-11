@@ -1,26 +1,29 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {AlertTriangle, Clock, CheckCircle2, ChevronRight, CreditCard, FilePlus, Pencil} from "lucide-react";
+import { toast } from "sonner";
+import {AlertTriangle, Clock, CheckCircle2, ChevronRight, CreditCard, FilePlus, Pencil, Undo2} from "lucide-react";
 import { DetailActions } from "@/components/app/DetailActions";
 import { PageShell } from "@/components/app/PageShell";
+import { PaymentReverseDialog } from "@/components/app/PaymentReverseDialog";
 import { SALES_INVOICE_LABEL } from "@/lib/actionLabels";
 import { KpiCard } from "@/components/app/KpiCard";
-import { SectionHeader } from "@/components/app/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { BillStatus, OutstandingBill } from "@/domain/types";
+import type { BillStatus, OutstandingBill, Payment } from "@/domain/types";
 import {
   commitSetCustomerActive,
+  reversePayment,
   useCustomers,
   useCustomersCatalog,
+  useCustomerBills,
   useDomainBundleLoadState,
   useMasterCatalogLoadState,
-  useOutstandingBills,
   usePayments,
 } from "@/store/domain";
 import { MasterArchiveAction } from "@/components/app/MasterArchiveAction";
 import { DateDisplay } from "@/components/app/DateDisplay";
+import { customerAdvanceBalance, customerReceivable } from "@/lib/customerBalance";
 import { npr, fmtDateDualBs } from "@/lib/utils";
 import { ListPagination } from "@/components/app/ListPagination";
 import { usePagination } from "@/lib/usePagination";
@@ -123,27 +126,62 @@ const BillCard = ({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 type Tab = "bills" | "payments";
+type PaymentFilter = "all" | "active" | "reversed";
 
 export const CustomerDetailPage = () => {
-  const { id }     = useParams();
-  const navigate   = useNavigate();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const customerId = id ?? "";
   const [tab, setTab] = useState<Tab>("bills");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
+  const [paymentToReverse, setPaymentToReverse] = useState<Payment | null>(null);
+  const [reversing, setReversing] = useState(false);
 
   const ACTIVE_CUSTOMERS = useCustomers();
   const CATALOG_CUSTOMERS = useCustomersCatalog();
   const bundleState = useDomainBundleLoadState();
   const catalogState = useMasterCatalogLoadState();
-  const OUTSTANDING_BILLS = useOutstandingBills();
-  const PAYMENTS         = usePayments();
+  const customerBills = useCustomerBills(customerId);
+  const PAYMENTS = usePayments();
 
   const customer =
     CATALOG_CUSTOMERS.find((c) => c.id === id) ??
     ACTIVE_CUSTOMERS.find((c) => c.id === id);
 
-  if (
-    !customer &&
-    (bundleState === "loading" || catalogState === "loading")
-  ) {
+  const allBills = useMemo(
+    () =>
+      [...customerBills].sort((a, b) => {
+        const order = { overdue: 0, partial: 1, current: 2, paid: 3 };
+        if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+        return new Date(b.billDate).getTime() - new Date(a.billDate).getTime();
+      }),
+    [customerBills],
+  );
+
+  const payments = useMemo(
+    () => PAYMENTS.filter((p) => p.customerId === customerId),
+    [PAYMENTS, customerId],
+  );
+
+  const reversedCount = useMemo(
+    () => payments.filter((p) => p.reversedAt).length,
+    [payments],
+  );
+
+  const filteredPayments = useMemo(() => {
+    if (paymentFilter === "active") return payments.filter((p) => !p.reversedAt);
+    if (paymentFilter === "reversed") return payments.filter((p) => p.reversedAt);
+    return payments;
+  }, [payments, paymentFilter]);
+
+  const billsPage = usePagination(allBills, undefined, customerId);
+  const paymentsPage = usePagination(
+    filteredPayments,
+    undefined,
+    `${customerId}|payments|${paymentFilter}`,
+  );
+
+  if (!customer && (bundleState === "loading" || catalogState === "loading")) {
     return (
       <PageShell>
         <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
@@ -161,25 +199,29 @@ export const CustomerDetailPage = () => {
     );
   }
 
-  const allBills   = OUTSTANDING_BILLS.filter((b) => b.customerId === id)
-    .sort((a, b) => {
-      // overdue first, then current, then paid; within same status sort by dueDate asc
-      const order = { overdue: 0, partial: 1, current: 2, paid: 3 };
-      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    });
-
-  const openBills    = allBills.filter((b) => b.balance > 0);
+  const receivable = customerReceivable(customer.outstanding);
+  const advanceBal = customerAdvanceBalance(customer.outstanding);
+  const openBills = allBills.filter((b) => b.balance > 0);
   const overdueBills = allBills.filter((b) => b.status === "overdue");
-
-  const billsPage = usePagination(allBills, undefined, id);
-  const payments = PAYMENTS.filter((p) => p.customerId === id);
-  const paymentsPage = usePagination(payments, undefined, `${id}|payments`);
-
   const totalOverdue = overdueBills.reduce((s, b) => s + b.balance, 0);
 
   const goToPayment = () => navigate(`/app/payments/new?customerId=${customer.id}`);
+  const goToAdvance = () =>
+    navigate(`/app/payments/new?customerId=${customer.id}&mode=advance`);
   const goToNewBill = () => navigate(`/app/sales/new?customerId=${customer.id}`);
+
+  const handleReversePayment = async (paymentId: string, reason: string) => {
+    setReversing(true);
+    try {
+      await reversePayment(paymentId, reason);
+      toast.success("Payment reversed.");
+      setPaymentToReverse(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Reversal failed");
+    } finally {
+      setReversing(false);
+    }
+  };
 
   return (
     <PageShell>
@@ -202,17 +244,17 @@ export const CustomerDetailPage = () => {
       <div className="mb-4 grid grid-cols-3 gap-2">
         <KpiCard
           size="compact"
-          label="Outstanding"
-          value={npr(customer.outstanding)}
-          variant={customer.outstanding > 0 ? "warning" : "success"}
+          label="Receivable"
+          value={npr(receivable)}
+          variant={receivable > 0 ? "warning" : "success"}
           sub={`${openBills.length} open`}
         />
         <KpiCard
           size="compact"
-          label="Overdue"
-          value={npr(totalOverdue)}
-          variant={totalOverdue > 0 ? "danger" : "success"}
-          sub={totalOverdue > 0 ? `${overdueBills.length} due` : "None"}
+          label="Advance"
+          value={npr(advanceBal)}
+          variant={advanceBal > 0 ? "info" : "success"}
+          sub={advanceBal > 0 ? "On account" : "None"}
         />
         <KpiCard
           size="compact"
@@ -220,11 +262,17 @@ export const CustomerDetailPage = () => {
           value={npr(customer.creditLimit)}
           sub={
             customer.creditLimit > 0
-              ? `${Math.min(100, Math.round((customer.outstanding / customer.creditLimit) * 100))}% used`
+              ? `${Math.min(100, Math.round((receivable / customer.creditLimit) * 100))}% used`
               : "Not set"
           }
         />
       </div>
+
+      {advanceBal > 0 && receivable === 0 && (
+        <div className="mb-4 rounded-xl border border-info/20 bg-info-light px-4 py-3 text-sm text-info-foreground">
+          Customer has {npr(advanceBal)} advance — it will apply automatically on the next sales invoice.
+        </div>
+      )}
 
       {/* ── Overdue alert banner ── */}
       {overdueBills.length > 0 && (
@@ -300,17 +348,24 @@ export const CustomerDetailPage = () => {
           entityLabel="customer"
           isActive={customer.isActive}
           blockArchiveReason={
-            customer.outstanding > 0.01 ? "Clear outstanding balance before archiving." : undefined
+            receivable > 0.01 ? "Clear receivable balance before archiving." : undefined
           }
           onSetActive={(active) => commitSetCustomerActive(customer.id, active)}
           onArchived={() => navigate("/app/customers")}
         />
       </div>
 
-      {customer.isActive && customer.outstanding > 0 && (
+      {customer.isActive && receivable > 0 && (
         <Button size="full" className="mb-4 gap-2" onClick={goToPayment}>
           <CreditCard size={16} />
-          Collect · {npr(customer.outstanding)}
+          Collect · {npr(receivable)}
+        </Button>
+      )}
+
+      {customer.isActive && advanceBal > 0 && receivable === 0 && (
+        <Button size="full" variant="outline" className="mb-4 gap-2" onClick={goToNewBill}>
+          <FilePlus size={16} />
+          New invoice · apply {npr(advanceBal)} advance
         </Button>
       )}
 
@@ -391,34 +446,105 @@ export const CustomerDetailPage = () => {
       {/* ── Payments tab ── */}
       {tab === "payments" && (
         <>
+          {payments.length > 0 && (
+            <div className="mb-3 flex rounded-lg border border-border-subtle bg-surface-muted/20 p-0.5 text-xs">
+              {(
+                [
+                  ["all", `All (${payments.length})`],
+                  ["active", `Active (${payments.length - reversedCount})`],
+                  ["reversed", `Reversed (${reversedCount})`],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setPaymentFilter(id)}
+                  className={`flex-1 rounded-md px-2 py-1.5 font-semibold transition-colors ${
+                    paymentFilter === id
+                      ? "bg-white text-foreground shadow-sm"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {payments.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted">No payments recorded.</p>
+          ) : filteredPayments.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted">No payments in this filter.</p>
           ) : (
             <Card>
               <CardContent className="p-0 px-4">
-                {paymentsPage.visible.map((p) => (
-                  <div key={p.id} className="border-b border-border-subtle last:border-0 py-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{npr(p.amount)}</p>
-                        <p className="text-xs text-muted">
-                          <DateDisplay iso={p.date} dual compact /> · {p.mode}
-                          {p.reference ? ` · ${p.reference}` : ""}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        {p.billNo && (
-                          <button
-                            className="flex items-center gap-1 text-xs text-teal-600 font-medium"
-                            onClick={() => {}}
-                          >
-                            {p.billNo} <ChevronRight size={12} />
-                          </button>
-                        )}
+                {paymentsPage.visible.map((p) => {
+                  const reversed = Boolean(p.reversedAt);
+                  return (
+                    <div
+                      key={p.id}
+                      className={`border-b border-border-subtle py-3 last:border-0 ${reversed ? "opacity-60" : ""}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p
+                              className={`text-sm font-semibold ${reversed ? "line-through text-muted" : "text-foreground"}`}
+                            >
+                              {npr(p.amount)}
+                            </p>
+                            {p.isAdvance && !reversed && (
+                              <Badge variant="teal" className="text-[9px]">
+                                Advance
+                              </Badge>
+                            )}
+                            {reversed && (
+                              <Badge variant="danger" className="text-[9px]">
+                                Reversed
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted">
+                            <DateDisplay iso={p.date} dual compact /> · {p.mode}
+                            {p.reference ? ` · ${p.reference}` : ""}
+                          </p>
+                          {reversed && (
+                            <p className="mt-0.5 text-[11px] text-muted">
+                              Reversed
+                              {p.reversedAt ? (
+                                <>
+                                  {" "}
+                                  · <DateDisplay iso={p.reversedAt} dual compact />
+                                </>
+                              ) : null}
+                              {p.reversalReason ? ` · ${p.reversalReason}` : ""}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {p.billNo && (
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 text-xs font-medium text-teal-600"
+                              onClick={() => navigate(`/app/bills/${encodeURIComponent(p.billNo!)}`)}
+                            >
+                              {p.billNo} <ChevronRight size={12} />
+                            </button>
+                          )}
+                          {!reversed && (
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 text-[11px] font-semibold text-danger"
+                              onClick={() => setPaymentToReverse(p)}
+                            >
+                              <Undo2 size={12} /> Reverse
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
           )}
@@ -435,11 +561,25 @@ export const CustomerDetailPage = () => {
             />
           )}
 
-          <Button size="full" variant="outline" className="mt-4" onClick={goToPayment}>
-            + Record new payment
-          </Button>
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Button size="full" variant="outline" onClick={goToPayment}>
+              + Against bills
+            </Button>
+            <Button size="full" variant="outline" onClick={goToAdvance}>
+              + Record advance
+            </Button>
+          </div>
         </>
       )}
+
+      <PaymentReverseDialog
+        payment={paymentToReverse}
+        loading={reversing}
+        onConfirm={handleReversePayment}
+        onCancel={() => {
+          if (!reversing) setPaymentToReverse(null);
+        }}
+      />
 
       <div className="h-6" />
     </PageShell>

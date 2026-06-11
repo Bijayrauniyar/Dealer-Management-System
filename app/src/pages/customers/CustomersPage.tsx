@@ -24,8 +24,9 @@ export const CustomersPage = () => {
 
   const outstandingOnly = params.get("filter") === "outstanding";
   const overdueOnly = params.get("filter") === "overdue";
-  const [listFilter, setListFilter] = useState<"all" | "credit" | "overdue">(
-    overdueOnly ? "overdue" : outstandingOnly ? "credit" : "all",
+  const advanceOnly = params.get("filter") === "advance";
+  const [listFilter, setListFilter] = useState<"all" | "credit" | "overdue" | "advance">(
+    advanceOnly ? "advance" : overdueOnly ? "overdue" : outstandingOnly ? "credit" : "all",
   );
   const [areaFilter, setAreaFilter] = useState("all");
   const areaList = useMemo(() => customerAreas(CUSTOMERS), [CUSTOMERS]);
@@ -39,6 +40,7 @@ export const CustomersPage = () => {
         c.area.toLowerCase().includes(query.toLowerCase());
       if (!matchesQuery) return false;
       if (listFilter === "credit") return c.outstanding > 0;
+      if (listFilter === "advance") return c.outstanding < -0.01;
       if (listFilter === "overdue") {
         return c.outstanding > 0 && c.oldestBillDays > business.overdueDays;
       }
@@ -63,12 +65,14 @@ export const CustomersPage = () => {
 
   const filterOptions = useMemo((): BrowseFilterOption[] => {
     const creditCount = searchMatched.filter((c) => c.outstanding > 0).length;
+    const advanceCount = searchMatched.filter((c) => c.outstanding < -0.01).length;
     const overdueCount = searchMatched.filter(
       (c) => c.outstanding > 0 && c.oldestBillDays > business.overdueDays,
     ).length;
     return [
       { value: "all", label: `All (${searchMatched.length})` },
       { value: "credit", label: `On credit (${creditCount})` },
+      { value: "advance", label: `Advance (${advanceCount})` },
       { value: "overdue", label: `Overdue (${overdueCount})` },
     ];
   }, [searchMatched, business.overdueDays]);
@@ -106,7 +110,7 @@ export const CustomersPage = () => {
         filterOptions={filterOptions}
         filterLabel="Status"
         filterVariant={listFilter === "overdue" ? "danger" : "default"}
-        onFilterChange={(v) => setListFilter(v as "all" | "credit" | "overdue")}
+        onFilterChange={(v) => setListFilter(v as "all" | "credit" | "overdue" | "advance")}
         extraFilter={{
           label: "Area",
           value: areaFilter,
@@ -153,6 +157,10 @@ export const CustomersPage = () => {
                     c.outstanding > 0 ? (
                       <Badge variant={isOverdue ? "danger" : "warning"} className="text-[11px]">
                         {npr(c.outstanding)}
+                      </Badge>
+                    ) : c.outstanding < -0.01 ? (
+                      <Badge variant="info" className="text-[11px]">
+                        Credit {npr(Math.abs(c.outstanding))}
                       </Badge>
                     ) : (
                       <span className="text-[11px] font-medium text-success-foreground">Clear</span>

@@ -53,7 +53,7 @@ function runExportChecks() {
   } else r.fail("export columns", "incomplete");
 
   const settings = readSrc("pages/settings/SettingsPage.tsx");
-  if (settings.includes("ExportSection") && settings.includes('id: "export"')) {
+  if (settings.includes("ExportSection") && settings.includes('id: "data"')) {
     r.pass("Settings Export tab");
   } else r.fail("Settings Export tab", "missing");
 
@@ -99,7 +99,7 @@ function runTierASourceChecks() {
     } else {
       r.fail("Settings district on bill", "missing");
     }
-    const tabIds = ['"business"', '"bills"', '"stock"', '"export"'];
+    const tabIds = ['"shop"', '"bills"', '"catalog"', '"data"'];
     for (const id of tabIds) {
       if (settings.includes(id)) r.pass(`Settings tab ${id}`);
       else r.fail(`Settings tab ${id}`, "missing");

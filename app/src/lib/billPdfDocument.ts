@@ -21,6 +21,7 @@ import {
   salesBillUnitPriceHeaderPrint,
   showsSalesBillPaymentQr,
 } from "@/lib/billPriceDisplay";
+import { IRD_SALES_BILL_DISCLAIMER } from "@/lib/irdDisclaimer";
 import { amountInWords, fmtDate, nprNum, toMiti } from "@/lib/utils";
 
 export type BillPdfInput = {
@@ -366,6 +367,13 @@ export function createBillPdf({ sale, customer, business }: BillPdfInput): jsPDF
     pdf.text("(Scan QR on screen bill — vector PDF shows bank details only)", MARGIN, y);
     y += 6;
   }
+
+  pdf.setFont("helvetica", "italic");
+  pdf.setFontSize(7);
+  pdf.setTextColor(100, 100, 100);
+  const discLines = pdf.splitTextToSize(IRD_SALES_BILL_DISCLAIMER, CONTENT_W);
+  pdf.text(discLines, MARGIN, y);
+  y += discLines.length * 3.2 + 4;
 
   pdf.setDrawColor(180);
   pdf.setLineDashPattern([2, 2], 0);

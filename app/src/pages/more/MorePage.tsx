@@ -40,7 +40,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { label: "Payment in", icon: CreditCard, to: "/app/payments/new", color: "bg-green-100 text-green-700" },
       { label: "Return", icon: RotateCcw, to: "/app/returns/new", color: "bg-amber-100 text-amber-700" },
       { label: "Damage", icon: AlertTriangle, to: "/app/damages/new", color: "bg-red-100 text-red-600" },
-      { label: "Purchase invoice", icon: Package, to: "/app/purchases/new", color: "bg-blue-100 text-blue-700" },
+      { label: "Purchase invoice", icon: Package, to: "/app/purchases", color: "bg-blue-100 text-blue-700" },
       { label: "Supplier pay", icon: Truck, to: "/app/supplier-payments/new", color: "bg-purple-100 text-purple-700" },
       { label: "Expense", icon: DollarSign, to: "/app/expenses/new", color: "bg-orange-100 text-orange-700" },
       { label: "Daily cash", icon: Calculator, to: "/app/daily-cash", color: "bg-slate-100 text-slate-600" },

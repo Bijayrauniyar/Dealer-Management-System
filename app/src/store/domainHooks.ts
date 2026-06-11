@@ -25,6 +25,8 @@ import {
   DOMAIN_QUERY_KEY,
   MASTER_CATALOG_QUERY_KEY,
   commitPaymentLive,
+  commitAdvancePaymentLive,
+  reversePaymentLive,
   fetchMasterCatalogLive,
   setCustomerActiveLive,
   setProductActiveLive,
@@ -37,6 +39,7 @@ import {
   commitSaleLive,
   commitSupplierPaymentLive,
   deriveOutstandingBills,
+  deriveAllBillsFromSales,
   fetchDomainBundle,
   fetchSaleByBillNoLive,
   peekNextBillNoLive,
@@ -55,6 +58,7 @@ import {
 } from "@/lib/live/domainLive";
 import type {
   CommitPaymentOpts,
+  CommitAdvancePaymentOpts,
   CommitPurchaseOpts,
   CommitPurchaseUpdateOpts,
   CommitReturnOpts,
@@ -219,6 +223,14 @@ export function useOutstandingBills(): OutstandingBill[] {
   return useMemo(() => deriveOutstandingBills(sales), [sales]);
 }
 
+export function useCustomerBills(customerId: string): OutstandingBill[] {
+  const sales = useSales();
+  return useMemo(
+    () => deriveAllBillsFromSales(sales).filter((b) => b.customerId === customerId),
+    [sales, customerId],
+  );
+}
+
 export function useSaleByBillQuery(billNo: string) {
   return useQuery({
     queryKey: ["sale-bill", billNo],
@@ -267,13 +279,23 @@ export function useNextBillNo(isEdit: boolean, existingBillNo?: string) {
   return no;
 }
 
-export async function commitSale(sale: Sale): Promise<string> {
+export async function commitSale(
+  sale: Sale,
+): Promise<{ billNo: string; advanceApplied: number }> {
   const r = await commitSaleLive(sale);
-  return r.billNo;
+  return { billNo: r.billNo, advanceApplied: r.advanceApplied };
 }
 
 export async function commitPayment(opts: CommitPaymentOpts): Promise<void> {
   await commitPaymentLive(opts);
+}
+
+export async function commitAdvancePayment(opts: CommitAdvancePaymentOpts): Promise<void> {
+  await commitAdvancePaymentLive(opts);
+}
+
+export async function reversePayment(paymentId: string, reason: string): Promise<void> {
+  await reversePaymentLive(paymentId, reason);
 }
 
 export async function commitReturn(opts: CommitReturnOpts): Promise<void> {

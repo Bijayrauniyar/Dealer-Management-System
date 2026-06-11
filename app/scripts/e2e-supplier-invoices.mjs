@@ -36,19 +36,15 @@ function runSourceChecks() {
     } else {
       r.pass("SuppliersPage no empty onClick stubs");
     }
+    const purchasesHub = readSrc("pages/purchases/PurchasesPage.tsx");
     if (
-      suppliersPage.includes('navigate("/app/supplier-payments/new"') &&
-      suppliersPage.includes("onViewInvoices") &&
-      suppliersPage.includes("/invoices")
+      purchasesHub?.includes('navigate("/app/supplier-payments/new"') &&
+      purchasesHub.includes("/app/purchases/") &&
+      purchasesHub.includes("SegmentedTabs")
     ) {
-      r.pass("SuppliersPage wires payment + invoices navigation");
+      r.pass("PurchasesPage hub wires payment + invoice navigation");
     } else {
-      r.fail("SuppliersPage navigation", "missing expected navigate calls");
-    }
-    if (suppliersPage.includes("stopPropagation")) {
-      r.pass("SuppliersPage stopPropagation on action buttons");
-    } else {
-      r.fail("SuppliersPage stopPropagation", "missing");
+      r.fail("PurchasesPage hub navigation", "missing supplier payment or invoice routes");
     }
   }
 
@@ -83,6 +79,11 @@ function runSourceChecks() {
       r.pass("Route suppliers/:supplierId/invoices");
     } else {
       r.fail("Route supplier invoices", "missing");
+    }
+    if (router.includes('path="purchases"') && router.includes("PurchasesPage")) {
+      r.pass("Route purchases hub (PurchasesPage)");
+    } else if (router) {
+      r.fail("Route purchases hub", "missing PurchasesPage at /app/purchases");
     }
     if (router.includes("purchases/:purchaseId")) {
       r.pass("Route purchases/:purchaseId");
@@ -148,6 +149,42 @@ function runSourceChecks() {
     r.fail("PurchasePage edit save", "missing commitPurchaseUpdate");
   }
 
+  if (purchasePage && purchasePage.includes("dueDate") && purchasePage.includes("Due today or earlier")) {
+    r.pass("PurchasePage due date hint + state");
+  } else if (purchasePage) {
+    r.fail("PurchasePage due date", "missing dueDate wiring");
+  }
+
+  if (
+    purchasePage &&
+    purchasePage.includes("ConfirmDialog") &&
+    purchasePage.includes("purchasePaidAdjustmentConfirm")
+  ) {
+    r.pass("PurchasePage financial save confirmation dialog");
+  } else if (purchasePage) {
+    r.fail("PurchasePage save confirm", "missing ConfirmDialog / purchasePaidAdjustmentConfirm");
+  }
+
+  const financialConfirm = readSrc("lib/financialSaveConfirm.tsx");
+  if (financialConfirm && financialConfirm.includes("On confirmation")) {
+    r.pass("financialSaveConfirm professional copy");
+  } else if (financialConfirm) {
+    r.fail("financialSaveConfirm", "missing");
+  }
+
+  const purchaseLineDisplay = readSrc("lib/purchaseLineDisplay.ts");
+  if (purchaseLineDisplay && purchaseLineDisplay.includes("purchaseLineQtyDisplay") && purchaseLineDisplay.includes("billLineQtyDisplay")) {
+    r.pass("purchaseLineDisplay helpers");
+  } else if (purchaseLineDisplay) {
+    r.fail("purchaseLineDisplay", "missing qty display helpers");
+  }
+
+  if (domainLive && domainLive.includes("p_due_date")) {
+    r.pass("domainLive passes p_due_date to record_purchase");
+  } else if (domainLive) {
+    r.fail("domainLive due date RPC", "missing p_due_date");
+  }
+
   if (purchasePage && purchasePage.includes("supplierInvoiceNo") && purchasePage.includes("commitPurchase({")) {
     r.pass("PurchasePage passes supplierInvoiceNo on create");
   } else if (purchasePage) {
@@ -211,6 +248,12 @@ function runSourceChecks() {
     r.fail("PurchaseBillView", "missing");
   }
 
+  if (purchaseBill && purchaseBill.includes("qtyAlt")) {
+    r.pass("PurchaseBillView dual UOM qtyAlt subline");
+  } else if (purchaseBill) {
+    r.fail("PurchaseBillView dual UOM", "missing qtyAlt");
+  }
+
   if (purchasePage && !purchasePage.includes("InvoiceNoField")) {
     r.pass("PurchasePage invoice field without mic component");
   } else if (purchasePage) {
@@ -244,7 +287,7 @@ function runSourceChecks() {
   if (
     productForm &&
     productForm.includes("Buy price excl. VAT") &&
-    productForm.includes("addVatToExcl(buyPrice") &&
+    productForm.includes("addVatToExclPrice(buyPrice") &&
     !productForm.includes("Sell price must be greater than 0")
   ) {
     r.pass("ProductFormPage buy excl VAT + optional sell price");

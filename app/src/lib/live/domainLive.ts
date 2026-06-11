@@ -41,6 +41,7 @@ import { billLineAmount, saleLineDisplayMrp } from "@/lib/saleLineMath";
 import { linePricingForProduct, productFromSalesEmbed } from "@/lib/uom";
 import { saleLineToRpcItem } from "@/lib/uom";
 import { parseUomConversion, parseUomPrices, toDbUomConversion, toDbUomPrices } from "@/lib/uom";
+import { purchaseLineQtyDisplay } from "@/lib/purchaseLineDisplay";
 import { getTenantIdForCurrentUser } from "@/lib/tenantUser";
 
 /** v2: client tenant_id scope on reads (super_admin RLS no longer merges all shops). */
@@ -662,31 +663,56 @@ export async function fetchSaleByBillNoLive(billNo: string): Promise<Sale | unde
   return { ...header, lines };
 }
 
+function saleToOutstandingBill(s: Sale): OutstandingBill {
+  return {
+    id: `ob-${s.id}`,
+    saleId: s.id,
+    customerId: s.customerId,
+    billNo: s.billNo,
+    billDate: s.date,
+    dueDate: s.dueDate,
+    billTotal: s.grandTotal,
+    paidAmount: s.paidNow,
+    balance: s.balance,
+    status: billStatus(s.grandTotal, s.paidNow),
+  };
+}
+
+/** All sales invoices as bill rows (paid + open) — for customer detail history. */
+export function deriveAllBillsFromSales(sales: Sale[]): OutstandingBill[] {
+  return sales.map(saleToOutstandingBill);
+}
+
 export function deriveOutstandingBills(sales: Sale[]): OutstandingBill[] {
-  return sales
-    .filter((s) => s.balance > 0.01)
-    .map((s) => ({
-      id: `ob-${s.id}`,
-      saleId: s.id,
-      customerId: s.customerId,
-      billNo: s.billNo,
-      billDate: s.date,
-      dueDate: s.dueDate,
-      billTotal: s.grandTotal,
-      paidAmount: s.paidNow,
-      balance: s.balance,
-      status: billStatus(s.grandTotal, s.paidNow),
-    }));
+  return sales.filter((s) => s.balance > 0.01).map(saleToOutstandingBill);
 }
 
 export async function fetchPaymentsLive(): Promise<Payment[]> {
   const tenantId = await tenantIdForCurrentUser();
-  const { data: rows, error } = await supabase
+  const selectFull =
+    "id, payment_date, customer_id, amount, mode, notes, bill_id, reversed_at, reversal_reason, sales_bills(bill_no), customers(name)";
+  const selectLegacy =
+    "id, payment_date, customer_id, amount, mode, notes, bill_id, sales_bills(bill_no), customers(name)";
+  let rows: unknown[] | null = null;
+  let error: { message?: string } | null = null;
+  const full = await supabase
     .from("payments")
-    .select("id, payment_date, customer_id, amount, mode, notes, sales_bills(bill_no), customers(name)")
+    .select(selectFull)
     .eq("tenant_id", tenantId)
     .order("payment_date", { ascending: false })
     .limit(200);
+  rows = full.data;
+  error = full.error;
+  if (error && isMissingColumnError(error, "reversed_at")) {
+    const legacy = await supabase
+      .from("payments")
+      .select(selectLegacy)
+      .eq("tenant_id", tenantId)
+      .order("payment_date", { ascending: false })
+      .limit(200);
+    rows = legacy.data;
+    error = legacy.error;
+  }
   if (error) throw error;
   type PayRow = {
     id: string;
@@ -695,6 +721,9 @@ export async function fetchPaymentsLive(): Promise<Payment[]> {
     amount: number;
     mode: string;
     notes: string | null;
+    bill_id?: string | null;
+    reversed_at?: string | null;
+    reversal_reason?: string | null;
     sales_bills?: { bill_no: string } | { bill_no: string }[] | null;
     customers?: { name: string } | { name: string }[] | null;
   };
@@ -703,6 +732,8 @@ export async function fetchPaymentsLive(): Promise<Payment[]> {
     const billRel = embedOne(r.sales_bills);
     const custRel = embedOne(r.customers);
     const billNo = billRel?.bill_no ?? "";
+    const reversedAt = r.reversed_at?.slice(0, 10) ?? null;
+    const isAdvance = !r.bill_id && !reversedAt;
     return {
       id: r.id as string,
       date: r.payment_date as string,
@@ -711,9 +742,47 @@ export async function fetchPaymentsLive(): Promise<Payment[]> {
       amount: Number(r.amount),
       mode: r.mode as string,
       reference: (r.notes as string) ?? "",
-      billNo,
+      billNo: billNo || undefined,
+      isAdvance,
+      reversedAt,
+      reversalReason: r.reversal_reason?.trim() || null,
     };
   });
+}
+
+export async function commitAdvancePaymentLive(opts: {
+  customerId: string;
+  amount: number;
+  mode: string;
+  reference: string;
+  date: string;
+}): Promise<void> {
+  const { error } = await supabase.rpc("record_customer_advance", {
+    p_payment_date: opts.date,
+    p_customer_id: opts.customerId,
+    p_amount: opts.amount,
+    p_mode: opts.mode,
+    p_notes: opts.reference || null,
+  });
+  if (error) throw error;
+  await queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+}
+
+export async function reversePaymentLive(paymentId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc("reverse_customer_payment", {
+    p_payment_id: paymentId,
+    p_reason: reason.trim(),
+  });
+  if (error) {
+    const msg = error.message ?? "Reversal failed";
+    if (/reverse_customer_payment|reversed_at|function.*does not exist/i.test(msg)) {
+      throw new Error(
+        "Payment reversal is not enabled on the database yet. Apply migration 0043 in Supabase SQL Editor, then try again.",
+      );
+    }
+    throw new Error(msg);
+  }
+  await queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
 }
 
 export async function peekNextBillNoLive(): Promise<string> {
@@ -737,7 +806,9 @@ export async function peekNextBillNoLive(): Promise<string> {
   return `${prefix}-${maxN + 1}`;
 }
 
-export async function commitSaleLive(sale: Sale): Promise<{ billNo: string; id: string }> {
+export async function commitSaleLive(
+  sale: Sale,
+): Promise<{ billNo: string; id: string; advanceApplied: number }> {
   const business = await fetchTenantSettingsLive();
   const priceMode = business.salesBillPriceMode;
   const items = sale.lines
@@ -809,7 +880,7 @@ export async function commitSaleLive(sale: Sale): Promise<{ billNo: string; id: 
     globalThis.setTimeout(() => {
       void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
     }, 0);
-    return { billNo: outNo, id: billId };
+    return { billNo: outNo, id: billId, advanceApplied: 0 };
   }
 
   const { data, error } = await supabase.rpc("create_sales_bill", {
@@ -827,10 +898,11 @@ export async function commitSaleLive(sale: Sale): Promise<{ billNo: string; id: 
   const row = Array.isArray(data) ? data[0] : data;
   const billId = (row as { bill_id?: string; bill_no?: string })?.bill_id ?? "";
   const billNo = (row as { bill_no?: string })?.bill_no ?? sale.billNo;
+  const advanceApplied = Number((row as { advance_applied?: number })?.advance_applied ?? 0);
   globalThis.setTimeout(() => {
     void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
   }, 0);
-  return { billNo, id: billId };
+  return { billNo, id: billId, advanceApplied };
 }
 
 export async function commitPaymentLive(opts: {
@@ -903,9 +975,12 @@ export async function commitPurchaseLive(opts: {
   supplierId: string;
   purchaseDate: string;
   supplierInvoiceNo?: string | null;
+  dueDate?: string | null;
   lines: { productId: string; receivedQty: number; rateExcl: number }[];
   totalReceived: number;
 }): Promise<{ purchaseNo: string; purchaseId: string }> {
+  const due =
+    opts.dueDate?.trim()?.slice(0, 10) || null;
   const { data, error } = await supabase.rpc("record_purchase", {
     p_purchase_date: opts.purchaseDate,
     p_supplier_id: opts.supplierId,
@@ -914,6 +989,7 @@ export async function commitPurchaseLive(opts: {
     p_supplier_invoice_no: opts.supplierInvoiceNo
       ? normalizeInvoiceNoSpoken(opts.supplierInvoiceNo) || null
       : null,
+    p_due_date: due,
   });
   if (error) throw purchaseRpcError(error, { settingInvoice: Boolean(opts.supplierInvoiceNo?.trim()) });
   const row = Array.isArray(data) ? data[0] : data;
@@ -929,6 +1005,7 @@ export async function commitPurchaseUpdateLive(opts: {
   supplierId: string;
   purchaseDate: string;
   supplierInvoiceNo?: string | null;
+  dueDate?: string | null;
   notes?: string | null;
   lines: { productId: string; receivedQty: number; rateExcl: number }[];
 }): Promise<{ purchaseNo: string }> {
@@ -936,12 +1013,17 @@ export async function commitPurchaseUpdateLive(opts: {
     opts.supplierInvoiceNo !== undefined && opts.supplierInvoiceNo !== null
       ? normalizeInvoiceNoSpoken(opts.supplierInvoiceNo) || null
       : null;
+  const due =
+    opts.dueDate !== undefined
+      ? opts.dueDate?.trim()?.slice(0, 10) || null
+      : null;
   const { data, error } = await supabase.rpc("update_purchase", {
     p_purchase_id: opts.purchaseId,
     p_supplier_id: opts.supplierId,
     p_purchase_date: opts.purchaseDate,
     p_lines: purchaseLinesToRpc(opts.lines),
     p_notes: opts.notes ?? null,
+    ...(opts.dueDate !== undefined ? { p_due_date: due } : {}),
     ...(inv !== null ? { p_supplier_invoice_no: inv } : {}),
   });
   if (error) throw purchaseRpcError(error, { settingInvoice: inv !== null });
@@ -1087,7 +1169,7 @@ export async function upsertProductLive(p: {
   min_qty_pack?: number | null;
   opening_stock?: number;
   hsn_code?: string | null;
-}): Promise<void> {
+}): Promise<string> {
   const tenantId = await tenantIdForCurrentUser();
   const hsnTrimmed = p.hsn_code?.trim() ?? "";
   const hsn_code = hsnTrimmed.length > 0 ? hsnTrimmed : null;
@@ -1115,11 +1197,13 @@ export async function upsertProductLive(p: {
     const { tenant_id: _t, is_active: _a, ...updateRow } = row;
     const { error } = await supabase.from("products").update(updateRow).eq("id", p.id);
     if (error) throw error;
-  } else {
-    const { error } = await supabase.from("products").insert(row);
-    if (error) throw error;
+    void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+    return p.id;
   }
+  const { data, error } = await supabase.from("products").insert(row).select("id").single();
+  if (error) throw error;
   void queryClient.invalidateQueries({ queryKey: DOMAIN_QUERY_KEY });
+  return data.id as string;
 }
 
 export async function recordExpenseLive(input: {
@@ -1575,6 +1659,7 @@ function mapPurchaseListRow(raw: unknown): PurchaseListItem {
     purchase_no: string;
     supplier_invoice_no: string | null;
     purchase_date: string;
+    due_date?: string | null;
     total: number;
     supplier_id: string;
     paid: number;
@@ -1590,6 +1675,7 @@ function mapPurchaseListRow(raw: unknown): PurchaseListItem {
     purchaseNo: r.purchase_no,
     supplierInvoiceNo: r.supplier_invoice_no?.trim() ?? "",
     date: r.purchase_date,
+    dueDate: r.due_date?.slice(0, 10) ?? undefined,
     total: Number(r.total),
     supplierId: r.supplier_id,
     supplierName: sup?.name ?? "",
@@ -1599,9 +1685,11 @@ function mapPurchaseListRow(raw: unknown): PurchaseListItem {
 }
 
 const PURCHASE_LIST_SELECT =
-  "id, purchase_no, supplier_invoice_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)";
+  "id, purchase_no, supplier_invoice_no, purchase_date, due_date, total, supplier_id, paid, payment_status, suppliers(name)";
 const PURCHASE_LIST_SELECT_LEGACY =
   "id, purchase_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)";
+const PURCHASE_LIST_SELECT_NO_DUE =
+  "id, purchase_no, supplier_invoice_no, purchase_date, total, supplier_id, paid, payment_status, suppliers(name)";
 
 function purchaseSelectWithoutInvoiceCol(select: string): string {
   return select
@@ -1631,6 +1719,16 @@ export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
     data = legacy.data;
     error = legacy.error;
   }
+  if (error && isMissingColumnError(error, "due_date")) {
+    const noDue = await supabase
+      .from("purchases")
+      .select(PURCHASE_LIST_SELECT_NO_DUE)
+      .eq("tenant_id", tenantId)
+      .order("purchase_date", { ascending: false })
+      .limit(200);
+    data = noDue.data;
+    error = noDue.error;
+  }
   if (error) throw error;
   return (data ?? []).map(mapPurchaseListRow);
 }
@@ -1650,10 +1748,14 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
   if (
     error &&
     (isMissingColumnError(error, "supplier_invoice_no") ||
+      isMissingColumnError(error, "due_date") ||
       isMissingColumnError(error, "subtotal_excl") ||
       isMissingColumnError(error, "vat_amount"))
   ) {
     let legacySel = purchaseSelectWithoutInvoiceCol(detailSelect);
+    if (isMissingColumnError(error, "due_date")) {
+      legacySel = legacySel.replace("due_date, ", "").replace(", due_date", "");
+    }
     legacySel = legacySel.replace(", subtotal_excl, vat_amount", "").replace("subtotal_excl, vat_amount, ", "");
     const legacy = await supabase
       .from("purchases")
@@ -1670,17 +1772,25 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
   let itemErr: { message?: string } | null = null;
   const itemsFull = await supabase
     .from("purchase_items")
-    .select("product_id, qty, rate, rate_excl, total, products(name, unit)")
+    .select("product_id, qty, rate, rate_excl, total, products(name, unit, uom_conversion)")
     .eq("purchase_id", purchaseId);
   itemRows = itemsFull.data;
   itemErr = itemsFull.error;
   if (itemErr && isMissingColumnError(itemErr, "rate_excl")) {
     const itemsLegacy = await supabase
       .from("purchase_items")
-      .select("product_id, qty, rate, total, products(name, unit)")
+      .select("product_id, qty, rate, total, products(name, unit, uom_conversion)")
       .eq("purchase_id", purchaseId);
     itemRows = itemsLegacy.data;
     itemErr = itemsLegacy.error;
+  }
+  if (itemErr && isMissingColumnError(itemErr, "uom_conversion")) {
+    const itemsNoConv = await supabase
+      .from("purchase_items")
+      .select("product_id, qty, rate, rate_excl, total, products(name, unit)")
+      .eq("purchase_id", purchaseId);
+    itemRows = itemsNoConv.data;
+    itemErr = itemsNoConv.error;
   }
   if (itemErr) throw itemErr;
 
@@ -1699,20 +1809,29 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
       rate: number;
       rate_excl?: number | null;
       total: number;
-      products?: { name: string; unit?: string } | { name: string; unit?: string }[] | null;
+      products?:
+        | { name: string; unit?: string; uom_conversion?: unknown }
+        | { name: string; unit?: string; uom_conversion?: unknown }[]
+        | null;
     };
     const prod = Array.isArray(row.products) ? row.products[0] : row.products;
-    const qty = Number(row.qty);
+    const baseQty = Number(row.qty);
+    const baseUom = prod?.unit?.trim() || "PCS";
+    const conv = parseUomConversion(prod?.uom_conversion, baseUom);
+    const display = purchaseLineQtyDisplay(baseQty, baseUom, conv);
     const rateIncl = Number(row.rate);
     const rateExcl =
       row.rate_excl != null ? Number(row.rate_excl) : rateIncl;
     const amount = Number(row.total);
-    const vatAmount = Math.max(0, roundMoney(amount - qty * rateExcl));
+    const vatAmount = Math.max(0, roundMoney(amount - baseQty * rateExcl));
     return {
       productId: row.product_id,
       productName: prod?.name ?? "Product",
-      qty,
-      uom: prod?.unit?.trim() || "PCS",
+      qty: display.qty,
+      uom: display.uom,
+      baseQty,
+      baseUom,
+      qtyAlt: display.sub,
       rateExcl,
       rateIncl,
       vatAmount,
