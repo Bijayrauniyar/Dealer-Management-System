@@ -181,6 +181,28 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Settings → Business: Product units list.
 
 36. Migration 0039 (product price precision — buy/sell/MRP up to 4 decimals)
+
+37. Migration 0040 (purchase due_date — save due date; due today or earlier = paid/cash on save)
+   - Open: app/supabase/migrations/0040_purchase_due_date.sql
+   - Copy entire file → Paste → Run → Success.
+   - Required for purchase due-date field + cash-vs-credit on new/edit purchase.
+
+38. Migration 0041 (purchase edit — cap paid to corrected total when fixing wrong line prices)
+   - Open: app/supabase/migrations/0041_purchase_edit_cap_paid.sql
+   - Copy entire file → Paste → Run → Success.
+   - Apply after 0040 if purchase edit fails when paid > new total.
+
+39. Migration 0042 (sales invoice edit — cap collected amount when revised total is lower)
+   - Open: app/supabase/migrations/0042_sales_edit_cap_paid.sql
+   - Copy entire file → Paste → Run → Success.
+
+40. Migration 0043 (customer advance receipts, payment reversal, auto-apply advance on new bill)
+   - Open: app/supabase/migrations/0043_customer_advance_payments.sql
+   - Copy entire file → Paste → Run → Success.
+   - Adds `payments.reversed_at` / `reversal_reason`, `record_customer_advance`, `reverse_customer_payment`, and auto-apply advance in `create_sales_bill`.
+   - If you see error `cannot change name of view column "last_payment_date"`: you ran an older copy — re-run the **current** 0043 file (it drops/recreates `v_customer_balance` + `v_overdue_customers`).
+   - If reversal fails in the app but columns exist: confirm the full file ran (RPCs at bottom), not only the `ALTER TABLE` part.
+   - If error `42P13: cannot change return type of existing function` on `create_sales_bill`: re-run the **current** 0043 file (includes `DROP FUNCTION` before the new `create_sales_bill`).
    - Open: app/supabase/migrations/0039_product_price_precision.sql
    - Copy entire file → Paste → Run → Success.
    - Product form accepts e.g. 98.4567 on buy price (stored after migration).
