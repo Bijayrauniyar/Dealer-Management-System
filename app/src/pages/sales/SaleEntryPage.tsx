@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {Download, Eye, Pencil, Plus, Save, Trash2, X} from "lucide-react";
 import { downloadBillPdf } from "@/lib/billExport";
@@ -134,6 +134,29 @@ export const SaleEntryPage = () => {
     lineId: number;
     productId: string;
   } | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const focusNextField = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter") return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === "SELECT") return;
+    if (target instanceof HTMLInputElement && target.type === "date") return;
+    const form = formRef.current;
+    if (!form) return;
+    const nodes = form.querySelectorAll<HTMLElement>(
+      'input:not([type="hidden"]):not([type="date"]):not([disabled]):not([readonly]), select:not([disabled])',
+    );
+    const idx = Array.from(nodes).indexOf(target);
+    if (idx >= 0 && idx < nodes.length - 1) {
+      e.preventDefault();
+      const next = nodes[idx + 1];
+      next.focus();
+      if (next instanceof HTMLInputElement) {
+        next.select();
+      }
+    }
+  }, []);
+
   const setLinesWithSchemes = useCallback(
     (updater: (ls: Line[]) => Line[]) => {
       setLines((ls) => {
@@ -242,7 +265,8 @@ export const SaleEntryPage = () => {
       });
       return;
     }
-    const uom = product.uom || "PCS";
+    const conv = product.uomConversion;
+    const uom = conv?.packUom ?? (product.uom || "PCS");
     const { mrp, rate } = linePricingForProduct(product, uom);
     updateLine(lineId, {
       productId,
@@ -268,11 +292,13 @@ export const SaleEntryPage = () => {
       product.uom,
       product.uomConversion ?? null,
     );
+    const conv = product.uomConversion;
     const newQty = Math.max(
       0,
-      baseUnitsToBillQty(baseQty, newUom, product.uom, product.uomConversion ?? null),
+      baseUnitsToBillQty(baseQty, newUom, product.uom, conv),
     );
-    const qty = Number.isInteger(newQty) ? newQty : roundMoney(newQty);
+    const snap = conv && newUom === conv.packUom && newQty > 0 ? Math.max(1, newQty) : newQty;
+    const qty = Number.isInteger(snap) ? snap : roundMoney(snap);
     const { mrp, rate } = linePricingForProduct(product, newUom);
     updateLine(lineId, { uom: newUom, mrp, rate, qty: qty || 1 });
   };
@@ -482,7 +508,7 @@ export const SaleEntryPage = () => {
         title={isEdit ? `Edit sales invoice ${editBillNo}` : "New sales invoice"}
       />
 
-      <div className="space-y-4">
+      <div className="space-y-4" onKeyDown={focusNextField} ref={formRef}>
         {/* ── Bill header ── */}
         <FormField label="Customer" required>
           <EntityPicker

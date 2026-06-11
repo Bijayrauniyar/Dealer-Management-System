@@ -643,10 +643,10 @@ export const PurchasePage = () => {
                           value={line.invoiceQty}
                           onChange={(v) => {
                             const invoiceQty = Math.max(0, v);
+                            const wasInSync = line.receivedQty === line.invoiceQty;
                             updateLine(line.id, {
                               invoiceQty,
-                              receivedQty:
-                                line.receivedQty > invoiceQty ? invoiceQty : line.receivedQty,
+                              receivedQty: wasInSync ? invoiceQty : Math.min(line.receivedQty, invoiceQty),
                             });
                           }}
                         />
