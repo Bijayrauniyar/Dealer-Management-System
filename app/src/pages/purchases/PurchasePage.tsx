@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {Pencil, Plus, Trash2} from "lucide-react";
 import { toast } from "sonner";
@@ -178,6 +178,28 @@ export const PurchasePage = () => {
   } | null>(null);
   const prevProductPriceSigRef = useRef<Map<string, string>>(new Map());
   const catalogAtUnmountRef = useRef<Map<string, string>>(new Map());
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const focusNextField = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter") return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === "SELECT") return;
+    if (target instanceof HTMLInputElement && target.type === "date") return;
+    const form = formRef.current;
+    if (!form) return;
+    const nodes = form.querySelectorAll<HTMLElement>(
+      'input:not([type="hidden"]):not([type="date"]):not([disabled]):not([readonly]), select:not([disabled])',
+    );
+    const idx = Array.from(nodes).indexOf(target);
+    if (idx >= 0 && idx < nodes.length - 1) {
+      e.preventDefault();
+      const next = nodes[idx + 1];
+      next.focus();
+      if (next instanceof HTMLInputElement) {
+        next.select();
+      }
+    }
+  }, []);
 
   /** When product master buy price changes (in-place or after returning from product form), refresh line costs. */
   useEffect(() => {
@@ -257,7 +279,7 @@ export const PurchasePage = () => {
   }, [isEdit, editPurchaseId]);
 
   useEffect(() => {
-    if (!editLinesRaw?.length) return;
+    if (!editLinesRaw?.length || !PRODUCTS.length) return;
     setLines(
       editLinesRaw.map((l, i) =>
         purchaseLineFromDetail(l, i, PRODUCTS.find((p) => p.id === l.productId), vatPct),
@@ -297,7 +319,8 @@ export const PurchasePage = () => {
       updateLine(lineId, { productId, productName, uom: "PCS", cost: 0 });
       return;
     }
-    const uom = product.uom || "PCS";
+    const conv = product.uomConversion;
+    const uom = conv?.packUom ?? (product.uom || "PCS");
     updateLine(lineId, {
       productId,
       productName,
@@ -321,11 +344,13 @@ export const PurchasePage = () => {
       product.uom,
       product.uomConversion ?? null,
     );
+    const conv = product.uomConversion;
     const newQty = Math.max(
       0,
-      baseUnitsToBillQty(baseQty, newUom, product.uom, product.uomConversion ?? null),
+      baseUnitsToBillQty(baseQty, newUom, product.uom, conv),
     );
-    const qty = Number.isInteger(newQty) ? newQty : roundMoney(newQty);
+    const snap = conv && newUom === conv.packUom && newQty > 0 ? Math.max(1, newQty) : newQty;
+    const qty = Number.isInteger(snap) ? snap : roundMoney(snap);
     updateLine(lineId, {
       uom: newUom,
       invoiceQty: qty,
@@ -484,7 +509,7 @@ export const PurchasePage = () => {
         }
       />
 
-      <div className="space-y-3">
+      <div className="space-y-3" onKeyDown={focusNextField} ref={formRef}>
         <FormField label="Supplier" required>
           <EntityPicker
             placeholder="Search supplier"
