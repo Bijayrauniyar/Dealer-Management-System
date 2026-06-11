@@ -84,7 +84,7 @@
 
 | Priority | ID | Task | Status | Notes |
 |----------|-----|------|--------|-------|
-| **0** | **IRD-DISC-1** | **Legal disclaimers** on sales + purchase print/PDF (not IRD e-bill) | `todo` | **Before pilot/ads** — [BACKLOG § IRD-DISC-1](BACKLOG.md#detail--ird-disc-1-pre-verification-legal-disclaimers--p0-before-launch) |
+| **0** | **IRD-DISC-1** | **Legal disclaimers** on sales + purchase print/PDF (not IRD e-bill) | `done` | Shipped — [BACKLOG § IRD-DISC-1](BACKLOG.md#detail--ird-disc-1-pre-verification-legal-disclaimers--p0-before-launch) |
 | 1 | **DEPLOY-DOM** | **Split domains:** marketing **`bikrikhata.com`** + app **`app.bikrikhata.com`** | `todo` | Netlify DNS + Supabase Auth redirect URLs; see [BACKLOG § DEPLOY-DOM](BACKLOG.md#detail--deploy-dom-split-domains) |
 | 2 | **NOTIF-FIX** | **Test and fix notifications** bell (overdue, low stock, license renewal links) | `todo` | Computed alerts in `NotificationPanel.tsx`; manual §3.0b T0B7 + G17 |
 | 3 | **LOAD-1** | **Branded loader** — show BikriKhata logo while app/data loads | `todo` | Initial auth + domain bundle fetch; avoid blank screen on slow network |
@@ -93,7 +93,7 @@
 | 6 | **WEB-MEDIA-1** | **Videos + screenshots + feature explain** — show real P1 UI; restore feature storytelling | `todo` | Stale PNGs; removed explain content — [BACKLOG § WEB-MEDIA-1](BACKLOG.md#detail--web-media-1-videos-screenshots-feature-storytelling) |
 | 7 | **WEB-AUDIT-1** | **Full landing audit** — copy, mobile, CTAs after media refresh | `todo` | After WEB-MEDIA-1 + pilot feedback |
 | 8 | **BRAND-LOGO-2** | **New application logo** — PWA, login, app shell | `todo` | [BRAND_ICON_GUIDE](BRAND_ICON_GUIDE.md) |
-| 9 | **AUDIT-LOG-1** | **Activity log & monitoring** — who changed bills, settings, masters | `backlog` | Post-launch trust feature — not blocking pilot |
+| 9 | **AUDIT-LOG-1** | **Activity hub** (`/app/activity`) — who/when/why for bills, payments, settings; revert where allowed | `backlog` | Post-pilot; partial today = payment reverse + reason only — [BACKLOG § AUDIT-LOG-1](BACKLOG.md#detail--audit-log-1-activity-hub--professional-audit-trail) |
 
 ### Later (not blocking launch)
 
@@ -132,7 +132,7 @@ When an item is **deferred**, copy its ID to [BACKLOG.md](BACKLOG.md) and set St
 | L6  | **One pilot shop** live ~1 week (real bills)                                  | **ready** | Owner runs [ONBOARDING_FIRST_SHOP](ONBOARDING_FIRST_SHOP.md) — sign-off when week complete                |
 | L7  | Founding **price** on website (one package for all)                           | **done**  | `launchPricing.ts` → landing `#pricing`, license gate, FAQ, terms                                         |
 | L8  | Contact form **email alerts** (Resend + Edge Function + migration 0033)       | **deferred** | Code ready; enable later — [CONTACT_FORM_EMAIL_SETUP](CONTACT_FORM_EMAIL_SETUP.md). Not needed for ads.   |
-| **IRD-DISC-1** | **IRD disclaimers** on sales + purchase print/PDF (not certified e-bill) | **todo** | **P0 legal** — before pilot/ads — [BACKLOG § IRD-DISC-1](BACKLOG.md#detail--ird-disc-1-pre-verification-legal-disclaimers--p0-before-launch) |
+| **IRD-DISC-1** | **IRD disclaimers** on sales + purchase print/PDF (not certified e-bill) | **done** | Shipped — [BACKLOG § IRD-DISC-1](BACKLOG.md#detail--ird-disc-1-pre-verification-legal-disclaimers--p0-before-launch) |
 | **DEPLOY-DOM** | Split **`bikrikhata.com`** (marketing) + **`app.bikrikhata.com`** (product) | **todo** | [BACKLOG § DEPLOY-DOM](BACKLOG.md#detail--deploy-dom-split-domains) |
 | **NOTIF-FIX** | Notifications bell — test + fix computed alerts                               | **todo** | `NotificationPanel.tsx`; manual T0B7, G17 |
 | **LOAD-1** | Branded logo loader on slow app/data load                                     | **todo** | Auth + domain bundle |
@@ -141,7 +141,7 @@ When an item is **deferred**, copy its ID to [BACKLOG.md](BACKLOG.md) and set St
 | **WEB-CTA-1** | Landing: **1–2** free trial CTAs only (dedupe buttons)                        | **todo** | `PublicSignupCta`, nav, footer |
 | **WEB-MEDIA-1** | Demo **videos** + **new UI screenshots** + restore feature explain content  | **todo** | Replace stale marketing assets |
 | **BRAND-LOGO-2** | New **application logo** (PWA, login, shell)                                  | **todo** | [BRAND_ICON_GUIDE](BRAND_ICON_GUIDE.md) |
-| **AUDIT-LOG-1** | **Activity log** + monitoring (tenant audit trail)                            | **backlog** | Phase 2 trust — not blocking ads |
+| **AUDIT-LOG-1** | **Activity hub** — owner audit trail (user, time, reason, revert rules)       | **backlog** | Phase 1+; see BACKLOG § AUDIT-LOG-1a–c |
 
 ---
 

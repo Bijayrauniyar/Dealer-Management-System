@@ -43,7 +43,8 @@ Master lists show **active only**. Archived records: **More → Archives** (`/ap
 | Sales order (open) | Cancel | **No** | `cancelled_at` / status |
 | Sales order (invoiced) | — | **No** | Read-only; link to bill |
 | Sales / purchase **bill** | Edit / return / void (future) | **Never** | Rows stay for books and export |
-| Payment | Reverse (future) | **No** | |
+| Payment | **Reverse** (reason required) | **No** | `reverse_customer_payment` sets `reversed_at`; original row kept for audit |
+| All changes (future) | View in **Activity** hub | **No** | **AUDIT-LOG-1** — central list: who, when, why; revert only where RPC allows |
 | Return, expense, damage | Soft hide (Phase 2) | **No** | |
 | Capital | Soft hide + audit (Phase 2-C) | **No** | |
 | Stock adjustment | Opposing entry | **No** | |

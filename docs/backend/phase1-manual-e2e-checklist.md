@@ -102,7 +102,7 @@ Check each row after manual testing.
 | Module | Use cases | Route / entry |
 |--------|-----------|----------------|
 | **Auth** | Log in, register, pending tenant, no tenant, log out | `/login`, `/register`, `/pending-approval`, `/no-tenant` |
-| **Home** | `DateDisplay` (BS + AD); today KPIs; attention cards; quick actions; recent bills | `/app/home`, `/app/home/overdue`, `/app/home/outstanding`, … |
+| **Home** | `DateDisplay` (BS + AD); today KPIs; attention cards; **6** quick-action tiles; categorized overview (Receivables, Payables, Business position, Reports & data); recent bills | `/app/home`, `/app/home/overdue`, `/app/home/outstanding`, … |
 | **Stock** | Product/inventory hub — title **Stock**, on-hand qty, **Add purchase** | `/app/products`, `/app/products?filter=low`; `/app/stock` redirects here |
 | **Settings** | Tabbed: Business, Bills & tax, Catalog & stock, Data & account | `/app/settings` |
 | **Customers** | List (`EntityList`), filter outstanding, add, edit, detail, new bill | `/app/customers`, `.../new`, `.../edit/:id`, `.../:id` |
@@ -113,7 +113,8 @@ Check each row after manual testing.
 | **Bill detail** | View, **Share**, Print, PDF, Return, **Collect** (green), Edit | `/app/bills/:billNo` |
 | **Payment** | Customer payment, bill allocation | `/app/payments/new` |
 | **Return** | Return against bill, stock back, credit | `/app/returns/new` |
-| **Purchase** | Stock in, supplier payable | `/app/purchases/new` |
+| **Purchases hub** | Invoice list (paid/unpaid filter, by supplier, sort), Suppliers tab, new invoice | `/app/purchases` |
+| **Purchase entry** | Stock in, supplier payable, due date | `/app/purchases/new` |
 | **Supplier payment** | Pay down POs | `/app/supplier-payments/new` |
 | **Expense** | Record expense | `/app/expenses/new` |
 | **Damage** | Stock out | `/app/damages/new` |
@@ -182,7 +183,7 @@ Migrations **0025** (optional), **0026** (customer tax). Automated: `npm run e2e
 | T0C4 | `/app/more` → redirects to **Reports** | |
 | T0C5 | **Help & support** — BikriKhata (platform) contact; not shop retail helpline | |
 | T0C6 | **No Support tab** in Settings (help only via menu) | |
-| T0C7 | Home: **DateDisplay** (BS + AD), today strip, attention cards, quick-action grid | |
+| T0C7 | Home: **DateDisplay** (BS + AD), today strip, attention cards, **6** quick-action tiles, overview sections (Receivables / Payables / Business position / Reports & data) | |
 | T0C8 | Customer form: optional **PAN / VAT** → save → print bill with customer | |
 | T0C9 | Bill detail: **Share** (outline) + Print + PDF; **Collect** green when balance due | |
 | T0C10 | **Products** / **Suppliers** masters: same **Add** button style ([UI_CONSISTENCY_PLAN](../UI_CONSISTENCY_PLAN.md)) | |
@@ -405,6 +406,10 @@ open     = total − paid
 | PY4 | **Select all** + amount | Distributes per UI rules |
 | PY5 | Customer with no open bills | “No open bills” or empty state |
 | PY6 | After payment, customer outstanding on Home | Decreased |
+| PY7 | Payment → **Advance only** tab, customer with no open bills, NPR 500 | `payments` row with `bill_id` null; customer Advance KPI increases |
+| PY8 | Customer with advance → **New sales invoice** | Banner shows advance; on save toast mentions advance applied; `sales_bills.paid` includes advance |
+| PY9 | Customer detail → Payments → **Reverse** on a receipt (reason ≥ 3 chars) | `reversed_at` set; receivable/advance KPIs update; row shows Reversed badge |
+| PY10 | Customer detail → Bills tab | Lists **all** invoices (paid + open), not only open |
 
 ---
 

@@ -38,11 +38,12 @@
 
 | ID | Feature | Status |
 |----|---------|--------|
-| **IRD-DISC-1** | **P0 legal** — IRD pre-verification disclaimers on sales + purchase print/PDF | todo |
+| **IRD-DISC-1** | **P0 legal** — IRD pre-verification disclaimers on sales + purchase print/PDF | shipped |
 | **L2** | Prod auth smoke — confirm-email OFF, Site URL, `/register` + `/login` | ready |
 | **L6** | One pilot shop ~1 week on prod (real bills) | ready |
 | **DEPLOY-DOM** | `bikrikhata.com` marketing + `app.bikrikhata.com` app | todo |
 | **NOTIF-FIX** | Test + fix notification bell (computed alerts) | todo |
+| **NOTIF-SOUND** | Optional alert sound when urgent bell count rises | backlog |
 | **LOAD-1** | Branded logo loader while app/data loads | todo |
 | **THEME-1** | Dark / light theme toggle | todo |
 | **WEB-CTA-1** | Landing: keep **1–2** free-trial CTAs only | todo |
@@ -59,9 +60,9 @@
 | **L8** | Contact form inbox email (Resend) | deferred |
 | **CHANGELOG-APP** | In-app “What’s new” release notes | deferred |
 | **DATE-BS-1** | BS day/month/year dropdown picker | backlog |
-| **AUDIT-LOG-1** | Activity log + monitoring | backlog |
+| **AUDIT-LOG-1** | **Activity** hub — who changed what, when, why; filter + export; revert where allowed | backlog |
 | **NOTIF-2A** | DB notifications + Realtime bell | backlog |
-| **ORD-*** · **CAT-PUB-*** · **RPT-1** · **CAT-1** · **INLINE+** · **INV-2** · **IMP-*** · etc. | Phase 1–2 features | backlog |
+| **ORD-*** · **CAT-PUB-*** · **RPT-1** · **CAT-1** · **UX-HUB-1** · **INV-2** · **IMP-*** · etc. | Phase 1–2 features | backlog |
 
 Full rows: [§ Master register](#master-register). Execution order: [FIRST_LAUNCH § What's next](FIRST_LAUNCH.md#whats-next-do-in-this-order).
 
@@ -103,7 +104,12 @@ Full rows: [§ Master register](#master-register). Execution order: [FIRST_LAUNC
 | **CAT-PUB-3** | Accept cart → order/bill | 1.2 | 3–5 d | backlog | |
 | **RPT-1** | On-screen period books | 1.0 | 2–4 d | backlog | |
 | **RPT-1c** | XLSX accountant pack | 1.1 | 3–5 d | backlog | |
-| **INLINE+** | Inline + create on forms | 1.0 | 2–3 d | backlog | |
+| **UX-HUB-1** | **Entity hub** — list + Add on top; save returns to hub; fewer back hops | 1.0 | 2–3 wk | **backlog** | § UX-HUB-1 — rollout after pilot |
+| **UX-HUB-1a** | Standard **Add** button + list header (no wrap, one label) | 1.0 | 0.5 d | backlog | `AddEntityButton` everywhere |
+| **UX-HUB-1b** | Post-save → hub + toast (not `navigate(-1)`) | 1.0 | 2–3 d | backlog | Masters + simple entries |
+| **UX-HUB-1c** | Inline / bottom-sheet add-edit for simple masters | 1.0 | 3–5 d | backlog | Customer, supplier, product |
+| **UX-HUB-1d** | Row actions: open · edit · archive (no delete) | 1.0 | 2–3 d | backlog | Swipe or ⋮ menu |
+| **INLINE+** | *(merged into UX-HUB-1c)* | 1.0 | — | backlog | See **UX-HUB-1** |
 | **CAT-1** | Parent/child categories (2-level) | 1.0 | 3–5 d | backlog | |
 | **INV-2** | Stock as-of bill date | 1.0 | 0–5 d | backlog | Product decision |
 | **SUP-1** | Supplier scheme pass-through | 2 | 3–5 d | backlog | |
@@ -128,7 +134,7 @@ Full rows: [§ Master register](#master-register). Execution order: [FIRST_LAUNC
 | **EXP-1** | Export Tier A registers | 0 | — | **done** | partial ZIP |
 | **BRAND-1** | BikriKhata rebrand | 0 | — | **done** | |
 | **L8** | Contact form email alerts (Resend) | 0 ops | ~20 min | **deferred** | Code ready; enable later — 0033 + `setup:contact-email` |
-| **IRD-DISC-1** | IRD pre-verification disclaimers on sales + purchase print/PDF | 0 launch | 0.5–1 d | **todo** | **P0 before pilot/ads** — not IRD e-bill certified — § IRD-DISC-1 |
+| **IRD-DISC-1** | IRD pre-verification disclaimers on sales + purchase print/PDF | 0 launch | 0.5–1 d | **shipped** | Sales + purchase print/PDF — § IRD-DISC-1 |
 | **DEPLOY-DOM** | Split domains: `bikrikhata.com` + `app.bikrikhata.com` | 0 launch | 2–4 h | **todo** | Netlify DNS, redirects, Supabase Auth — § DEPLOY-DOM |
 | **NOTIF-FIX** | Test + fix notification bell (computed alerts) | 0 launch | 0.5–1 d | **todo** | Not NOTIF-2A DB table — fix `NotificationPanel` now |
 | **LOAD-1** | Branded logo splash while app/data loads | 0 launch | 0.5–1 d | **todo** | Auth + domain bundle; PWA-friendly |
@@ -138,7 +144,10 @@ Full rows: [§ Master register](#master-register). Execution order: [FIRST_LAUNC
 | **WEB-CTA-1** | Dedupe **7-day trial** buttons on landing (keep 1–2) | 0 launch | 0.5 d | **todo** | Hero + pricing; trim nav/footer/section repeats — § WEB-CTA-1 |
 | **WEB-MEDIA-1** | Feature videos + new UI screenshots + restore feature explain content | 0 launch | 2–5 d | **todo** | Replace stale marketing PNGs; short demo clips — § WEB-MEDIA-1 |
 | **BRAND-LOGO-2** | New application logo (PWA, login, shell, favicon) | 0 launch | 1–2 d | **todo** | [BRAND_ICON_GUIDE](BRAND_ICON_GUIDE.md); `productBrand.ts`, `public/` |
-| **AUDIT-LOG-1** | Activity log + monitoring (who changed what, when) | 1–2 | 1–2 wk | **backlog** | Tenant audit trail; optional platform ops dashboard — § AUDIT-LOG-1 |
+| **AUDIT-LOG-1** | **Activity** hub — tenant audit trail (owner + staff actions) | 1–2 | 2–3 wk | **backlog** | Route `/app/activity`; § AUDIT-LOG-1 — depends **COMM-2** for “employee” |
+| **AUDIT-LOG-1a** | `tenant_activity_log` table + RPC write hooks | 1–2 | 3–5 d | **backlog** | Migration; append-only; no secrets |
+| **AUDIT-LOG-1b** | Activity screen UI (list, filters, detail drawer) | 1–2 | 3–5 d | **backlog** | Home + Reports + drawer link |
+| **AUDIT-LOG-1c** | Revert / undo from activity (entity-specific) | 1–2 | 3–5 d | **backlog** | Only where policy allows — not hard delete |
 | **L2** | Prod auth smoke — register/login on prod | 0 ops | 1–2 h | **ready** | [P0_LAUNCH_RUNBOOK § L2](P0_LAUNCH_RUNBOOK.md) |
 | **L6** | One pilot shop ~1 week (real bills) | 0 ops | 1 wk | **ready** | [ONBOARDING_FIRST_SHOP](ONBOARDING_FIRST_SHOP.md) |
 
@@ -284,24 +293,192 @@ Replace BikriKhata mark in:
 
 ---
 
-## Detail — AUDIT-LOG-1 (activity log & monitoring)
+## Detail — UX-HUB-1 (entity hub + entry flow — one standard for whole app)
 
-**Why:** Owners and support need **who did what** (bill edit, payment, settings change, archive) — trust + dispute resolution.
+**Why:** Dealers want **fewer pages** and **less back-button** — list stays the “home” for each data type; add/edit should feel fast and predictable (Tally/BUSY: register open, voucher entry, back to register).
 
-**Phase 1 (tenant):**
+**Discuss first, then roll out** — not launch-blocking; pilot can use current list → form → back flow.
 
-| Event | Log fields |
-|-------|------------|
-| Sales/purchase bill create/edit | user, bill_no, timestamp, action |
-| Payment / return | customer, amount, timestamp |
-| Settings save | changed keys (not secrets) |
-| Master archive/restore | entity type, id, action |
+### Recommended approach (single standard)
 
-**Phase 2 (platform ops):** Super-admin read-only view, error/usage monitoring (Sentry or Supabase logs) — tie to **PLAT-1** security review.
+**Pattern A — Hub page (default for every entity type)**
 
-**Not launch-blocking** — backlog until pilot shops ask or compliance needs it.
+```
+┌─────────────────────────────────────┐
+│  [optional back]     [+ Add customer]│  ← ListPageHeader / AddEntityButton
+│  Customers                           │
+├─────────────────────────────────────┤
+│  Search · filters · export           │  ← ListBrowsePanel
+├─────────────────────────────────────┤
+│  Row → tap opens detail              │  ← EntityListCard
+│  Row → ⋮ Edit · Archive              │  ← UX-HUB-1d (no Delete)
+├─────────────────────────────────────┤
+│  pagination                          │
+└─────────────────────────────────────┘
+```
 
-Refs: **TRUST-1** (bill amendment history UI); existing RPC audit fields if any in `data-model.md`.
+| After save | Go to |
+|------------|--------|
+| **Simple master** (customer, supplier, product) | **Same hub** + toast “Saved” (optional: open detail) |
+| **Transaction** (payment, expense, damage) | **Hub or detail** of parent (e.g. customer detail), not `navigate(-1)` |
+| **Complex document** (sales bill, purchase) | **Bill/purchase detail** (print/share) — list reachable via hub tab |
+
+**Pattern B — Full-page form (keep for heavy entry only)**
+
+- Sales invoice, purchase with lines, daily cash close.
+- Header: `FormPageHeader` + **back to hub** (explicit `backTo="/app/purchases"`), not browser history.
+
+**Pattern C — Inline / sheet (Phase 1b — simple masters only)**
+
+- Add customer from customer list **without route change** (bottom sheet or slide-over).
+- Edit 3–5 fields → Save → sheet closes, list row updates.
+- Reduces pages; **UX-HUB-1c** / former **INLINE+**.
+
+**Not in v1 hub standard**
+
+- Hard **Delete** on lists — use **Archive** + [DELETE_POLICY](DELETE_POLICY.md).
+- Different Add button styles per screen — one `AddEntityButton`.
+
+### “Add entry” button (your screenshot)
+
+| OK | Fix |
+|----|-----|
+| Teal primary, `+` icon, top-right on overview | Good — matches brand |
+| Label **“Add entry”** wrapping to two lines on narrow width | Use **short labels**: `Add capital`, `Add customer`, `Add product` |
+| One-off `Button` on Company overview | Roll into **`AddEntityButton`** + `whitespace-nowrap` (**UX-HUB-1a**) |
+
+**Reference implementation today:** `ListPageHeader` + `AddEntityButton` on `ProductsPage`, `CustomersPage`, `PurchasesPage` hub.
+
+### Entity rollout map (when we implement)
+
+| Entity | Hub route | Add | Edit | After save |
+|--------|-----------|-----|------|------------|
+| Products | `/app/products` | top Add | detail or sheet | hub |
+| Customers | `/app/customers` | top Add | detail / sheet | hub or customer detail |
+| Suppliers | `/app/suppliers` | top Add | detail | hub |
+| Purchases | `/app/purchases` | top Add | `/purchases/:id` | purchases hub |
+| Payments | `/app/customers/:id` or payments hub (future) | tabs | — | customer detail |
+| Capital | `/app/capital` list (new hub) or company | Add capital | edit row | capital list |
+| Expense / damage / scheme | optional hub lists | + from Home | full form | hub when built |
+
+### Delivery phases
+
+| ID | Deliverable |
+|----|-------------|
+| **UX-HUB-1a** | One Add button component; grep replace ad-hoc “Add entry” |
+| **UX-HUB-1b** | `commit*` success handlers → `navigate(hub)` + toast matrix |
+| **UX-HUB-1c** | Sheet add/edit for customer (pilot), then product, supplier |
+| **UX-HUB-1d** | Row ⋮ menu component shared across `EntityListCard` |
+| Docs | Update [UI_CONSISTENCY_PLAN](UI_CONSISTENCY_PLAN.md) + manual checklist |
+
+### Acceptance (owner)
+
+1. Every master list has **same** top-right Add control.  
+2. Saving a new customer returns to **customer list** without pressing back.  
+3. No **Delete** on lists; Archive only.  
+4. Complex bills still use full form; user always knows how to get back to list (hub tab or explicit back).
+
+Refs: [UI_CONSISTENCY_PLAN](UI_CONSISTENCY_PLAN.md) entity hub template; **UI-1** done (chrome only).
+
+---
+
+## Detail — AUDIT-LOG-1 (Activity hub — professional audit trail)
+
+**Why:** Business owners (and later staff) need one place to answer: *Who changed this? When? Why? Can we undo it?* — same expectation as Tally **alteration log**, BUSY/Marg **audit trail**, or Xero **history**.
+
+**Not launch-blocking** — ship after pilot (L6). Payment reversal (`0043`) is the first slice; full Activity hub is Phase 1+.
+
+### What exists today (partial)
+
+| Area | Today | Gap |
+|------|--------|-----|
+| Payment reverse | `payments.reversed_at`, `reversal_reason`; Customer → Payments → **Reversed** | No **who** reversed; not in central list |
+| Bill edit | Row kept; totals via RPC | No amendment timeline UI (**TRUST-1**) |
+| Masters | Archive/restore (`0037`) | No central log of who archived |
+| Settings | Saved to `tenant_settings` | No diff log |
+
+### Target UX — **Activity** screen
+
+| Item | Spec |
+|------|------|
+| **Route** | `/app/activity` (also **Reports hub** + **Home → Business overview** + drawer **Activity**) |
+| **Audience** | Tenant **owner** sees all; **staff** sees own actions when **COMM-2** ships |
+| **List columns** | Date/time (AD + BS), **User** (name/email), **Action** (created / edited / reversed / archived), **Entity** (bill, payment, product, …), **Summary** (e.g. “INV-12 · NPR 5,000”), **Reason** (if required) |
+| **Filters** | Date range, user, action type, entity type, search (bill no., customer name) |
+| **Detail** | Tap row → before/after snapshot (JSON diff for settings), link to live record, link to related reversal |
+| **Export** | CSV “Activity register” for CA / dispute (Tier A style) |
+
+### Events to log (Phase 1)
+
+| Category | Actions | Reason required? |
+|----------|---------|------------------|
+| Sales bill | create, edit (cap paid, lines, discount) | On material total change |
+| Purchase | create, edit, due-date settle | On paid cap / total change |
+| Payment | receive, advance, **reverse** | Reverse always |
+| Return | create | Optional |
+| Expense / damage / stock adj. | create | Optional |
+| Supplier payment | create | Optional |
+| Master | archive, restore | Optional |
+| Settings | save (keys only, no API keys) | — |
+| Daily cash | close | — |
+
+**Write path:** security-definer helper `log_tenant_activity(...)` called from existing RPCs (`create_sales_bill`, `reverse_customer_payment`, `upsert` paths, etc.) — **never** only from React.
+
+### Revert / undo policy (professional norm)
+
+Align with [DELETE_POLICY](DELETE_POLICY.md) — **ledger rows are not deleted**.
+
+| Entity | From Activity UI | Correct action |
+|--------|------------------|----------------|
+| Payment | **Revert** → same as Reverse (reason pre-filled or new) | `reverse_customer_payment` |
+| Sales / purchase bill | **No delete** | Edit bill, or return/credit note, or void (future) |
+| Master archive | **Restore** | `set_*_active(true)` |
+| Settings | **No auto-revert** | Show diff; user re-saves manually |
+| Stock / expense | **No undo** (v1) | Opposing entry (future) |
+
+Activity shows **Revert** only when an RPC exists — greyed + tooltip otherwise (“Edit the bill or post a return”).
+
+### Data model (sketch — **AUDIT-LOG-1a**)
+
+Table `tenant_activity_log` (append-only, RLS by `tenant_id`):
+
+| Column | Type | Notes |
+|--------|------|--------|
+| id | uuid PK | |
+| tenant_id | uuid | |
+| actor_user_id | uuid FK → auth.users | Who did it |
+| actor_email | text | Denormalized for list display |
+| action | text | `payment.reversed`, `sale.created`, … |
+| entity_type | text | `payment`, `sales_bill`, `product`, … |
+| entity_id | uuid | Nullable |
+| entity_label | text | e.g. `INV-1042`, `Roman Days Hotel` |
+| reason | text | User-entered when required |
+| metadata | jsonb | Amounts, diff summary, related ids |
+| created_at | timestamptz | Server time |
+
+Indexes: `(tenant_id, created_at desc)`, `(tenant_id, entity_type, entity_id)`.
+
+**Quick win before full hub:** add `reversed_by uuid` on `payments` + backfill from `auth.uid()` in `reverse_customer_payment`.
+
+### Delivery phases
+
+| ID | Deliverable | Effort |
+|----|-------------|--------|
+| **AUDIT-LOG-1a** | Migration + `log_tenant_activity` + hooks on payment reverse, bill create/edit, archive | 3–5 d |
+| **AUDIT-LOG-1b** | `/app/activity` UI + export row | 3–5 d |
+| **AUDIT-LOG-1c** | Revert/Restore shortcuts from activity rows | 3–5 d |
+| **COMM-2** | Owner vs staff roles (filter “my actions” vs “all”) | 4–7 d |
+| **TRUST-1** | Per-bill amendment timeline (subset of activity) | 2 d |
+| Platform | Super-admin read-only (**PLAT-1**) + Sentry | Phase 2 |
+
+### Acceptance (owner sign-off)
+
+1. Reverse a payment in app → Activity shows row with user, time, reason, NPR amount.  
+2. Edit a sales bill total → Activity shows edit + link to bill.  
+3. Filter last 7 days + export CSV opens in Excel.  
+4. No hard delete anywhere; Revert on payment matches customer balance.
+
+Refs: **TRUST-1**, **COMM-2**, [DELETE_POLICY](DELETE_POLICY.md), `data-model.md` (update when **AUDIT-LOG-1a** ships).
 
 ---
 
