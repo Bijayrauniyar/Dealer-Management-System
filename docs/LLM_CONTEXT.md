@@ -403,6 +403,11 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
+- **2026-06-05** — **Marketing & ops backlog:** WEB-CTA-1 (dedupe trial buttons), WEB-MEDIA-1 (demo videos + P1 screenshots + restore feature explain content), BRAND-LOGO-2, AUDIT-LOG-1 activity monitoring — [BACKLOG](BACKLOG.md).
+- **2026-06-05** — **IRD-DISC-1 (P0):** Legal disclaimers on sales + purchase print/PDF before launch — not IRD e-bill certified; exact copy in [BACKLOG § IRD-DISC-1](BACKLOG.md#detail--ird-disc-1-pre-verification-legal-disclaimers--p0-before-launch).
+- **2026-06-05** — **SSOT:** [BACKLOG § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth) = single register for all shipped + todo IDs; FIRST_LAUNCH = launch order only; NAV-P1 renamed **NAV-HUB-1** (delivery note stays **NAV-P1** backlog).
+- **2026-06-05** — **CHANGELOG-APP deferred** — in-app What’s new not needed for now; release notes stay in `LLM_CONTEXT.md` only.
+- **2026-06-05** — **Pre-launch polish backlog:** DEPLOY-DOM, NOTIF-FIX, LOAD-1, THEME-1, WEB-AUDIT-1 — [FIRST_LAUNCH](FIRST_LAUNCH.md) § Pre-launch polish.
 - **2026-06-05** — **Docs sync — where we are:** [FIRST_LAUNCH](FIRST_LAUNCH.md) P1 complete + `0039` on prod; [BACKLOG](BACKLOG.md) P1 IDs done; manual checklist §3.0d; pre-flight `0034`–`0039`; [UI_CONSISTENCY_PLAN](UI_CONSISTENCY_PLAN.md) rollout status.
 - **2026-06-05** — **Backlog DATE-BS-1:** BS day/month/year dropdowns only (no full calendar grid); native AD picker + BS line below until shipped — [BACKLOG.md](BACKLOG.md) § DATE-BS-1.
 - **2026-06-05** — **4-decimal prices on sale/purchase lines:** `SaleLinePricingBlock` + purchase line cost use `numericPriceProps` (Label MRP / sell on invoice, buy on purchase); product form + `0039` migration for DB; bill **totals** stay 2-decimal NPR.

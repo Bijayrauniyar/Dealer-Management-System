@@ -1,17 +1,78 @@
 # Product backlog (deferred & future)
 
-**Navigate:** [FIRST_LAUNCH](FIRST_LAUNCH.md) (active priorities) · [Phase roadmap](PHASE_ROADMAP.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Export spec](DATA_EXPORT_SPEC.md)
+**Navigate:** [FIRST_LAUNCH](FIRST_LAUNCH.md) (launch order & ops) · [Phase roadmap](PHASE_ROADMAP.md) · [Backend checklist](backend/BACKEND-TODO.md) · [Export spec](DATA_EXPORT_SPEC.md)
 
-> **Single deferred register.** Promote items to [FIRST_LAUNCH.md](FIRST_LAUNCH.md) when starting work. When done, mark **Done** here + [BACKEND-TODO](backend/BACKEND-TODO.md) + [LLM_CONTEXT](LLM_CONTEXT.md) changelog.
+> **Single source of truth (SSOT)** for every feature **ID**, **status**, and **todo**.  
+> **[§ Feature status index](#feature-status-index-single-source-of-truth)** below is authoritative — update here first, then sync [FIRST_LAUNCH.md](FIRST_LAUNCH.md) execution sections + [LLM_CONTEXT.md](LLM_CONTEXT.md) changelog.
+
+---
+
+## Feature status index (single source of truth)
+
+**Maintainers:** One row per ID in [§ Master register](#master-register). Status values: `done` · `todo` · `ready` · `in_progress` · `deferred` · `backlog`.
+
+### Shipped — product (`done`)
+
+| ID | Feature |
+|----|---------|
+| **BRAND-1** | BikriKhata rebrand (login, PWA, package name) |
+| **EXP-1** | Export Tier A (Settings → Export, CSV + partial ZIP) |
+| **INV-1** | Oversell guard DB (`0024`) |
+| **WEB-1** | Marketing site + `/app` SPA |
+| **LIC-1** | Trial / license expiry, banners, `approve_tenant` |
+| **HSN-1** | Optional HSN on product (`0034`) |
+| **UI-1** | Symmetric UI — patterns, EntityList, Settings tabs |
+| **DEL-1** | Archive/restore masters (`0037`) |
+| **BILL-QR-1** | Payment QR + bank on balance-due bills (`0035`–`0036`) |
+| **PRICE-DISP-1** | MRP vs selling price on print; purchase excl/incl (`0035`) |
+| **UNITS-1** | Custom product units (`0038`) |
+| **EXP-P1** | Export: expenses, damages, returns registers |
+| **PRICE-4DEC** | 4-decimal product/line prices (`0039`) |
+| **NAV-HUB-1** | Stock hub, Home ops dashboard, bottom nav, drawer dedupe |
+| **DATE-AD** | Dual BS+AD dates (`DateFormField` + `DateDisplay`) |
+| **SUP-APP** | In-app support form → `platform_inquiries` + WhatsApp |
+
+*Phase 0 core (sales, purchase, stock, credit, VAT, Share bill, customer PAN/VAT, shell, schemes, etc.) — shipped 2026-05-26; see [PHASE0_SIGNOFF](PHASE0_SIGNOFF.md).*
+
+### Active todo — launch & polish (`todo` / `ready`)
+
+| ID | Feature | Status |
+|----|---------|--------|
+| **IRD-DISC-1** | **P0 legal** — IRD pre-verification disclaimers on sales + purchase print/PDF | todo |
+| **L2** | Prod auth smoke — confirm-email OFF, Site URL, `/register` + `/login` | ready |
+| **L6** | One pilot shop ~1 week on prod (real bills) | ready |
+| **DEPLOY-DOM** | `bikrikhata.com` marketing + `app.bikrikhata.com` app | todo |
+| **NOTIF-FIX** | Test + fix notification bell (computed alerts) | todo |
+| **LOAD-1** | Branded logo loader while app/data loads | todo |
+| **THEME-1** | Dark / light theme toggle | todo |
+| **WEB-CTA-1** | Landing: keep **1–2** free-trial CTAs only | todo |
+| **WEB-MEDIA-1** | Demo videos + new UI screenshots + feature explain section | todo |
+| **WEB-AUDIT-1** | Full landing audit after WEB-MEDIA-1 + pilot | todo |
+| **BRAND-LOGO-2** | New application logo (PWA, login, shell) | todo |
+
+*Launch ops **L0–L1, L3–L5, L7** = `done` — see [FIRST_LAUNCH § P0](FIRST_LAUNCH.md#p0--before-first-ad-operations--trust).*
+
+### Deferred / future (`deferred` / `backlog`)
+
+| ID | Feature | Status |
+|----|---------|--------|
+| **L8** | Contact form inbox email (Resend) | deferred |
+| **CHANGELOG-APP** | In-app “What’s new” release notes | deferred |
+| **DATE-BS-1** | BS day/month/year dropdown picker | backlog |
+| **AUDIT-LOG-1** | Activity log + monitoring | backlog |
+| **NOTIF-2A** | DB notifications + Realtime bell | backlog |
+| **ORD-*** · **CAT-PUB-*** · **RPT-1** · **CAT-1** · **INLINE+** · **INV-2** · **IMP-*** · etc. | Phase 1–2 features | backlog |
+
+Full rows: [§ Master register](#master-register). Execution order: [FIRST_LAUNCH § What's next](FIRST_LAUNCH.md#whats-next-do-in-this-order).
 
 ---
 
 ## How to maintain
 
-1. **New idea** — Add row below with ID, phase, effort, status `backlog`.  
-2. **Starting** — Move to FIRST_LAUNCH with Priority P1/P2; status `in_progress`.  
-3. **Done** — Status `done` + date; check off BACKEND-TODO.  
-4. **Do not duplicate** — Implementation detail in `data-model.md` / export spec; this file is the **ID index**.
+1. **New idea** — Add row to [§ Master register](#master-register) with ID, phase, effort, status `backlog`.  
+2. **Starting** — Set status `todo` or `in_progress`; add execution order in [FIRST_LAUNCH](FIRST_LAUNCH.md) if launch-related.  
+3. **Done** — Set status `done` + date; update [§ Feature status index](#feature-status-index-single-source-of-truth); [LLM_CONTEXT](LLM_CONTEXT.md) changelog.  
+4. **Do not duplicate** — No second status list elsewhere; link to this file. Implementation detail → `data-model.md` / export spec.
 
 ---
 
@@ -57,13 +118,190 @@
 | **COMM-1** | Customer price tier | 1 | 3–5 d | backlog | |
 | **COMM-2** | Owner vs staff roles | 1 | 4–7 d | backlog | |
 | **EXP-P1** | Extra export registers | 1 | 2–3 d | **done** | 2026-06-05 — expenses, damages, returns |
-| **NAV-P1** | Delivery note from invoice | 1 | 2–3 d | backlog | Not shipped — distinct from stock-hub nav (see FIRST_LAUNCH NAV-P1) |
+| **NAV-HUB-1** | Stock hub, Home dashboard, bottom nav, drawer dedupe | 1.0 | — | **done** | 2026-06-05 — `/app/products`; was “NAV-P1” in FIRST_LAUNCH |
+| **SUP-APP** | In-app support inquiry form + WhatsApp | 1.0 | — | **done** | 2026-06-05 — `AppSupportInquiryForm` |
+| **DATE-AD** | Dual BS+AD dates (AD picker + BS line below) | 1.0 | — | **done** | 2026-06-05 — upgrade = **DATE-BS-1** |
+| **NAV-P1** | Delivery note from invoice | 1 | 2–3 d | backlog | Not shipped — distinct from **NAV-HUB-1** |
 | **WEB-1** | Marketing site + `/app` route | 0 launch | — | **done** | [FIRST_LAUNCH § Website](FIRST_LAUNCH.md#website-bikrikhatacom--app) |
 | **MIG-0012** | Scheme Box→PCS columns | opt | 10 min | backlog | Only if cross-UOM schemes |
 | **INV-1** | Block oversell in DB | 0 | — | **done** | 0024 |
 | **EXP-1** | Export Tier A registers | 0 | — | **done** | partial ZIP |
 | **BRAND-1** | BikriKhata rebrand | 0 | — | **done** | |
 | **L8** | Contact form email alerts (Resend) | 0 ops | ~20 min | **deferred** | Code ready; enable later — 0033 + `setup:contact-email` |
+| **IRD-DISC-1** | IRD pre-verification disclaimers on sales + purchase print/PDF | 0 launch | 0.5–1 d | **todo** | **P0 before pilot/ads** — not IRD e-bill certified — § IRD-DISC-1 |
+| **DEPLOY-DOM** | Split domains: `bikrikhata.com` + `app.bikrikhata.com` | 0 launch | 2–4 h | **todo** | Netlify DNS, redirects, Supabase Auth — § DEPLOY-DOM |
+| **NOTIF-FIX** | Test + fix notification bell (computed alerts) | 0 launch | 0.5–1 d | **todo** | Not NOTIF-2A DB table — fix `NotificationPanel` now |
+| **LOAD-1** | Branded logo splash while app/data loads | 0 launch | 0.5–1 d | **todo** | Auth + domain bundle; PWA-friendly |
+| **THEME-1** | Dark / light theme toggle | 1.0 | 2–3 d | **todo** | Tailwind `dark:`; Settings or `prefers-color-scheme` |
+| **CHANGELOG-APP** | In-app release changelog / What’s new | 1.0 | 1–2 d | **deferred** | Not needed for now — use `LLM_CONTEXT.md` changelog only |
+| **WEB-AUDIT-1** | Landing page audit after main features | 0 launch | 1–2 d | **todo** | Copy, hero, screenshots, mobile — post-pilot |
+| **WEB-CTA-1** | Dedupe **7-day trial** buttons on landing (keep 1–2) | 0 launch | 0.5 d | **todo** | Hero + pricing; trim nav/footer/section repeats — § WEB-CTA-1 |
+| **WEB-MEDIA-1** | Feature videos + new UI screenshots + restore feature explain content | 0 launch | 2–5 d | **todo** | Replace stale marketing PNGs; short demo clips — § WEB-MEDIA-1 |
+| **BRAND-LOGO-2** | New application logo (PWA, login, shell, favicon) | 0 launch | 1–2 d | **todo** | [BRAND_ICON_GUIDE](BRAND_ICON_GUIDE.md); `productBrand.ts`, `public/` |
+| **AUDIT-LOG-1** | Activity log + monitoring (who changed what, when) | 1–2 | 1–2 wk | **backlog** | Tenant audit trail; optional platform ops dashboard — § AUDIT-LOG-1 |
+| **L2** | Prod auth smoke — register/login on prod | 0 ops | 1–2 h | **ready** | [P0_LAUNCH_RUNBOOK § L2](P0_LAUNCH_RUNBOOK.md) |
+| **L6** | One pilot shop ~1 week (real bills) | 0 ops | 1 wk | **ready** | [ONBOARDING_FIRST_SHOP](ONBOARDING_FIRST_SHOP.md) |
+
+---
+
+## Detail — IRD-DISC-1 (pre-verification legal disclaimers) — **P0 before launch**
+
+**Why:** BikriKhata is **not IRD-certified** for e-billing. Printed/shared documents are **working copies** only — not official legal invoices until the shop’s IRD-registered process issues the statutory document.
+
+**Must ship before pilot week (L6) and ads** — every sales and purchase print/PDF/Share must show the disclaimer below (italic, below totals — match reference screenshots).
+
+### Copy (exact)
+
+| Document | Footer disclaimer |
+|----------|-------------------|
+| **Sales bill** (print, PDF, Share) | `* This is not the final invoice. Please contact the company for the official legal invoice.` |
+| **Purchase bill** (print, PDF) | `* This is a Purchase Order, not the final invoice. Please contact the company for the official legal invoice.` |
+
+### Implementation targets
+
+| Surface | Files |
+|---------|--------|
+| Sales print / preview | `BillPrintView.tsx`, `billPdfDocument.ts`, `index.css` print rules |
+| Purchase print | `PurchaseBillView.tsx`, purchase PDF path if any |
+| Settings | Do **not** rely on free-text `bill_footer` only — **default-on** system disclaimer; optional future `tenant_settings.ird_certified` to hide when IRD-integrated |
+
+### Acceptance
+
+- Disclaimer visible on browser print preview and downloaded PDF for sales + purchase.
+- Survives Share bill flow.
+- `e2e:bill` or `e2e-tier-c` source grep for disclaimer strings.
+- Manual: print one sales + one purchase bill; disclaimer readable at bottom.
+
+**Later:** IRD API / certified e-bill → Phase 3 ([GTM_NEPAL §5](GTM_NEPAL.md)); remove or replace disclaimer when legally cleared.
+
+---
+
+## Detail — DEPLOY-DOM (split domains)
+
+**Goal:** Marketing on **`https://bikrikhata.com`**; product on **`https://app.bikrikhata.com`**.
+
+| Layer | Action |
+|-------|--------|
+| **DNS** | `bikrikhata.com` → Netlify (landing); `app.bikrikhata.com` → same or second Netlify site |
+| **Netlify** | Option A: two sites (marketing repo path vs `app/` build). Option B: one site + subdomain redirect rules |
+| **App routes** | Marketing `/`, `/privacy`, `/faq`, `/login`, `/register`; app `/` → redirect to `/app/home` on app subdomain |
+| **Supabase Auth** | **Site URL** = `https://app.bikrikhata.com`; **Redirect URLs** include both domains + localhost |
+| **Links** | Landing CTAs → `https://app.bikrikhata.com/login`; marketing footer unchanged |
+
+**Acceptance:** Register/login on app subdomain; landing CTAs open app; no broken auth redirect.
+
+---
+
+## Detail — NOTIF-FIX (bell QA — not live DB yet)
+
+**Scope:** Fix **computed** alerts in `NotificationPanel.tsx` (overdue bills, low stock, license renewal). **NOTIF-2A** (DB + Realtime) stays deferred.
+
+**Test:** Manual §3.0b T0B7, G17; Settings overdue/due-soon days match bell list; tap opens correct route (`/app/products?filter=low`, overdue list).
+
+---
+
+## Detail — LOAD-1 (branded loader)
+
+Show BikriKhata logo (from `productBrand.ts` / PWA icon) full-screen while:
+- Supabase session resolving
+- First `fetchDomainBundle` / license gate
+
+Hide when shell ready or timeout with retry. No blank white flash on 3G.
+
+---
+
+## Detail — THEME-1 (dark / light)
+
+- Toggle in **Settings → Business** or follow `prefers-color-scheme` with manual override
+- Tailwind `class` strategy on `<html>`; persist choice
+- Bill print stays light (print CSS unchanged)
+
+---
+
+## Detail — CHANGELOG-APP (in-app release notes) — **deferred**
+
+**Status:** Not needed for now. Ship history stays in **`docs/LLM_CONTEXT.md`** changelog for dev/agents.
+
+Revisit when dealers ask for in-app “What’s new” after updates (Settings card or post-deploy banner).
+
+---
+
+## Detail — WEB-AUDIT-1 (landing audit)
+
+**When:** After pilot week + main app features stable.
+
+**Checklist:** Hero matches product (stock hub, tax invoice); pricing = `launchPricing.ts`; FAQ accurate; mobile layout; contact form; `/login` links to app domain if **DEPLOY-DOM** shipped.
+
+**Also track:** **WEB-CTA-1** (trial button count), **WEB-MEDIA-1** (videos + screenshots + feature copy).
+
+Refs: [MARKETING_SCREENSHOTS_PLAN](MARKETING_SCREENSHOTS_PLAN.md), [MARKETING_HERO_IMAGE_BRIEF](MARKETING_HERO_IMAGE_BRIEF.md).
+
+---
+
+## Detail — WEB-CTA-1 (trial CTA dedupe)
+
+**Problem:** Landing has too many **7-day free trial** / register CTAs (nav, hero, features, pricing, footer, contact, etc.) — feels repetitive.
+
+**Goal:** Keep **1–2 primary trial CTAs** (e.g. hero + pricing block). Secondary links → **Log in** or **Contact** only.
+
+**Files:** `PublicSignupCta.tsx`, `MarketingNav.tsx`, `MarketingFooter.tsx`, landing sections, `publicSignup.ts` / `launchPricing.ts` labels.
+
+**Acceptance:** Count visible trial CTAs above fold + full scroll ≤ 2 trial-primary buttons; `e2e:p0-public` still passes.
+
+---
+
+## Detail — WEB-MEDIA-1 (videos, screenshots, feature storytelling)
+
+**Problem:** Past landing trim removed useful **feature explain** content and **app screen** visuals (`#why-switch` band removed 2026-05-26). Marketing PNGs are **stale** vs P1 UI (stock hub, Home dashboard, compact lists, Settings tabs).
+
+**Goal:**
+
+| Deliverable | Notes |
+|-------------|--------|
+| **Fresh screenshots** | Capture from prod/dev: Home, sales invoice, stock, bill print, export — `app/public/marketing/*.png` |
+| **Short demo videos** | 30–90 s clips or embedded YouTube: billing, stock, credit, export (Nepali or bilingual voice optional) |
+| **Feature explain section** | Restore clear “what you get” band — not competitor comparison; pillars + screenshot or video per feature |
+| **Phone row** | Update 4-phone marketing row per [MARKETING_SCREENSHOTS_PLAN](MARKETING_SCREENSHOTS_PLAN.md) |
+
+**Not in scope:** Full video production agency; start with screen recordings + light edit.
+
+**Acceptance:** Landing shows current UI; at least one video or animated GIF per major pillar; owner sign-off before ads scale.
+
+---
+
+## Detail — BRAND-LOGO-2 (application logo refresh)
+
+Replace BikriKhata mark in:
+
+| Surface | Path / config |
+|---------|----------------|
+| PWA / favicon | `app/public/`, `vite.config.ts` manifest |
+| Login / register | marketing + app auth pages |
+| App shell | header, loader (**LOAD-1**) |
+| Source of truth | `app/src/config/productBrand.ts`, [BRAND_ICON_GUIDE](BRAND_ICON_GUIDE.md) |
+
+**Acceptance:** Sharp on retina + PWA install; teal brand color unchanged unless brief says otherwise.
+
+---
+
+## Detail — AUDIT-LOG-1 (activity log & monitoring)
+
+**Why:** Owners and support need **who did what** (bill edit, payment, settings change, archive) — trust + dispute resolution.
+
+**Phase 1 (tenant):**
+
+| Event | Log fields |
+|-------|------------|
+| Sales/purchase bill create/edit | user, bill_no, timestamp, action |
+| Payment / return | customer, amount, timestamp |
+| Settings save | changed keys (not secrets) |
+| Master archive/restore | entity type, id, action |
+
+**Phase 2 (platform ops):** Super-admin read-only view, error/usage monitoring (Sentry or Supabase logs) — tie to **PLAT-1** security review.
+
+**Not launch-blocking** — backlog until pilot shops ask or compliance needs it.
+
+Refs: **TRUST-1** (bill amendment history UI); existing RPC audit fields if any in `data-model.md`.
 
 ---
 
@@ -180,4 +418,4 @@ Sigma-style lite v1: salesman master → sales order → full convert → one sa
 
 ---
 
-*Last updated: 2026-06-05 — P1 items (UI-1, DEL-1, BILL-QR-1, PRICE-DISP-1, UNITS-1, EXP-P1, PRICE-4DEC) marked done; DATE-BS-1 still backlog.*
+*Last updated: 2026-06-05 — **IRD-DISC-1** P0 legal disclaimers before launch (not IRD e-bill certified).*

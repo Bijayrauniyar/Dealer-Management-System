@@ -35,7 +35,7 @@ When you **change app behavior**, **add a feature**, **add/alter a migration**, 
 | Phase 0 Tier C (shell, support, Share, Home tabs, 0025/0026) | `e2e-tier-c.mjs` (+ `:live`); manual checklist §3.0c |
 | UI chrome (`patterns.tsx`, `PageActionBar`, `ListPageHeader`, buttons) | `e2e-tier-c.mjs` and/or `UI_CONSISTENCY_PLAN.md`; run `npm run e2e:phase0` before release |
 | Any Phase 0 change | Prefer `npm run e2e:phase0` (or `e2e:phase0:live` if DB/RPC touched); update manual §3.0a–c — see `phase1-use-cases-and-tests.md` |
-| New screen / flow / behaviour change | `docs/backend/phase1-manual-e2e-checklist.md` §2 + §3 (+ §7 backlog if Phase 1+) |
+| New screen / flow / behaviour change | **`docs/BACKLOG.md` § Feature status index + master register** (SSOT), `FIRST_LAUNCH` if launch order, manual checklist §2 + §3 |
 
 Hub index: `docs/README.md` — add a link when you add a new top-level doc.
 

@@ -206,6 +206,9 @@ Migrations **0034**–**0039** on prod. Automated: `npm run e2e:tier-c` / `e2e:p
 | T1P9 | Settings → Bills & tax → upload payment QR → balance-due sales bill print shows QR (`0035`–`0036`) | |
 | T1P10 | Settings → Business → custom units → product form unit dropdown (`0038`) | |
 
+| T1P11 | **IRD-DISC-1** — Sales print/PDF/Share shows: *This is not the final invoice…* | |
+| T1P12 | **IRD-DISC-1** — Purchase print shows: *This is a Purchase Order, not the final invoice…* | |
+
 ---
 
 ### 3.0e P0 marketing (MAN-P0) — pre-ads
@@ -578,7 +581,7 @@ After manual flows, spot-check in **Table Editor**:
 | §3.0a Tier A (T0A1–T0A10) | — | ☐ | | |
 | §3.0b Tier B (T0B1–T0B8) | — | ☐ | | |
 | §3.0c Tier C (T0C1–T0C10) | — | ☑ | 2026-05-26 prod + deploy | |
-| §3.0d P1 product (T1P1–T1P10) | — | ☐ | 2026-06-05 — after deploy | |
+| §3.0d P1 product (T1P1–T1P12) | — | ☐ | 2026-06-05 — after deploy + IRD-DISC-1 | |
 | API matrix (`e2e:matrix`) | ☐ | — | | |
 | UI script (`e2e:ui`) | ☐ | — | | |
 | Gaps G1–G30 | — | ☐ | | |
@@ -598,7 +601,20 @@ After manual flows, spot-check in **Table Editor**:
 
 ### Phase 1+ (planned)
 
+**SSOT:** [BACKLOG § Feature status index](../BACKLOG.md#feature-status-index-single-source-of-truth) — update there first; checklist below mirrors active todo only.
+
 - [x] UI-1 full symmetry pass — §3.0d MAN-P1 + [UI_CONSISTENCY_PLAN](../UI_CONSISTENCY_PLAN.md) (2026-06-05)
+- [ ] **IRD-DISC-1** — sales + purchase print/PDF legal disclaimers (before pilot)
+- [ ] **DEPLOY-DOM** — `app.bikrikhata.com` + `bikrikhata.com` split ([BACKLOG](../BACKLOG.md))
+- [ ] **NOTIF-FIX** — notification bell test + fix (T0B7, G17)
+- [ ] **LOAD-1** — branded logo loader on slow load
+- [ ] **THEME-1** — dark / light theme toggle
+- ~~**CHANGELOG-APP**~~ — deferred (not needed for now)
+- [ ] **WEB-CTA-1** — landing trial CTAs: keep 1–2 only
+- [ ] **WEB-MEDIA-1** — demo videos + new UI screenshots + feature explain on website
+- [ ] **BRAND-LOGO-2** — new application logo (PWA, login, shell)
+- [ ] **AUDIT-LOG-1** — activity log & monitoring (post-launch)
+- [ ] **WEB-AUDIT-1** — full landing audit after media refresh
 - [ ] Sales orders / salesman (SF-0, ORD-*) — new §3.xx
 - [ ] Bill edit audit history  
 - [ ] Live daily cash + schemes tables  

@@ -8,8 +8,8 @@
 
 | Who | Open first |
 |-----|------------|
-| **Human — launch / ads** | **[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** · [P0 runbook](P0_LAUNCH_RUNBOOK.md) |
-| **Human — what to build next** | **[BACKLOG.md](BACKLOG.md)** |
+| **Human — all features + todo (SSOT)** | **[BACKLOG.md § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth)** |
+| **Human — launch / ads order** | **[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** · [P0 runbook](P0_LAUNCH_RUNBOOK.md) |
 | **AI agent** | **[AI_AGENT.md](AI_AGENT.md)** |
 | **Phase 0 done?** | **[PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md)** |
 | **P1 done? Where are we?** | **[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** — P1 product complete; ads blocked on L2 + L6 |
@@ -20,8 +20,8 @@
 
 | File | Role |
 |------|------|
-| [FIRST_LAUNCH.md](FIRST_LAUNCH.md) | P0/P1/P2 checklist — **edit priorities here** |
-| [BACKLOG.md](BACKLOG.md) | Deferred features — move to/from FIRST_LAUNCH |
+| [FIRST_LAUNCH.md](FIRST_LAUNCH.md) | Launch **execution order** (ops + polish sequence) |
+| [BACKLOG.md](BACKLOG.md) | **SSOT** — every feature ID + status + todo index |
 | [PHASE_ROADMAP.md](PHASE_ROADMAP.md) | Phase 0–3 strategy |
 | [LLM_CONTEXT.md](LLM_CONTEXT.md) | Code handbook + changelog |
 | [DELETE_POLICY.md](DELETE_POLICY.md) | Archive/restore; no hard delete in shop UI |
@@ -55,7 +55,7 @@ AI agents: **ignore `archive/`** unless the user asks for history.
 
 | Change | Update |
 |--------|--------|
-| Feature / UX | FIRST_LAUNCH or BACKLOG, LLM_CONTEXT changelog, e2e script, manual checklist |
+| Feature / UX / status | **[BACKLOG.md § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth)** first, then FIRST_LAUNCH order + LLM_CONTEXT changelog + e2e + manual checklist |
 | Migration | `app/supabase/README.txt`, data-model, phase1-use-cases pre-flight |
 | New deferred idea | Row in **BACKLOG** only |
 
@@ -73,4 +73,4 @@ Rule: [.cursor/rules/docs-on-change.mdc](../.cursor/rules/docs-on-change.mdc)
 
 ---
 
-*Last updated: 2026-06-05 — P1 product complete; migrations through `0039` on prod; launch ops: L2 + L6.*
+*Last updated: 2026-06-05 — BACKLOG = SSOT for feature status; FIRST_LAUNCH = launch order.*
