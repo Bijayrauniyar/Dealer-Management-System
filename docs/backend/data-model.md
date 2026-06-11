@@ -270,36 +270,29 @@ Tracks per-bill balance (created when `sale.net_total > paid_now`):
 
 ---
 
-### `payments`
+### `payments` (live schema via `apply_customer_payment` / `0043`)
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
 | tenant_id | uuid FK | |
 | customer_id | uuid FK → customers | |
-| amount | numeric NOT NULL | Total amount received |
-| mode | text CHECK IN ('cash','esewa','khalti','fonepay','mobile_banking','cheque') | |
-| reference | text | UTR / cheque no. |
-| cheque_clearing_date | date | Cheque only |
-| advance_amount | numeric DEFAULT 0 | Excess beyond all open bills |
-| date | date NOT NULL | |
-| created_by | uuid FK → users | |
-| created_at | timestamptz | |
+| bill_id | uuid FK → sales_bills NULL | **NULL** = advance on account (unapplied) |
+| payment_date | date NOT NULL | |
+| amount | numeric NOT NULL | Receipt amount |
+| mode | text | Cash, UPI, Cheque, … |
+| notes | text | Reference / UTR |
+| reversed_at | timestamptz NULL | Set by `reverse_customer_payment` (`0043`) |
+| reversal_reason | text NULL | Required on reverse |
 
-### `payment_allocations`
-One row per bill this payment touches (FIFO):
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| payment_id | uuid FK → payments | |
-| outstanding_bill_id | uuid FK → outstanding_bills | |
-| allocated_amount | numeric NOT NULL | Amount applied to this bill |
+**Customer balance** (`v_customer_balance`): `opening + billed − payments (non-reversed) − returns`. Negative balance = **advance** (`advance_balance` = sum of orphan payments).
 
-**Side effects on payment save:**
-1. Insert `payments`.
-2. For each allocation: insert `payment_allocations`; decrement `outstanding_bills.balance`; set `status = paid` if `balance = 0`.
-3. Decrement `customers.outstanding` by `amount − advance_amount`.
-4. If advance: increment `customers.advance_credit`.
-5. If `mode = cash`: increment today's `daily_cash.cash_receipts`.
+**RPCs (`0043`):**
+- `apply_customer_payment` — bill allocation (existing).
+- `record_customer_advance` — receipt with `bill_id` null.
+- `reverse_customer_payment` — audit reversal; reduces `sales_bills.paid` if linked.
+- `create_sales_bill` — auto-applies orphan advance FIFO via `allocate_advance_to_bill`; returns `advance_applied`.
+
+**UI:** Payment in → **Against bills** or **Advance only**; customer detail → **Reverse** on payments tab (no hard delete).
 
 ---
 

@@ -403,6 +403,23 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
+- **2026-06-05** — **Product edit load fix:** edit form waited for catalog then syncs min qty / pricing from DB (was showing Settings defaults like random 20); Company **Add capital** button nowrap.
+- **2026-06-05** — **Product form:** new product pre-fills **Default sell markup (%)** from Settings (matches min qty behaviour); buy price recalculates sell using that markup.
+- **2026-06-05** — **UX-HUB-1 backlog:** One app-wide entity hub pattern (list + Add on top, save→hub, inline sheet for masters, row edit/archive) — [BACKLOG § UX-HUB-1](BACKLOG.md#detail--ux-hub-1-entity-hub--entry-flow--one-standard-for-whole-app).
+- **2026-06-05** — **AUDIT-LOG-1 spec expanded:** Activity hub backlog (`/app/activity`, `tenant_activity_log`, who/when/reason, revert matrix, phases 1a–1c + **COMM-2** staff) — [BACKLOG § AUDIT-LOG-1](BACKLOG.md#detail--audit-log-1-activity-hub--professional-audit-trail).
+- **2026-06-05** — **Home layout v2:** Quick actions = 6 daily vouchers (3×2); below that **Receivables / Payables / Business position / Reports & data** list sections (`HOME_OVERVIEW_SECTIONS`) — Company, Reports, Daily cash moved out of quick grid.
+- **2026-06-05** — **Home owner shortcuts** + **0043 view fix:** Home **Business overview** row (Dashboard, Company, Reports, Outstanding, Capital, Overdue); `0043` drops/recreates `v_customer_balance` (fixes Postgres view column error); customer Payments **Reversed** filter; clearer toast when `0043` RPCs missing.
+- **2026-06-05** — **Customer advance + payment reversal (Option B):** migration `0043` — `record_customer_advance`, `reverse_customer_payment`, auto-apply orphan advance on `create_sales_bill`; Payment in tabs **Against bills** / **Advance only**; customer detail shows Receivable vs Advance KPIs, all bills history, **Reverse** on payments tab; new invoice hints advance apply.
+- **2026-06-05** — **Financial save confirmations:** Purchase/sales show formal confirm dialog before adjusting paid/collected amounts or posting purchase as fully paid (due date); migration `0042` caps sales `paid` on edit.
+- **2026-06-05** — **Purchase price correction + customer credit:** migration `0041` caps `paid` to new total on edit; Company overview labels negative receivable as customer credit; Customers filter **Advance**.
+- **2026-06-05** — **Purchases hub:** `/app/purchases` — invoice list (filter paid/unpaid/partial, by supplier, sort) + Suppliers tab (list, add, payable filter); Home/drawer Purchase opens hub not entry form.
+- **2026-06-05** — **Purchase due date + dual UOM on bills:** migration `0040` saves `due_date`; due today or earlier → paid (cash) on save; purchase/sales print shows pack + PCS (e.g. 6 Ctn / 108 PCS); `purchaseLineDisplay.ts`.
+- **2026-06-05** — **Bill + purchase UX:** IRD-DISC-1 disclaimers shipped; PCS↔Ctn qty hint on lines; UOM switch converts qty; re-pick product resets qty; quick add/edit product modal from bill & purchase; purchase detail Print/Preview/Share/PDF; Add item button below lines on purchase.
+- **2026-06-05** — **Marketing & ops backlog:** WEB-CTA-1 (dedupe trial buttons), WEB-MEDIA-1 (demo videos + P1 screenshots + restore feature explain content), BRAND-LOGO-2, AUDIT-LOG-1 activity monitoring — [BACKLOG](BACKLOG.md).
+- **2026-06-05** — **IRD-DISC-1 (shipped):** Legal disclaimers on sales + purchase print/PDF — `irdDisclaimer.ts`, BillPrintView, PurchaseBillView, billPdfDocument.
+- **2026-06-05** — **SSOT:** [BACKLOG § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth) = single register for all shipped + todo IDs; FIRST_LAUNCH = launch order only; NAV-P1 renamed **NAV-HUB-1** (delivery note stays **NAV-P1** backlog).
+- **2026-06-05** — **CHANGELOG-APP deferred** — in-app What’s new not needed for now; release notes stay in `LLM_CONTEXT.md` only.
+- **2026-06-05** — **Pre-launch polish backlog:** DEPLOY-DOM, NOTIF-FIX, LOAD-1, THEME-1, WEB-AUDIT-1 — [FIRST_LAUNCH](FIRST_LAUNCH.md) § Pre-launch polish.
 - **2026-06-05** — **Docs sync — where we are:** [FIRST_LAUNCH](FIRST_LAUNCH.md) P1 complete + `0039` on prod; [BACKLOG](BACKLOG.md) P1 IDs done; manual checklist §3.0d; pre-flight `0034`–`0039`; [UI_CONSISTENCY_PLAN](UI_CONSISTENCY_PLAN.md) rollout status.
 - **2026-06-05** — **Backlog DATE-BS-1:** BS day/month/year dropdowns only (no full calendar grid); native AD picker + BS line below until shipped — [BACKLOG.md](BACKLOG.md) § DATE-BS-1.
 - **2026-06-05** — **4-decimal prices on sale/purchase lines:** `SaleLinePricingBlock` + purchase line cost use `numericPriceProps` (Label MRP / sell on invoice, buy on purchase); product form + `0039` migration for DB; bill **totals** stay 2-decimal NPR.

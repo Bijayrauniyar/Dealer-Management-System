@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { KpiCard } from "@/components/app/KpiCard";
 import { SectionHeader } from "@/components/app/SectionHeader";
 import { DateDisplay } from "@/components/app/DateDisplay";
-import { HOME_QUICK_ACTIONS } from "@/config/appNavigation";
+import { HOME_OVERVIEW_SECTIONS, HOME_QUICK_ACTIONS } from "@/config/appNavigation";
 import {
   useBusinessSettings,
   useCustomers,
@@ -144,6 +144,43 @@ export const HomePage = () => {
             </button>
           );
         })}
+      </div>
+
+      <div className="mb-5 space-y-5">
+        {HOME_OVERVIEW_SECTIONS.map((section) => (
+          <div key={section.title}>
+            <SectionHeader title={section.title} className="mb-2" />
+            <ul className="space-y-2">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.to + item.label}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          item.to,
+                          item.settingsTab
+                            ? { state: { settingsTab: item.settingsTab } }
+                            : undefined,
+                        )
+                      }
+                      className="flex w-full items-center gap-3 rounded-xl border border-border-subtle bg-white px-4 py-3.5 text-left shadow-card active:scale-[0.99] transition-transform"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100">
+                        <Icon size={18} className="text-slate-600" />
+                      </div>
+                      <p className="min-w-0 flex-1 text-sm font-semibold text-foreground">
+                        {item.label}
+                      </p>
+                      <ChevronRight size={16} className="shrink-0 text-muted" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </div>
 
       {recentBills.length > 0 && (

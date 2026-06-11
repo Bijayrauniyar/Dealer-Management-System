@@ -14,6 +14,7 @@ import { SaleEntryPage } from "@/pages/sales/SaleEntryPage";
 import { PaymentPage } from "@/pages/payments/PaymentPage";
 import { ReturnPage } from "@/pages/returns/ReturnPage";
 import { DamagePage } from "@/pages/damage/DamagePage";
+import { PurchasesPage } from "@/pages/purchases/PurchasesPage";
 import { PurchasePage } from "@/pages/purchases/PurchasePage";
 import { PurchaseDetailPage } from "@/pages/purchases/PurchaseDetailPage";
 import { SupplierPaymentPage } from "@/pages/supplier-payment/SupplierPaymentPage";
@@ -79,6 +80,7 @@ const AppRoutesInner = () => (
       <Route path="payments/new" element={<PaymentPage />} />
       <Route path="returns/new" element={<ReturnPage />} />
       <Route path="damages/new" element={<DamagePage />} />
+      <Route path="purchases" element={<PurchasesPage />} />
       <Route path="purchases/new" element={<PurchasePage />} />
       <Route path="purchases/edit/:purchaseId" element={<PurchasePage />} />
       <Route path="purchases/:purchaseId" element={<PurchaseDetailPage />} />

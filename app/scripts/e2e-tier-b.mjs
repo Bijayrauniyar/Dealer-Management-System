@@ -74,14 +74,19 @@ function runSourceChecks() {
     } else {
       r.fail("SaleEntryPage credit", "missing credit handling");
     }
-    if (
-      saleEntry.includes("SaleLinePricingBlock") &&
-      saleEntry.includes("Prints: Rate") &&
-      saleEntry.includes("Bill uses")
-    ) {
+    const saleLinePricing = readSrc("components/app/SaleLinePricingBlock.tsx");
+    if (saleEntry.includes("SaleLinePricingBlock")) {
       r.pass("SaleEntryPage line pricing block");
     } else {
       r.fail("SaleEntryPage pricing UI", "missing SaleLinePricingBlock");
+    }
+    if (
+      saleLinePricing?.includes("Prints: Rate") &&
+      saleLinePricing?.includes("Bill uses")
+    ) {
+      r.pass("SaleLinePricingBlock print/rate hints");
+    } else {
+      r.fail("SaleLinePricingBlock hints", "missing Prints/Bill uses copy");
     }
     if (!saleEntry.includes("dealer pricing")) {
       r.pass("SaleEntryPage no dealer pricing label");

@@ -22,8 +22,9 @@ html, body { margin: 0; padding: 0; background: #fff; }
  * Print only the bill card in a hidden iframe (empty page title → no bill no. in browser header).
  * In the print dialog: turn off "Headers and footers" for a clean page; turn on "Background graphics".
  */
-export function printBill(_billNo?: string): void {
-  const root = document.getElementById("bill-print-root");
+/** Print any document root (sales #bill-print-root, purchase #purchase-bill-print-root). */
+export function printDocument(rootId: string): void {
+  const root = document.getElementById(rootId);
   if (!root) {
     return;
   }
@@ -76,6 +77,14 @@ export function printBill(_billNo?: string): void {
   } else {
     setTimeout(run, 200);
   }
+}
+
+export function printBill(_billNo?: string): void {
+  printDocument("bill-print-root");
+}
+
+export function printPurchaseBill(): void {
+  printDocument("purchase-bill-print-root");
 }
 
 /** Tab title while viewing a bill (print uses iframe — does not change print header). */

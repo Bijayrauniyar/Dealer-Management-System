@@ -4,7 +4,8 @@
 
 **Docs:** Old files live in `[docs/archive/](archive/README.md)` — archive first, delete later. Do not add new top-level docs; use BACKLOG.
 
-> **One place for “what before ads” and “what next.”** Edit **Priority** and **Status** columns yourself. Move rows to [BACKLOG.md](BACKLOG.md) when deferred; move back here when promoting to active work.
+> **Launch execution guide** — ordered steps before ads.  
+> **Single source of truth for all feature IDs + status:** [BACKLOG.md § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth) — update BACKLOG first; keep this file in sync for ops order only.
 
 **Product:** BikriKhata — VAT billing, purchase, stock, credit, and period export for Nepal wholesalers and dealers (1 godown).
 
@@ -57,7 +58,7 @@
 | **UNITS-1** | Custom product units in Settings (`0038`); **+ Add unit** on product form |
 | **EXP-P1** | Export: expenses, damages, returns registers + backup ZIP |
 | **PRICE-4DEC** | Product + line prices up to **4 decimals** (`0039` on prod; `numericPriceProps`; bill totals stay 2-dec NPR) |
-| **NAV-P1** | Stock hub (`/app/products`, `/app/stock` redirects); Home ops dashboard; drawer deduped |
+| **NAV-HUB-1** | Stock hub (`/app/products`, `/app/stock` redirects); Home ops dashboard; drawer deduped |
 | **DATE-AD** | `DateFormField` + `DateDisplay` — AD native picker + BS line below (full BS picker = **DATE-BS-1** backlog) |
 | **SUP-APP** | In-app support: inquiry form → `platform_inquiries` + WhatsApp (`AppSupportInquiryForm`) |
 
@@ -75,13 +76,31 @@
 | 4 | **L6** | **One pilot shop ~1 week** on prod (real bills) | [ONBOARDING_FIRST_SHOP.md](ONBOARDING_FIRST_SHOP.md) |
 | 5 | Sign-off | Mark pilot date below → then **first ad live** | Sign-off table |
 
-**Ads-ready when:** L2 prod smoke + **L6 pilot week** complete. **L8 not required** for ads.
+**Ads-ready when:** **IRD-DISC-1** disclaimers on print/PDF + L2 prod smoke + **L6 pilot week** complete. **L8 not required** for ads.
+
+### Pre-launch polish (todo)
+
+**Authoritative list:** [BACKLOG § Active todo](BACKLOG.md#active-todo--launch--polish-todo--ready). Order below is suggested execution sequence only.
+
+| Priority | ID | Task | Status | Notes |
+|----------|-----|------|--------|-------|
+| **0** | **IRD-DISC-1** | **Legal disclaimers** on sales + purchase print/PDF (not IRD e-bill) | `done` | Shipped — [BACKLOG § IRD-DISC-1](BACKLOG.md#detail--ird-disc-1-pre-verification-legal-disclaimers--p0-before-launch) |
+| 1 | **DEPLOY-DOM** | **Split domains:** marketing **`bikrikhata.com`** + app **`app.bikrikhata.com`** | `todo` | Netlify DNS + Supabase Auth redirect URLs; see [BACKLOG § DEPLOY-DOM](BACKLOG.md#detail--deploy-dom-split-domains) |
+| 2 | **NOTIF-FIX** | **Test and fix notifications** bell (overdue, low stock, license renewal links) | `todo` | Computed alerts in `NotificationPanel.tsx`; manual §3.0b T0B7 + G17 |
+| 3 | **LOAD-1** | **Branded loader** — show BikriKhata logo while app/data loads | `todo` | Initial auth + domain bundle fetch; avoid blank screen on slow network |
+| 4 | **THEME-1** | **Dark / light theme** toggle (Settings or system preference) | `todo` | Tailwind dark mode; persist in `localStorage` or tenant prefs |
+| 5 | **WEB-CTA-1** | **Dedupe trial CTAs** — keep **1–2** “7-day free trial” buttons on landing | `todo` | Hero + pricing; reduce nav/footer/section repeats |
+| 6 | **WEB-MEDIA-1** | **Videos + screenshots + feature explain** — show real P1 UI; restore feature storytelling | `todo` | Stale PNGs; removed explain content — [BACKLOG § WEB-MEDIA-1](BACKLOG.md#detail--web-media-1-videos-screenshots-feature-storytelling) |
+| 7 | **WEB-AUDIT-1** | **Full landing audit** — copy, mobile, CTAs after media refresh | `todo` | After WEB-MEDIA-1 + pilot feedback |
+| 8 | **BRAND-LOGO-2** | **New application logo** — PWA, login, app shell | `todo` | [BRAND_ICON_GUIDE](BRAND_ICON_GUIDE.md) |
+| 9 | **AUDIT-LOG-1** | **Activity hub** (`/app/activity`) — who/when/why for bills, payments, settings; revert where allowed | `backlog` | Post-pilot; partial today = payment reverse + reason only — [BACKLOG § AUDIT-LOG-1](BACKLOG.md#detail--audit-log-1-activity-hub--professional-audit-trail) |
 
 ### Later (not blocking launch)
 
 | ID | What | When |
 |----|------|------|
 | **L8** | Inbox email for contact form (`0033` + Resend, ~20 min) | When you want Gmail alerts — [CONTACT_FORM_EMAIL_SETUP.md](CONTACT_FORM_EMAIL_SETUP.md). Leads still save in Supabase + WhatsApp button works today. |
+| **CHANGELOG-APP** | In-app “What’s new” / release notes | Not needed for now — deferred; docs changelog in `LLM_CONTEXT.md` is enough. |
 
 ### When paying shops ask (P2)
 
@@ -113,6 +132,16 @@ When an item is **deferred**, copy its ID to [BACKLOG.md](BACKLOG.md) and set St
 | L6  | **One pilot shop** live ~1 week (real bills)                                  | **ready** | Owner runs [ONBOARDING_FIRST_SHOP](ONBOARDING_FIRST_SHOP.md) — sign-off when week complete                |
 | L7  | Founding **price** on website (one package for all)                           | **done**  | `launchPricing.ts` → landing `#pricing`, license gate, FAQ, terms                                         |
 | L8  | Contact form **email alerts** (Resend + Edge Function + migration 0033)       | **deferred** | Code ready; enable later — [CONTACT_FORM_EMAIL_SETUP](CONTACT_FORM_EMAIL_SETUP.md). Not needed for ads.   |
+| **IRD-DISC-1** | **IRD disclaimers** on sales + purchase print/PDF (not certified e-bill) | **done** | Shipped — [BACKLOG § IRD-DISC-1](BACKLOG.md#detail--ird-disc-1-pre-verification-legal-disclaimers--p0-before-launch) |
+| **DEPLOY-DOM** | Split **`bikrikhata.com`** (marketing) + **`app.bikrikhata.com`** (product) | **todo** | [BACKLOG § DEPLOY-DOM](BACKLOG.md#detail--deploy-dom-split-domains) |
+| **NOTIF-FIX** | Notifications bell — test + fix computed alerts                               | **todo** | `NotificationPanel.tsx`; manual T0B7, G17 |
+| **LOAD-1** | Branded logo loader on slow app/data load                                     | **todo** | Auth + domain bundle |
+| **THEME-1** | Dark / light theme option                                                     | **todo** | Settings or system preference |
+| **WEB-AUDIT-1** | Landing page audit after main features complete                               | **todo** | Post-pilot; with WEB-MEDIA-1 |
+| **WEB-CTA-1** | Landing: **1–2** free trial CTAs only (dedupe buttons)                        | **todo** | `PublicSignupCta`, nav, footer |
+| **WEB-MEDIA-1** | Demo **videos** + **new UI screenshots** + restore feature explain content  | **todo** | Replace stale marketing assets |
+| **BRAND-LOGO-2** | New **application logo** (PWA, login, shell)                                  | **todo** | [BRAND_ICON_GUIDE](BRAND_ICON_GUIDE.md) |
+| **AUDIT-LOG-1** | **Activity hub** — owner audit trail (user, time, reason, revert rules)       | **backlog** | Phase 1+; see BACKLOG § AUDIT-LOG-1a–c |
 
 ---
 
@@ -129,7 +158,7 @@ When an item is **deferred**, copy its ID to [BACKLOG.md](BACKLOG.md) and set St
 | **HSN-1**    | Optional **HSN code** on product form                                | **done** | —      | `0034`; products export CSV                     |
 | EXP-P1       | Export: expenses / damages / returns registers                       | **done** | —      | Settings → Export period registers + backup ZIP |
 | PRICE-4DEC   | Product + sale/purchase line prices up to 4 decimals               | **done** | —      | `0039` on prod; `money.ts` `numericPriceProps`  |
-| NAV-P1       | Stock hub, Home dashboard, nav dedupe                                | **done** | —      | `/app/products`; `/app/stock` → redirect        |
+| NAV-HUB-1      | Stock hub, Home dashboard, nav dedupe                                | **done** | —      | `/app/products`; `/app/stock` → redirect        |
 | SUP-APP      | In-app support inquiry form + WhatsApp                             | **done** | —      | `AppSupportInquiryForm` on `/app/support`       |
 | DATE-AD      | Dual BS+AD dates (AD picker + BS line below)                         | **done** | —      | Full BS picker deferred — **DATE-BS-1**         |
 
@@ -197,6 +226,7 @@ IMP-0 full backup · IMP-1 import · IMP-2 restore · notifications DB · IRD AP
 | Customer PAN/VAT on B2B bill             | Done — 0026                                          |
 | Month-end CSV export                     | Done — Settings → Export                             |
 | IRD e-filing API                         | Phase 3 — not launch                                 |
+| IRD-certified e-bill / statutory invoice | **Not yet** — **IRD-DISC-1** disclaimers required on print/PDF until certified |
 | On-screen sales book UI                  | P2 — RPT-1                                           |
 
 ---
@@ -248,4 +278,4 @@ Tier A export, rebrand, stock adjustment, oversell **0024**, credit warn, shell,
 
 ---
 
-*Last updated: 2026-06-05 — P1 product complete; migrations through `0039` on prod; ads blocked on L2 + L6 only.*
+*Last updated: 2026-06-05 — SSOT = [BACKLOG § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth).*

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {CheckCircle2, Circle} from "lucide-react";
+import { CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -11,59 +11,64 @@ import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/app/NumericInput";
 import { numericMoneyProps } from "@/lib/money";
 import { Select } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { PAYMENT_MODES } from "@/domain/catalogs";
 import type { Sale } from "@/domain/types";
-import { useCustomers, useSales, commitPayment } from "@/store/domain";
+import { useCustomers, useSales, commitPayment, commitAdvancePayment } from "@/store/domain";
 import { DateDisplay } from "@/components/app/DateDisplay";
-import { npr } from "@/lib/utils";
-import { FormPageHeader } from "@/components/app/patterns";
+import { customerAdvanceBalance, customerReceivable } from "@/lib/customerBalance";
+import { advanceReceiptConfirm, type FinancialSaveConfirmConfig } from "@/lib/financialSaveConfirm";
+import { npr, toDateInput } from "@/lib/utils";
+import { FormPageHeader, SegmentedTabs } from "@/components/app/patterns";
 import { DateFormField } from "@/components/app/DateFormField";
 
-/** Open bills for allocation UI — sourced from live `useSales()` (Supabase). */
+type PayMode = "bills" | "advance";
+
 type OpenBill = {
   saleId: string;
   billNo: string;
   date: string;
   total: number;
-  outstanding: number; // remaining unpaid on this bill
+  outstanding: number;
 };
 
 function getOpenBills(sales: Sale[], customerId: string): OpenBill[] {
   return sales
     .filter((s) => s.customerId === customerId && s.balance > 0)
-    .sort((a, b) => a.date.localeCompare(b.date))          // FIFO — oldest first
+    .sort((a, b) => a.date.localeCompare(b.date))
     .map((s) => ({
-      saleId:      s.id,
-      billNo:      s.billNo,
-      date:        s.date,
-      total:       s.grandTotal,
+      saleId: s.id,
+      billNo: s.billNo,
+      date: s.date,
+      total: s.grandTotal,
       outstanding: s.balance,
     }));
 }
 
 export const PaymentPage = () => {
-  const navigate  = useNavigate();
-  const [params]  = useSearchParams();
-  const preId     = params.get("customerId") ?? "";
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const preId = params.get("customerId") ?? "";
+  const preMode = params.get("mode") === "advance" ? "advance" : "bills";
   const CUSTOMERS = useCustomers();
-  const SALES     = useSales();
+  const SALES = useSales();
 
+  const [payMode, setPayMode] = useState<PayMode>(preMode);
   const [customerId, setCustomerId] = useState(preId);
-  const [amount, setAmount]         = useState("");
-  const [mode, setMode]             = useState("Cash");
-  const [reference, setReference]   = useState("");
+  const [amount, setAmount] = useState("");
+  const [mode, setMode] = useState("Cash");
+  const [reference, setReference] = useState("");
   const [chequeDate, setChequeDate] = useState("");
-  const [saving, setSaving]         = useState(false);
-
-  // Which bills are selected for this payment
+  const [paymentDate, setPaymentDate] = useState(toDateInput());
+  const [saving, setSaving] = useState(false);
+  const [advanceConfirm, setAdvanceConfirm] = useState<FinancialSaveConfirmConfig | null>(null);
   const [selectedBills, setSelectedBills] = useState<Set<string>>(new Set());
 
-  const customerOptions  = CUSTOMERS.map((c) => ({ id: c.id, label: c.name, sub: c.area }));
+  const customerOptions = CUSTOMERS.map((c) => ({ id: c.id, label: c.name, sub: c.area }));
   const selectedCustomer = CUSTOMERS.find((c) => c.id === customerId);
-  const openBills        = getOpenBills(SALES, customerId);
-
-  // No auto-selection — the dealer manually ticks which bills this payment applies to.
+  const openBills = getOpenBills(SALES, customerId);
+  const receivable = selectedCustomer ? customerReceivable(selectedCustomer.outstanding) : 0;
+  const advanceBal = selectedCustomer ? customerAdvanceBalance(selectedCustomer.outstanding) : 0;
 
   const toggleBill = (saleId: string) =>
     setSelectedBills((prev) => {
@@ -72,12 +77,11 @@ export const PaymentPage = () => {
       return next;
     });
 
-  const enteredAmt  = Number(amount) || 0;
+  const enteredAmt = Number(amount) || 0;
   const selectedAmt = openBills
     .filter((b) => selectedBills.has(b.saleId))
     .reduce((s, b) => s + b.outstanding, 0);
 
-  // Running allocation: how much of the entered amount lands on each selected bill (FIFO order)
   const allocation = (() => {
     let remaining = enteredAmt;
     return openBills.map((bill) => {
@@ -89,70 +93,134 @@ export const PaymentPage = () => {
   })();
 
   const totalAllocated = allocation.reduce((s, b) => s + b.allocated, 0);
-  const unallocated    = Math.max(0, enteredAmt - totalAllocated);
 
-  const handleSave = async () => {
-    if (!customerId)               { toast.error("Choose a customer.");          return; }
-    if (!enteredAmt || enteredAmt <= 0) { toast.error("Enter a valid amount."); return; }
-    if (selectedBills.size === 0)  { toast.error("Select at least one bill.");   return; }
-    if (mode === "Cheque" && !reference) { toast.error("Enter cheque number."); return; }
-    setSaving(true);
-    try {
-      await new Promise((r) => setTimeout(r, 200));
-      const billNos = openBills.filter((b) => selectedBills.has(b.saleId)).map((b) => b.billNo).join(", ");
-      await commitPayment({
-        customerId,
-        amount:    enteredAmt,
-        mode,
-        reference,
-        date:      new Date().toISOString().slice(0, 10),
-        allocations: allocation
-          .filter((b) => b.allocated > 0)
-          .map((b)  => ({ saleId: b.saleId, amount: b.allocated, billNo: b.billNo })),
-      });
-      toast.success(`${npr(enteredAmt)} recorded against ${billNos}`);
-      navigate(-1);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Payment failed");
-    } finally {
-      setSaving(false);
-    }
+  const performBillPayment = async () => {
+    const billNos = openBills.filter((b) => selectedBills.has(b.saleId)).map((b) => b.billNo).join(", ");
+    await commitPayment({
+      customerId,
+      amount: enteredAmt,
+      mode,
+      reference,
+      date: paymentDate,
+      allocations: allocation
+        .filter((b) => b.allocated > 0)
+        .map((b) => ({ saleId: b.saleId, amount: b.allocated, billNo: b.billNo })),
+    });
+    toast.success(`${npr(enteredAmt)} recorded against ${billNos}`);
+    navigate(-1);
   };
+
+  const performAdvancePayment = async () => {
+    await commitAdvancePayment({
+      customerId,
+      amount: enteredAmt,
+      mode,
+      reference,
+      date: paymentDate,
+    });
+    toast.success(`Advance ${npr(enteredAmt)} recorded on account.`);
+    navigate(-1);
+  };
+
+  const handleSave = () => {
+    if (!customerId) {
+      toast.error("Choose a customer.");
+      return;
+    }
+    if (!enteredAmt || enteredAmt <= 0) {
+      toast.error("Enter a valid amount.");
+      return;
+    }
+    if (mode === "Cheque" && !reference) {
+      toast.error("Enter cheque number.");
+      return;
+    }
+
+    if (payMode === "bills") {
+      if (selectedBills.size === 0) {
+        toast.error("Select at least one bill, or use the Advance tab.");
+        return;
+      }
+      if (enteredAmt > selectedAmt + 0.01) {
+        toast.error(`Amount exceeds selected bills (${npr(selectedAmt)}). Reduce amount or select more bills.`);
+        return;
+      }
+      void (async () => {
+        setSaving(true);
+        try {
+          await performBillPayment();
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Payment failed");
+        } finally {
+          setSaving(false);
+        }
+      })();
+      return;
+    }
+
+    setAdvanceConfirm(advanceReceiptConfirm(enteredAmt));
+  };
+
+  const subtitle =
+    payMode === "bills"
+      ? "Record collection against open sales invoices."
+      : "Record advance when the customer paid before billing.";
 
   return (
     <PageShell stickyBar>
-      <FormPageHeader title="Payment in" subtitle="Record money received from a customer against open bills." />
+      <FormPageHeader title="Payment in" subtitle={subtitle} />
+
+      <SegmentedTabs
+        value={payMode}
+        onChange={setPayMode}
+        className="mb-4"
+        options={[
+          { id: "bills", label: "Against bills" },
+          { id: "advance", label: "Advance only" },
+        ]}
+      />
 
       <div className="space-y-4">
-        {/* ── Customer ── */}
         <FormField label="Customer" required>
           <EntityPicker
             placeholder="Search customers"
             options={customerOptions}
             value={customerId}
-            onChange={(id) => { setCustomerId(id); setAmount(""); setSelectedBills(new Set()); }}
-            onClear={() => { setCustomerId(""); setSelectedBills(new Set()); }}
+            onChange={(id) => {
+              setCustomerId(id);
+              setAmount("");
+              setSelectedBills(new Set());
+            }}
+            onClear={() => {
+              setCustomerId("");
+              setSelectedBills(new Set());
+            }}
             entityLabel="customer"
           />
         </FormField>
 
         {selectedCustomer && (
-          <div className="rounded-lg bg-warning-light border border-warning/20 px-3 py-2 text-sm">
-            <span className="font-medium text-warning-foreground">Total outstanding: </span>
-            <span className="font-bold text-warning-foreground">{npr(selectedCustomer.outstanding)}</span>
-            <span className="ml-2 text-xs text-warning-foreground/70">· oldest {selectedCustomer.oldestBillDays}d</span>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-lg border border-warning/20 bg-warning-light px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase text-warning-foreground/80">Receivable</p>
+              <p className="font-bold text-warning-foreground">{npr(receivable)}</p>
+            </div>
+            <div className="rounded-lg border border-info/20 bg-info-light px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase text-info-foreground/80">Advance</p>
+              <p className="font-bold text-info-foreground">{npr(advanceBal)}</p>
+            </div>
           </div>
         )}
 
-        {/* ── Open bills – select which to settle ── */}
-        {openBills.length > 0 && (
+        {payMode === "bills" && openBills.length > 0 && (
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">Apply to bills</p>
-                <p className="text-xs text-muted">Tick the bills this payment is for</p>
+                <p className="text-xs text-muted">Select invoices this receipt settles</p>
               </div>
               <button
+                type="button"
                 className="text-xs text-teal-600 hover:underline"
                 onClick={() =>
                   selectedBills.size === openBills.length
@@ -168,21 +236,18 @@ export const PaymentPage = () => {
               <CardContent className="p-0">
                 {allocation.map((bill, i) => {
                   const isSelected = selectedBills.has(bill.saleId);
-                  const fullyPaid  = isSelected && bill.allocated >= bill.outstanding;
-                  const partial    = isSelected && bill.allocated > 0 && bill.allocated < bill.outstanding;
+                  const fullyPaid = isSelected && bill.allocated >= bill.outstanding;
+                  const partial = isSelected && bill.allocated > 0 && bill.allocated < bill.outstanding;
                   return (
                     <div
                       key={bill.saleId}
                       onClick={() => toggleBill(bill.saleId)}
                       className={`flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-slate-50 ${i < allocation.length - 1 ? "border-b border-border-subtle" : ""} ${isSelected ? "bg-teal-50/40" : ""}`}
                     >
-                      {/* Checkbox */}
                       <span className="mt-0.5 shrink-0 text-teal-600">
                         {isSelected ? <CheckCircle2 size={18} /> : <Circle size={18} className="text-slate-300" />}
                       </span>
-
-                      {/* Bill info */}
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-sm font-medium text-foreground">{bill.billNo}</span>
                           <span className="text-sm font-semibold text-foreground">{npr(bill.outstanding)}</span>
@@ -190,15 +255,15 @@ export const PaymentPage = () => {
                         <p className="text-xs text-muted">
                           <DateDisplay iso={bill.date} dual compact /> · {npr(bill.total)}
                         </p>
-
-                        {/* Allocation preview */}
                         {isSelected && enteredAmt > 0 && (
-                          <div className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${fullyPaid ? "bg-success-light text-success-foreground" : partial ? "bg-warning-light text-warning-foreground" : "bg-slate-100 text-slate-500"}`}>
+                          <div
+                            className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${fullyPaid ? "bg-success-light text-success-foreground" : partial ? "bg-warning-light text-warning-foreground" : "bg-slate-100 text-slate-500"}`}
+                          >
                             {fullyPaid
-                              ? `✓ Fully settled (${npr(bill.allocated)})`
+                              ? `Settled ${npr(bill.allocated)}`
                               : partial
-                              ? `Partial — ${npr(bill.allocated)} of ${npr(bill.outstanding)}`
-                              : "No amount left to allocate"}
+                                ? `Partial ${npr(bill.allocated)} of ${npr(bill.outstanding)}`
+                                : "No amount left"}
                           </div>
                         )}
                       </div>
@@ -208,18 +273,26 @@ export const PaymentPage = () => {
               </CardContent>
             </Card>
             <p className="mt-1.5 text-xs text-muted">
-              Selected: {npr(selectedAmt)} outstanding across {selectedBills.size} bill{selectedBills.size !== 1 ? "s" : ""}
+              Selected: {npr(selectedAmt)} across {selectedBills.size} bill{selectedBills.size !== 1 ? "s" : ""}
             </p>
           </div>
         )}
 
-        {openBills.length === 0 && customerId && (
-          <div className="rounded-xl bg-success-light border border-success/20 px-4 py-3 text-sm text-success-foreground">
-            No open bills — this customer has no outstanding balance.
+        {payMode === "bills" && openBills.length === 0 && customerId && (
+          <div className="rounded-xl border border-border-subtle bg-surface-muted/30 px-4 py-3 text-sm text-muted">
+            No open invoices. Use <strong className="text-foreground">Advance only</strong> if the customer paid
+            before billing, or raise a sales invoice first.
           </div>
         )}
 
-        {/* ── Amount ── */}
+        {payMode === "advance" && customerId && (
+          <p className="rounded-lg border border-info/20 bg-info-light px-3 py-2 text-xs text-info-foreground leading-snug">
+            Advance is applied automatically to this customer&apos;s next sales invoice (up to the invoice total).
+          </p>
+        )}
+
+        <DateFormField label="Receipt date" value={paymentDate} onChange={setPaymentDate} />
+
         <FormField label="Amount received (NPR)" required>
           <NumericInput
             {...numericMoneyProps}
@@ -229,16 +302,11 @@ export const PaymentPage = () => {
           />
         </FormField>
 
-        {unallocated > 0 && (
-          <div className="rounded-lg bg-info-light border border-info/20 px-3 py-2 text-sm text-info-foreground">
-            <strong>{npr(unallocated)}</strong> unallocated — will be kept as advance credit.
-          </div>
-        )}
-
-        {/* ── Mode ── */}
         <FormField label="Payment mode" required>
           <Select value={mode} onChange={(e) => setMode(e.target.value)}>
-            {PAYMENT_MODES.map((m) => <option key={m}>{m}</option>)}
+            {PAYMENT_MODES.map((m) => (
+              <option key={m}>{m}</option>
+            ))}
           </Select>
         </FormField>
 
@@ -251,23 +319,45 @@ export const PaymentPage = () => {
         </FormField>
 
         {mode === "Cheque" && (
-          <DateFormField
-            label="Expected clearing date"
-            value={chequeDate}
-            onChange={setChequeDate}
-          />
+          <DateFormField label="Expected clearing date" value={chequeDate} onChange={setChequeDate} />
         )}
       </div>
 
+      <ConfirmDialog
+        open={advanceConfirm !== null}
+        title={advanceConfirm?.title ?? ""}
+        description={advanceConfirm?.content}
+        confirmLabel={advanceConfirm?.confirmLabel ?? "Confirm"}
+        cancelLabel="Cancel"
+        loading={saving}
+        onConfirm={() => {
+          void (async () => {
+            setSaving(true);
+            try {
+              await performAdvancePayment();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Advance failed");
+            } finally {
+              setSaving(false);
+              setAdvanceConfirm(null);
+            }
+          })();
+        }}
+        onCancel={() => {
+          if (!saving) setAdvanceConfirm(null);
+        }}
+      />
+
       <StickyBar
-        rows={[
-          ["Received", npr(enteredAmt)],
-          ...(unallocated > 0 ? [["Advance credit", npr(unallocated)] as [string, string]] : []),
-        ]}
-        action="Save payment"
+        rows={[["Received", npr(enteredAmt)]]}
+        action={payMode === "advance" ? "Save advance" : "Save payment"}
         onAction={handleSave}
         loading={saving}
-        disabled={!customerId || !enteredAmt || selectedBills.size === 0}
+        disabled={
+          !customerId ||
+          !enteredAmt ||
+          (payMode === "bills" && (openBills.length === 0 || selectedBills.size === 0))
+        }
       />
     </PageShell>
   );

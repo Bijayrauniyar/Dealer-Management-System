@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import {Download, Plus, Trash2, Eye, X, Save} from "lucide-react";
+import {Download, Eye, Pencil, Plus, Save, Trash2, X} from "lucide-react";
 import { downloadBillPdf } from "@/lib/billExport";
 import { printBill } from "@/lib/printBill";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
 import { DateFormField } from "@/components/app/DateFormField";
 import { EntityPicker } from "@/components/app/EntityPicker";
+import { ProductQuickModal } from "@/components/app/ProductQuickModal";
 import { StickyBar } from "@/components/app/StickyBar";
 import { BillPrintView } from "@/components/app/BillPrintView";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +20,14 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_MODES } from "@/domain/catalogs";
-import { conversionLabel, linePricingForProduct, productUomChoices } from "@/lib/uom";
+import {
+  baseUnitsToBillQty,
+  billQtyToBaseUnits,
+  conversionLabel,
+  linePricingForProduct,
+  lineUomQtyHint,
+  productUomChoices,
+} from "@/lib/uom";
 import {
   useProducts,
   useCustomers,
@@ -33,12 +41,18 @@ import { getVatPct, tenantChargesVat } from "@/lib/billDisplay";
 import { numericMoneyProps, numericPercentProps, numericQtyProps, roundMoney } from "@/lib/money";
 import { buildSaleProductPickerOptions } from "@/lib/stockAlert";
 import { stripFocSuffixFromName } from "@/lib/billFoc";
+import { ConfirmDialog } from "@/components/app/ConfirmDialog";
+import {
+  salesCollectedAdjustmentConfirm,
+  type FinancialSaveConfirmConfig,
+} from "@/lib/financialSaveConfirm";
 import {
   SAVE_INVOICE_ACTION,
   UPDATE_INVOICE_ACTION,
   SALES_INVOICE_LABEL,
 } from "@/lib/actionLabels";
 import { syncSchemeFreeLines, schemeHintForLine, type SaleDraftLine } from "@/lib/schemeApply";
+import { customerAdvanceBalance } from "@/lib/customerBalance";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
 import { FormPageHeader, InfoCallout, PreviewToolbar } from "@/components/app/patterns";
 
@@ -108,8 +122,18 @@ export const SaleEntryPage = () => {
 
   const [notes, setNotes]     = useState(existing?.notes ?? "");
   const [saving, setSaving]   = useState(false);
+  const [saveConfirm, setSaveConfirm] = useState<FinancialSaveConfirmConfig | null>(null);
   const [previewing, setPrev] = useState(false);
   const [exportingPreview, setExportingPreview] = useState(false);
+  const [productModal, setProductModal] = useState<{
+    lineId: number;
+    productId?: string;
+    initialName?: string;
+  } | null>(null);
+  const [pendingLineProduct, setPendingLineProduct] = useState<{
+    lineId: number;
+    productId: string;
+  } | null>(null);
   const setLinesWithSchemes = useCallback(
     (updater: (ls: Line[]) => Line[]) => {
       setLines((ls) => {
@@ -154,6 +178,14 @@ export const SaleEntryPage = () => {
     setDueDate(existing.dueDate ?? "");
     setNotes(existing.notes ?? "");
   }, [existing, editBillNo, PRODUCTS]);
+
+  useEffect(() => {
+    if (!pendingLineProduct) return;
+    const product = PRODUCTS.find((p) => p.id === pendingLineProduct.productId);
+    if (!product) return;
+    applyProductToLine(pendingLineProduct.lineId, product.id, product.name);
+    setPendingLineProduct(null);
+  }, [pendingLineProduct, PRODUCTS]);
 
   // ── Derived totals (MRP-based line amounts; bill discount unchanged below) ──
   const lineAmount = (l: Line) =>
@@ -216,6 +248,7 @@ export const SaleEntryPage = () => {
       productId,
       productName,
       uom,
+      qty: 1,
       mrp,
       rate,
       discountPct: product.discountPct ?? 0,
@@ -223,13 +256,29 @@ export const SaleEntryPage = () => {
   };
 
   const handleLineUomChange = (lineId: number, productId: string, newUom: string) => {
+    const line = lines.find((l) => l.id === lineId);
     const product = PRODUCTS.find((p) => p.id === productId);
-    if (!product) {
+    if (!line || !product) {
       updateLine(lineId, { uom: newUom });
       return;
     }
+    const baseQty = billQtyToBaseUnits(
+      line.qty,
+      line.uom,
+      product.uom,
+      product.uomConversion ?? null,
+    );
+    const newQty = Math.max(
+      0,
+      baseUnitsToBillQty(baseQty, newUom, product.uom, product.uomConversion ?? null),
+    );
+    const qty = Number.isInteger(newQty) ? newQty : roundMoney(newQty);
     const { mrp, rate } = linePricingForProduct(product, newUom);
-    updateLine(lineId, { uom: newUom, mrp, rate });
+    updateLine(lineId, { uom: newUom, mrp, rate, qty: qty || 1 });
+  };
+
+  const openProductModal = (lineId: number, productId?: string, initialName?: string) => {
+    setProductModal({ lineId, productId, initialName });
   };
 
   // ── Save ────────────────────────────────────────────────────────────
@@ -247,10 +296,6 @@ export const SaleEntryPage = () => {
   const validate = () => {
     if (!customerId) { toast.error("Choose a customer."); return false; }
     if (lines.every((l) => !l.productId)) { toast.error("Add at least one item."); return false; }
-    if (isEdit && grandTotal + 0.01 < recordedPaid) {
-      toast.error(`New total (${npr(grandTotal)}) can't be less than already collected (${npr(recordedPaid)}).`);
-      return false;
-    }
     if (balanceDue > 0 && !dueDate) { toast.error("Set a due date for the outstanding balance."); return false; }
     if (!isEdit && !billNo) {
       toast.error("Bill number is loading — try again in a moment.");
@@ -262,6 +307,7 @@ export const SaleEntryPage = () => {
   const savedBillNo = billNo;
 
   const customer = CUSTOMERS.find((c) => c.id === customerId);
+  const customerAdvance = customer ? customerAdvanceBalance(customer.outstanding) : 0;
 
   // Build a Sale object from current form state so BillDetailPage can render
   // it immediately without needing it to exist in the static SALES_BY_BILL map.
@@ -328,25 +374,47 @@ export const SaleEntryPage = () => {
     return msg || "Could not save bill";
   };
 
-  const handleSave = async () => {
-    if (!validate()) return;
-    maybeWarnCreditLimit();
+  const collectedWillCap = isEdit && grandTotal + 0.01 < recordedPaid;
+
+  const performSave = async () => {
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 200));
       const sale = buildSale();
-      const finalBillNo = await commitSale(sale);
-      navigate(`/app/bills/${encodeURIComponent(finalBillNo)}`, { state: { sale: { ...sale, billNo: finalBillNo } } });
+      const { billNo: finalBillNo, advanceApplied } = await commitSale(sale);
+      navigate(`/app/bills/${encodeURIComponent(finalBillNo)}`, {
+        state: { sale: { ...sale, billNo: finalBillNo } },
+      });
+      const advanceNote =
+        !isEdit && advanceApplied > 0.01
+          ? ` Advance ${npr(advanceApplied)} applied from customer credit.`
+          : "";
       toast.success(
         isEdit
-          ? `Bill ${finalBillNo} updated · ${npr(grandTotal)}${balanceDue > 0 ? ` · ${npr(balanceDue)} due` : ""}`
-          : `Bill ${finalBillNo} saved · ${npr(grandTotal)}${balanceDue > 0 ? ` · ${npr(balanceDue)} due` : " · Fully paid"}`,
+          ? collectedWillCap
+            ? `Bill ${finalBillNo} updated. Recorded collection adjusted to the revised total.`
+            : `Bill ${finalBillNo} updated.`
+          : `Bill ${finalBillNo} saved.${advanceNote}`,
       );
     } catch (e) {
       toast.error(saleSaveErrorMessage(e));
     } finally {
       setSaving(false);
+      setSaveConfirm(null);
     }
+  };
+
+  const handleSave = () => {
+    if (!validate()) return;
+    maybeWarnCreditLimit();
+
+    if (collectedWillCap && existing) {
+      setSaveConfirm(
+        salesCollectedAdjustmentConfirm(grandTotal, recordedPaid, existing.billNo),
+      );
+      return;
+    }
+    void performSave();
   };
 
   const handlePreviewDownload = async () => {
@@ -428,6 +496,13 @@ export const SaleEntryPage = () => {
           />
         </FormField>
 
+        {!isEdit && customerAdvance > 0 && (
+          <p className="rounded-lg border border-info/20 bg-info-light px-3 py-2 text-xs text-info-foreground leading-snug">
+            This customer has <strong>{npr(customerAdvance)}</strong> advance on account. It will be
+            applied automatically when you save this invoice (after any cash collected on the bill).
+          </p>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Bill no." hint="Auto-generated">
             <div className="flex h-11 items-center rounded-lg border border-border-subtle bg-slate-50 px-3 text-sm font-semibold tracking-wide text-teal-700">
@@ -460,14 +535,40 @@ export const SaleEntryPage = () => {
               ) : (
               <Card key={line.id}>
                 <CardContent className="space-y-3 p-3">
-                  <EntityPicker
-                    placeholder="Search product"
-                    options={productOptions}
-                    value={line.productId}
-                    onChange={(id, opt) => applyProductToLine(line.id, id, opt.label)}
-                    onClear={() => updateLine(line.id, { productId: "", productName: "", uom: "PCS", mrp: 0, rate: 0, discountPct: 0 })}
-                    entityLabel="product"
-                  />
+                  <div className="flex items-start gap-1.5">
+                    <div className="min-w-0 flex-1">
+                      <EntityPicker
+                        placeholder="Search product"
+                        options={productOptions}
+                        value={line.productId}
+                        onChange={(id, opt) => applyProductToLine(line.id, id, opt.label)}
+                        onClear={() =>
+                          updateLine(line.id, {
+                            productId: "",
+                            productName: "",
+                            uom: "PCS",
+                            qty: 1,
+                            mrp: 0,
+                            rate: 0,
+                            discountPct: 0,
+                          })
+                        }
+                        entityLabel="product"
+                        onCreateNew={() => openProductModal(line.id)}
+                        onCreateNewWithQuery={(q) => openProductModal(line.id, undefined, q)}
+                      />
+                    </div>
+                    {line.productId ? (
+                      <button
+                        type="button"
+                        title="Edit product"
+                        className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-muted hover:bg-slate-50 hover:text-teal-600"
+                        onClick={() => openProductModal(line.id, line.productId)}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    ) : null}
+                  </div>
                   {line.productId && (line.discountPct ?? 0) > 0 && (
                     <p className="text-[11px] text-amber-700">
                       Line discount {line.discountPct}% on{" "}
@@ -524,6 +625,16 @@ export const SaleEntryPage = () => {
                         value={line.qty}
                         onChange={(v) => updateLine(line.id, { qty: v > 0 ? v : 0 })}
                       />
+                      {(() => {
+                        const product = PRODUCTS.find((p) => p.id === line.productId);
+                        const hint =
+                          product && line.qty > 0
+                            ? lineUomQtyHint(line.qty, line.uom, product)
+                            : null;
+                        return hint ? (
+                          <p className="mt-0.5 text-[10px] text-teal-700">{hint}</p>
+                        ) : null;
+                      })()}
                     </FormField>
                     <FormField label="Amount">
                       <div className="flex h-11 flex-col justify-center rounded-lg bg-slate-50 px-3">
@@ -717,6 +828,29 @@ export const SaleEntryPage = () => {
           <Input placeholder="Any note for this invoice" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </FormField>
       </div>
+
+      {productModal ? (
+        <ProductQuickModal
+          open
+          productId={productModal.productId}
+          initialName={productModal.initialName}
+          onClose={() => setProductModal(null)}
+          onSaved={(id) => setPendingLineProduct({ lineId: productModal.lineId, productId: id })}
+        />
+      ) : null}
+
+      <ConfirmDialog
+        open={saveConfirm !== null}
+        title={saveConfirm?.title ?? ""}
+        description={saveConfirm?.content}
+        confirmLabel={saveConfirm?.confirmLabel ?? "Confirm"}
+        cancelLabel="Cancel"
+        loading={saving}
+        onConfirm={() => void performSave()}
+        onCancel={() => {
+          if (!saving) setSaveConfirm(null);
+        }}
+      />
 
       <StickyBar
         compact

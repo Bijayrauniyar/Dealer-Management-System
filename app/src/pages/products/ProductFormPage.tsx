@@ -37,7 +37,12 @@ import {
   roundPercent,
 } from "@/lib/money";
 import { Select } from "@/components/ui/select";
-import { useBusinessSettings, useProductsCatalog, upsertProductLive } from "@/store/domain";
+import {
+  useBusinessSettings,
+  useMasterCatalogLoadState,
+  useProductsCatalog,
+  upsertProductLive,
+} from "@/store/domain";
 import { FormPageHeader } from "@/components/app/patterns";
 import { supabase } from "@/lib/supabase";
 import { addVatToExclPrice, getVatPct, purchasePriceExclFromProduct } from "@/lib/tax";
@@ -64,6 +69,7 @@ export const ProductFormPage = () => {
   const navigate      = useNavigate();
   const { productId } = useParams<{ productId?: string }>();
   const PRODUCTS      = useProductsCatalog();
+  const catalogState  = useMasterCatalogLoadState();
   const business      = useBusinessSettings();
   const existing      = productId ? PRODUCTS.find((p) => p.id === productId) : undefined;
   const isEdit        = Boolean(existing);
@@ -128,16 +134,25 @@ export const ProductFormPage = () => {
       : 0;
   const [buyPrice, setBuyPrice] = useState(initialBuyExcl);
 
-  // Markup % — empty = unset (hint shows Settings default); 0 = no markup; not prefilled from Settings
+  // Markup % — new products use Settings default (same as min qty); edit derives from buy/sell
   const [markupPct, setMarkupPct] = useState<number | null>(() => {
-    if (!existing || initialBuyExcl <= 0) return null;
-    return roundPercent(((existing.sellingPrice - initialBuyExcl) / initialBuyExcl) * 100);
+    if (!existing) return defaultMarkup;
+    if (initialBuyExcl <= 0) return 0;
+    const sp = existing.sellingPrice;
+    if (sp <= 0 || sp < initialBuyExcl * 0.5) return 0;
+    return roundPercent(((sp - initialBuyExcl) / initialBuyExcl) * 100);
   });
 
   const markupForCalc = (m: number | null) => m ?? 0;
 
   // Sell price is derived from buy × (1 + markup/100), but can be overridden
-  const [sellPrice, setSellPrice] = useState(existing?.sellingPrice ?? 0);
+  const [sellPrice, setSellPrice] = useState(() => {
+    if (!existing) return 0;
+    const sp = existing.sellingPrice;
+    const buy = initialBuyExcl;
+    if (buy > 0 && (sp <= 0 || sp < buy * 0.5)) return roundMoney(buy, PRICE_DECIMAL_PLACES);
+    return sp ?? 0;
+  });
 
   const [discountPct,   setDiscountPct]   = useState(existing?.discountPct   ?? 0);
 
@@ -146,6 +161,52 @@ export const ProductFormPage = () => {
   const [minQtyPack, setMinQtyPack] = useState(
     existing?.minQtyPack ?? business.defaultMinPackQty,
   );
+
+  // New product only — never run on /edit/:id while catalog is still loading (was overwriting qty fields).
+  useEffect(() => {
+    if (productId) return;
+    setMinQty(business.defaultMinQty);
+    setMinQtyPack(business.defaultMinPackQty);
+    setMarkupPct(business.defaultMarkupPct);
+  }, [productId, business.defaultMinQty, business.defaultMinPackQty, business.defaultMarkupPct]);
+
+  // Catalog loads after first paint — sync edit form when product row arrives.
+  useEffect(() => {
+    if (!existing) return;
+    setName(existing.name);
+    setCategory(existing.category);
+    setUom(existing.uom);
+    setMrp(existing.mrp);
+    setDiscountPct(existing.discountPct);
+    setMinQty(existing.minQty);
+    setMinQtyPack(existing.minQtyPack ?? business.defaultMinPackQty);
+    setDescription(existing.description ?? "");
+    setHsnCode(existing.hsnCode ?? "");
+    setPackUom(existing.uomConversion?.packUom ?? "");
+    setPiecesPerPack(existing.uomConversion?.piecesPerPack ?? 0);
+    const buy =
+      existing.costPrice > 0 ? purchasePriceExclFromProduct(existing.costPrice, vatPct) : 0;
+    setBuyPrice(buy);
+    const sp = existing.sellingPrice;
+    if (buy > 0 && sp > 0 && sp >= buy * 0.5) {
+      setMarkupPct(roundPercent(((sp - buy) / buy) * 100));
+      setSellPrice(sp);
+    } else {
+      setMarkupPct(0);
+      setSellPrice(buy > 0 ? roundMoney(buy, PRICE_DECIMAL_PLACES) : sp);
+    }
+    setExtraUomRows(() => {
+      const pack = existing.uomConversion?.packUom;
+      return Object.entries(existing.uomPrices)
+        .filter(([k]) => k !== existing.uom && k !== pack)
+        .map(([uom, p], i) => ({
+          id: i + 1,
+          uom,
+          mrp: p.mrp,
+          sellingPrice: p.sellingPrice,
+        }));
+    });
+  }, [existing?.id, vatPct, business.defaultMinPackQty]);
 
   const [packUom, setPackUom] = useState(existing?.uomConversion?.packUom ?? "");
   const [piecesPerPack, setPiecesPerPack] = useState(
@@ -180,7 +241,8 @@ export const ProductFormPage = () => {
   const handleBuyChange = (v: number) => {
     const rounded = roundMoney(v, PRICE_DECIMAL_PLACES);
     setBuyPrice(rounded);
-    recalcSellFromMarkup(rounded, markupPct);
+    const m = markupPct ?? defaultMarkup;
+    recalcSellFromMarkup(rounded, m);
   };
 
   const handleMarkupChange = (v: number | null) => {
@@ -194,6 +256,8 @@ export const ProductFormPage = () => {
     setSellPrice(rounded);
     if (buyPrice > 0 && rounded > 0) {
       setMarkupPct(roundPercent(((rounded - buyPrice) / buyPrice) * 100));
+    } else if (rounded <= 0) {
+      setMarkupPct(0);
     }
   };
 
@@ -293,6 +357,24 @@ export const ProductFormPage = () => {
       setSaving(false);
     }
   };
+
+  if (productId && catalogState === "loading" && !existing) {
+    return (
+      <PageShell>
+        <FormPageHeader title="Edit product" subtitle="Loading…" />
+        <p className="text-center text-sm text-muted">Loading product…</p>
+      </PageShell>
+    );
+  }
+
+  if (productId && catalogState === "ready" && !existing) {
+    return (
+      <PageShell>
+        <FormPageHeader title="Product not found" />
+        <p className="text-center text-sm text-muted">This product is not in your catalogue.</p>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell stickyBar>
@@ -404,8 +486,8 @@ export const ProductFormPage = () => {
             <p><strong>MRP</strong> — printed on product. Shown on bill as reference only.</p>
             <p><strong>Buy price</strong> — supplier cost before VAT. With-VAT amount is calculated from Settings.</p>
             <p>
-              <strong>Markup %</strong> — leave blank for no markup, or use ↻ on sell price to apply Settings default (
-              {defaultMarkup}%).
+              <strong>Markup %</strong> — new products start from Settings default ({defaultMarkup}%); use ↻ on
+              sell price to recalculate from buy × markup.
             </p>
             <p>
               <strong>Sell price</strong> — updates from buy × markup; type to override (<em>excl. VAT</em>).

@@ -137,7 +137,7 @@ export function SettingsPage() {
   const [billFooter, setBillFooter] = useState("");
   const [overdueDays, setOverdueDays] = useState(7);
   const [dueSoonDays, setDueSoonDays] = useState(3);
-  const [defaultMarkupPct, setDefaultMarkupPct] = useState(15);
+  const [defaultMarkupPct, setDefaultMarkupPct] = useState(0);
   const [defaultMinQty, setDefaultMinQty] = useState(20);
   const [defaultMinPackQty, setDefaultMinPackQty] = useState(2);
   const [defaultVatPct, setDefaultVatPct] = useState(13);
@@ -182,8 +182,8 @@ export function SettingsPage() {
     setBillFooter(data.bill_footer ?? "");
     setOverdueDays(data.overdue_days);
     setDueSoonDays(data.due_soon_days);
-    setDefaultMarkupPct(data.default_markup_pct);
-    setDefaultMinQty(data.default_min_qty);
+    setDefaultMarkupPct(data.default_markup_pct ?? 0);
+    setDefaultMinQty(data.default_min_qty ?? 20);
     setDefaultMinPackQty(data.default_min_pack_qty ?? 2);
     setDefaultVatPct(Number(data.default_vat_pct ?? 13));
     const cats = Array.isArray(data.product_categories)
@@ -715,14 +715,14 @@ export function SettingsPage() {
             <div className="rounded-lg border border-border-subtle bg-slate-50 p-3">
               <p className="mb-2 text-xs font-semibold text-foreground">Default low stock alert</p>
               <p className="mb-3 text-[11px] text-muted leading-snug">
-                Applied to new products. Stock is in pieces (PCS); Box applies when the product has pack
-                conversion.
+                Applied to new products. Stock is in pieces (PCS); Box/Ctn applies when the product has
+                pack conversion.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Min (PCS / pieces)">
                   <NumericInput min={0} value={defaultMinQty} onChange={setDefaultMinQty} />
                 </FormField>
-                <FormField label="Min (Box / pack)">
+                <FormField label="Min (Box / Ctn / pack)">
                   <NumericInput min={0} value={defaultMinPackQty} onChange={setDefaultMinPackQty} />
                 </FormField>
               </div>

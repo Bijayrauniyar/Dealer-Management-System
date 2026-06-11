@@ -4,7 +4,8 @@
  */
 import React, { useEffect, useState } from "react";
 import type { Sale, Customer } from "@/domain/types";
-import { useBusinessSettings } from "@/store/domain";
+import { useBusinessSettings, useProducts } from "@/store/domain";
+import { billLineQtyDisplay } from "@/lib/purchaseLineDisplay";
 import { BillLetterhead } from "@/components/app/BillLetterhead";
 import {
   billDocumentTitleDisplay,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/billPriceDisplay";
 import { createSalesBillQrSignedUrl } from "@/lib/salesBillQrStorage";
 import { roundMoney } from "@/lib/money";
+import { IRD_SALES_BILL_DISCLAIMER } from "@/lib/irdDisclaimer";
 import { billLineAmount, saleLineDisplayMrp } from "@/lib/saleLineMath";
 
 type Props = {
@@ -79,6 +81,7 @@ function BillCellInner({
 
 export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
   const business = useBusinessSettings();
+  const PRODUCTS = useProducts();
   const lines = Array.isArray(sale.lines) ? sale.lines : [];
   const hasTax = sale.vatRate > 0;
   const hasTerms = sale.billTermsAmount > 0;
@@ -233,6 +236,8 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
                 const foc = isFocSaleLine(line);
                 const { title, subtitle } = billLineParticulars(line);
                 const unitPriceCell = billLineUnitPriceDisplay(line, business.salesBillPriceMode);
+                const product = PRODUCTS.find((p) => p.id === line.productId);
+                const qtyDisp = billLineQtyDisplay(line.qty, line.uom || "PCS", product);
                 return (
                 <tr key={i} className={foc ? "bg-pink-50/50 text-gray-700" : "even:bg-gray-50/60"}>
                   <td className="bill-cell border border-gray-300 p-0 text-gray-500">
@@ -254,10 +259,19 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
                     <BillCellInner align="center">{unitPriceCell}</BillCellInner>
                   </td>
                   <td className="bill-cell border border-gray-300 p-0 text-[7px] text-gray-600 sm:text-[8px]">
-                    <BillCellInner align="center">{line.uom || "PCS"}</BillCellInner>
+                    <BillCellInner align="center">{qtyDisp.uom}</BillCellInner>
                   </td>
                   <td className="bill-cell border border-gray-300 p-0 tabular-nums">
-                    <BillCellInner align="center">{nprNum(line.qty)}</BillCellInner>
+                    <BillCellInner align="center">
+                      <span className="block leading-tight">
+                        <span>{nprNum(qtyDisp.qty)}</span>
+                        {qtyDisp.sub ? (
+                          <span className="mt-0.5 block text-[7px] font-normal text-gray-500">
+                            ({qtyDisp.sub})
+                          </span>
+                        ) : null}
+                      </span>
+                    </BillCellInner>
                   </td>
                   {hasLineDisc && (
                     <td className="bill-cell border border-gray-300 p-0 text-amber-700">
@@ -399,6 +413,10 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
             ) : null}
           </div>
         ) : null}
+
+        <p className="bill-ird-disclaimer mt-2 text-[8px] leading-snug text-gray-500">
+          {IRD_SALES_BILL_DISCLAIMER}
+        </p>
 
         {/* ── Signatures ── */}
         <div className="bill-signatures mt-2 grid grid-cols-2 gap-3 border-t border-dashed border-gray-300 pt-2 sm:mt-1.5 sm:pt-1.5">

@@ -5,17 +5,17 @@ import { cn } from "@/lib/utils";
 type Props = {
   label?: string;
   className?: string;
-  /** Reserved for future; back uses history same as prior inline buttons. */
-  fallbackTo?: string;
+  /** When set, navigates here instead of browser history. */
+  to?: string;
 };
 
-export function PageBackLink({ label = "Back", className }: Props) {
+export function PageBackLink({ label = "Back", className, to }: Props) {
   const navigate = useNavigate();
 
   return (
     <button
       type="button"
-      onClick={() => navigate(-1)}
+      onClick={() => (to ? navigate(to) : navigate(-1))}
       className={cn(
         "mb-4 flex items-center gap-1 text-sm font-medium text-teal-600",
         className,

@@ -1,9 +1,10 @@
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
   open: boolean;
   title: string;
-  description?: string;
+  description?: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   confirmVariant?: "primary" | "danger";

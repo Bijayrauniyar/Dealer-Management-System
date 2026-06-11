@@ -47,16 +47,18 @@ export function FormPageHeader({
   title,
   subtitle,
   backLabel,
+  backTo,
   className,
 }: {
   title: string;
   subtitle?: string;
   backLabel?: string;
+  backTo?: string;
   className?: string;
 }) {
   return (
     <header className={cn("mb-5", className)}>
-      <PageBackLink label={backLabel} />
+      <PageBackLink label={backLabel} to={backTo} />
       <PageTitle className="mb-1">{title}</PageTitle>
       {subtitle ? <p className="text-sm text-muted">{subtitle}</p> : null}
     </header>
@@ -111,7 +113,7 @@ export function AddEntityButton({
   className?: string;
 }) {
   return (
-    <Button type="button" size="sm" onClick={onClick} className={className}>
+    <Button type="button" size="sm" onClick={onClick} className={cn("shrink-0 whitespace-nowrap", className)}>
       <Plus size={14} aria-hidden />
       {label}
     </Button>

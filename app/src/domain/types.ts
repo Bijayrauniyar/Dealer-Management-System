@@ -208,6 +208,9 @@ export type Payment = {
   mode: string;
   reference: string;
   billNo?: string;
+  isAdvance?: boolean;
+  reversedAt?: string | null;
+  reversalReason?: string | null;
 };
 
 export type CapitalEntry = {
@@ -234,6 +237,8 @@ export type PurchaseListItem = {
   /** Number on the supplier's tax invoice (optional). */
   supplierInvoiceNo: string;
   date: string;
+  /** Supplier payment due; due on/before today = recorded as paid on save. */
+  dueDate?: string;
   total: number;
   supplierId: string;
   supplierName: string;
@@ -246,6 +251,11 @@ export type PurchaseLineDetail = {
   productName: string;
   qty: number;
   uom: string;
+  /** Base unit qty (stock PCS) when different from displayed pack qty. */
+  baseQty?: number;
+  baseUom?: string;
+  /** Alternate qty/UOM subline on print (e.g. "108 PCS" under 6 Ctn). */
+  qtyAlt?: string | null;
   rateExcl: number;
   rateIncl: number;
   vatAmount: number;

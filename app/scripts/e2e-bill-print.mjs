@@ -221,6 +221,17 @@ function runSourceTests() {
     ["EntityPicker", "cursor-not-allowed", entityPicker],
     ["domainLive", "purchaseDate", domainLive],
     ["PurchasePage", "purchaseDate: date", purchasePage],
+    ["BillPrintView", "IRD_SALES_BILL_DISCLAIMER", billView],
+    ["BillPrintView", "billLineQtyDisplay", billView],
+    ["billPdfDocument", "IRD_SALES_BILL_DISCLAIMER", billPdf],
+    ["PurchaseBillView", "IRD_PURCHASE_BILL_DISCLAIMER", purchaseBill],
+    ["uom.ts", "lineUomQtyHint", readFileSync(resolve(SRC, "lib/uom.ts"), "utf8")],
+    ["PurchasePage", "lineUomQtyHint", purchasePage],
+    ["SaleEntryPage", "lineUomQtyHint", saleEntry],
+    ["SaleEntryPage", "salesCollectedAdjustmentConfirm", saleEntry],
+    ["EntityPicker", "onCreateNewWithQuery", entityPicker],
+    ["ProductQuickModal", "upsertProductLive", readFileSync(resolve(SRC, "components/app/ProductQuickModal.tsx"), "utf8")],
+    ["printBill.ts", "printPurchaseBill", readFileSync(resolve(SRC, "lib/printBill.ts"), "utf8")],
   ];
   for (const [file, needle, text] of mustHave) {
     if (!text.includes(needle)) r.fail(`${file} contains ${needle}`, "missing");

@@ -4,7 +4,12 @@ import { PageShell } from "@/components/app/PageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { commitSetProductActive, useProductsCatalog, useSchemes } from "@/store/domain";
+import {
+  commitSetProductActive,
+  useMasterCatalogLoadState,
+  useProductsCatalog,
+  useSchemes,
+} from "@/store/domain";
 import { MasterArchiveAction } from "@/components/app/MasterArchiveAction";
 import {
   isLowStock,
@@ -43,8 +48,18 @@ export const ProductDetailPage = () => {
   const navigate = useNavigate();
   const PRODUCTS = useProductsCatalog();
   const SCHEMES = useSchemes();
+  const catalogState = useMasterCatalogLoadState();
 
   const product = PRODUCTS.find((p) => p.id === productId);
+
+  if (!product && catalogState === "loading") {
+    return (
+      <PageShell>
+        <PageBackLink className="flex items-center gap-1 text-sm font-medium text-teal-600" />
+        <p className="mt-8 text-center text-sm text-muted">Loading product…</p>
+      </PageShell>
+    );
+  }
 
   if (!product) {
     return (

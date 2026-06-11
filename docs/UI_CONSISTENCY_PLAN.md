@@ -78,6 +78,12 @@ Every master entity (products, customers, suppliers) should follow:
 - [ ] `grep bg-teal-600 app/src/pages` audit for ad-hoc primary buttons
 - [ ] **DATE-BS-1** — BS day/month/year dropdowns (backlog; native AD picker + BS line below today)
 
+### Planned — **UX-HUB-1** (list + entry flow standard)
+
+**Goal:** One hub per entity — list + **Add** on top; save returns to hub; inline sheet for simple masters. Full spec: [BACKLOG § UX-HUB-1](BACKLOG.md#detail--ux-hub-1-entity-hub--entry-flow--one-standard-for-whole-app).
+
+Until shipped: keep current list → `/new` form → `navigate(-1)`; align new screens with `ListPageHeader` + `AddEntityButton` only.
+
 ---
 
 ## Design rules

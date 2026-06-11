@@ -239,6 +239,49 @@ export function packUomOptions(
   return catalog.filter((u) => u !== baseUom);
 }
 
+/** Human hint: qty in line UOM ↔ base units (e.g. "6 Ctn = 108 PCS"). */
+export function lineUomQtyHint(
+  qty: number,
+  lineUom: string,
+  product: Product,
+): string | null {
+  const q = Number(qty) || 0;
+  if (q <= 0) return null;
+  const conv = product.uomConversion;
+  if (!conv) return null;
+  const base = product.uom?.trim() || "PCS";
+  const unit = lineUom.trim();
+  if (unit === conv.packUom) {
+    const pcs = billQtyToBaseUnits(q, unit, base, conv);
+    return `${q} ${conv.packUom} = ${pcs} ${base}`;
+  }
+  if (unit === base) {
+    const packs = q / conv.piecesPerPack;
+    const packLabel = Number.isInteger(packs) ? String(packs) : packs.toFixed(2);
+    return `${q} ${base} = ${packLabel} ${conv.packUom}`;
+  }
+  return null;
+}
+
+/** Base-unit qty → bill UOM qty (e.g. 108 PCS → 6 Box when 1 Box = 18 PCS). */
+export function baseUnitsToBillQty(
+  baseQty: number,
+  billUom: string,
+  baseUom: string,
+  conversion: ProductUomConversion | null,
+): number {
+  const q = Number(baseQty) || 0;
+  if (q <= 0) return 0;
+  if (
+    conversion &&
+    billUom.trim() === conversion.packUom &&
+    baseUom.trim() !== conversion.packUom
+  ) {
+    return q / conversion.piecesPerPack;
+  }
+  return q;
+}
+
 /** Bill qty → base-unit qty for stock (e.g. 2 Box × 10 = 20 PCS). */
 export function billQtyToBaseUnits(
   billQty: number,

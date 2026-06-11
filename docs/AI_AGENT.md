@@ -8,13 +8,14 @@
 
 | Step | File | Use when |
 |------|------|----------|
-| 1 | **[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** | Priorities before ads; P0/P1/P2 (user edits Status) |
-| 2 | **[BACKLOG.md](BACKLOG.md)** | Deferred feature IDs; promote to FIRST_LAUNCH when building |
-| 3 | **[LLM_CONTEXT.md](LLM_CONTEXT.md)** | Routes, RPCs, file map, E2E commands (coding sessions) |
-| 4 | [backend/data-model.md](backend/data-model.md) | Schema / migrations |
-| 5 | [backend/phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md) | `npm run e2e:*` |
+| 1 | **[BACKLOG.md § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth)** | **SSOT** — every feature ID, shipped vs todo vs backlog |
+| 2 | **[FIRST_LAUNCH.md](FIRST_LAUNCH.md)** | Launch ops order (L2, L6, polish sequence) |
+| 3 | **[BACKLOG.md § Master register](BACKLOG.md#master-register)** | Full ID table + detail sections |
+| 4 | **[LLM_CONTEXT.md](LLM_CONTEXT.md)** | Routes, RPCs, file map, E2E commands (coding sessions) |
+| 5 | [backend/data-model.md](backend/data-model.md) | Schema / migrations |
+| 6 | [backend/phase1-use-cases-and-tests.md](backend/phase1-use-cases-and-tests.md) | `npm run e2e:*` |
 
-**Humans — quick status:** [FIRST_LAUNCH.md](FIRST_LAUNCH.md) (P1 product complete; ads blocked on L2 + L6) · [PHASE0_SIGNOFF.md](PHASE0_SIGNOFF.md) · [README.md](README.md)
+**Humans — quick status:** [BACKLOG § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth) · [FIRST_LAUNCH](FIRST_LAUNCH.md) · [PHASE0_SIGNOFF](PHASE0_SIGNOFF.md)
 
 **Strategy / market:** [PHASE_ROADMAP.md](PHASE_ROADMAP.md) · [GTM_NEPAL.md](GTM_NEPAL.md)
 
@@ -41,8 +42,9 @@
 
 Follow [.cursor/rules/docs-on-change.mdc](../.cursor/rules/docs-on-change.mdc):
 
-1. Update **FIRST_LAUNCH** or **BACKLOG** (status / new ID)  
-2. **LLM_CONTEXT** changelog (one dated bullet)  
+1. Update **[BACKLOG § Feature status index](BACKLOG.md#feature-status-index-single-source-of-truth)** + master register (status / new ID)  
+2. Sync **[FIRST_LAUNCH](FIRST_LAUNCH.md)** if launch order changed  
+3. **LLM_CONTEXT** changelog (one dated bullet)  
 3. Matching **`e2e-*.mjs`** script  
 4. [phase1-manual-e2e-checklist.md](backend/phase1-manual-e2e-checklist.md) if user-visible  
 
@@ -53,8 +55,8 @@ Follow [.cursor/rules/docs-on-change.mdc](../.cursor/rules/docs-on-change.mdc):
 ```text
 docs/
   AI_AGENT.md          ← you are here
-  FIRST_LAUNCH.md      ← active launch checklist
-  BACKLOG.md           ← all deferred work
+  BACKLOG.md           ← SSOT: feature status index + master register
+  FIRST_LAUNCH.md      ← launch execution order (sync from BACKLOG)
   PHASE0_SIGNOFF.md    ← Phase 0 done (one page)
   README.md            ← hub index
   LLM_CONTEXT.md       ← deep handbook

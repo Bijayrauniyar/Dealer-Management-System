@@ -4,6 +4,8 @@ import { BillLetterhead } from "@/components/app/BillLetterhead";
 import { getVatPct } from "@/lib/tax";
 import { purchaseDisplayTitle } from "@/lib/purchaseDisplay";
 import { purchaseBillRateHeader } from "@/lib/billPriceDisplay";
+import { IRD_PURCHASE_BILL_DISCLAIMER } from "@/lib/irdDisclaimer";
+import { DateDisplay } from "@/components/app/DateDisplay";
 import { fmtDate, npr, toMiti } from "@/lib/utils";
 
 type Props = {
@@ -74,6 +76,11 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
             <p className="font-bold text-gray-900">{title}</p>
             <p className="text-gray-600">{fmtDate(purchase.date)}</p>
             <p className="text-gray-500">{toMiti(purchase.date)}</p>
+            {purchase.dueDate ? (
+              <p className="text-gray-600">
+                Due <DateDisplay iso={purchase.dueDate} dual compact />
+              </p>
+            ) : null}
             {supTax ? (
               <p className="mt-0.5 text-gray-800">
                 <span className="text-gray-500">{supTax.label}</span>{" "}
@@ -104,7 +111,16 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
                     <BillCell>{line.productName}</BillCell>
                   </td>
                   <td className="px-1 py-1">
-                    <BillCell align="right">{line.qty}</BillCell>
+                    <BillCell align="right">
+                      <span className="block leading-tight">
+                        <span>{line.qty}</span>
+                        {line.qtyAlt ? (
+                          <span className="block text-[8px] font-normal text-gray-500">
+                            ({line.qtyAlt})
+                          </span>
+                        ) : null}
+                      </span>
+                    </BillCell>
                   </td>
                   <td className="px-1 py-1">
                     <BillCell>{line.uom}</BillCell>
@@ -164,6 +180,8 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
         {purchase.notes ? (
           <p className="mt-2 text-[9px] italic text-gray-600">{purchase.notes}</p>
         ) : null}
+
+        <p className="mt-2 text-[8px] leading-snug text-gray-500">{IRD_PURCHASE_BILL_DISCLAIMER}</p>
       </div>
     </div>
   );
