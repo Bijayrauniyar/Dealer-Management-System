@@ -198,6 +198,12 @@ function runSourceChecks() {
     r.fail("PurchasePage VAT entry", "missing Buy excl.");
   }
 
+  if (purchasePage && purchasePage.includes("productPurchasePriceSignature")) {
+    r.pass("PurchasePage refreshes line buy price when product catalog changes");
+  } else if (purchasePage) {
+    r.fail("PurchasePage catalog price sync", "missing productPurchasePriceSignature");
+  }
+
   const purchaseBill = readSrc("components/app/PurchaseBillView.tsx");
   if (purchaseBill && purchaseBill.includes("Purchase invoice")) {
     r.pass("PurchaseBillView component exists");

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {Plus, Trash2} from "lucide-react";
 import { toast } from "sonner";
@@ -57,6 +57,11 @@ const mkLine = (): Line => ({
 
 const inputCompact = "h-9 text-sm";
 
+/** Detect catalog pricing/UOM changes (for refreshing open purchase lines). */
+function productPurchasePriceSignature(p: Product): string {
+  return `${p.costPrice}|${p.uom}|${JSON.stringify(p.uomConversion ?? null)}`;
+}
+
 /** Buy price excl. VAT for line UOM (product.costPrice is stored VAT-inclusive). */
 function costExclForProductUom(product: Product, uom: string, vatPct: number): number {
   const unit = uom.trim() || product.uom || "PCS";
@@ -108,6 +113,44 @@ export const PurchasePage = () => {
   const [dueDate, setDueDate] = useState("");
   const [lines, setLines] = useState<Line[]>([mkLine()]);
   const [saving, setSaving] = useState(false);
+  const prevProductPriceSigRef = useRef<Map<string, string>>(new Map());
+  const catalogAtUnmountRef = useRef<Map<string, string>>(new Map());
+
+  /** When product master buy price changes (in-place or after returning from product form), refresh line costs. */
+  useEffect(() => {
+    if (loadingEdit) return;
+
+    const refreshProductIds = new Set<string>();
+    for (const p of PRODUCTS) {
+      const sig = productPurchasePriceSignature(p);
+      const prev = prevProductPriceSigRef.current.get(p.id);
+      const atUnmount = catalogAtUnmountRef.current.get(p.id);
+      if ((prev !== undefined && prev !== sig) || (atUnmount !== undefined && atUnmount !== sig)) {
+        refreshProductIds.add(p.id);
+      }
+      prevProductPriceSigRef.current.set(p.id, sig);
+    }
+    if (refreshProductIds.size === 0) return;
+
+    setLines((ls) =>
+      ls.map((l) => {
+        if (!l.productId || !refreshProductIds.has(l.productId)) return l;
+        const product = PRODUCTS.find((p) => p.id === l.productId);
+        if (!product) return l;
+        return {
+          ...l,
+          productName: product.name,
+          cost: costExclForProductUom(product, l.uom, vatPct),
+        };
+      }),
+    );
+  }, [PRODUCTS, vatPct, loadingEdit]);
+
+  useEffect(() => {
+    return () => {
+      catalogAtUnmountRef.current = new Map(prevProductPriceSigRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (isEdit || !presetSupplierId) return;
