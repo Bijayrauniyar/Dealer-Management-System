@@ -1,6 +1,6 @@
 import { FormField } from "@/components/app/FormField";
 import { NumericInput } from "@/components/app/NumericInput";
-import { formatPriceAmount, numericPriceProps } from "@/lib/money";
+import { formatPriceAmount, numericPriceProps, roundMoney, PRICE_DECIMAL_PLACES } from "@/lib/money";
 import { billLineRateColumnValue, saleLineChargeUnit } from "@/lib/saleLineMath";
 import { addVatToExclPrice } from "@/lib/tax";
 import { cn, nprNum } from "@/lib/utils";
@@ -23,6 +23,7 @@ type Props = {
   vatPct: number;
   onMrpChange: (value: number) => void;
   onRateChange: (value: number) => void;
+  piecesPerPack?: number;
 };
 
 const activeFieldClass =
@@ -38,19 +39,33 @@ export function SaleLinePricingBlock({
   vatPct,
   onMrpChange,
   onRateChange,
+  piecesPerPack,
 }: Props) {
   const uom = line.uom || "unit";
   const mrpBilling = priceMode === "mrp";
   const chargeUnit = saleLineChargeUnit(line, priceMode);
+  const ppp = piecesPerPack && piecesPerPack > 1 ? piecesPerPack : undefined;
   const printRate = billLineRateColumnValue(
     { ...line, amount: lineAmount },
     priceMode,
+    ppp,
   );
+
+  const displayMrp = ppp ? roundMoney(line.mrp / ppp, PRICE_DECIMAL_PLACES) : line.mrp;
+  const displayRate = ppp ? roundMoney(line.rate / ppp, PRICE_DECIMAL_PLACES) : line.rate;
+  const handleMrpChange = ppp
+    ? (v: number) => onMrpChange(roundMoney(v * ppp, PRICE_DECIMAL_PLACES))
+    : onMrpChange;
+  const handleRateChange = ppp
+    ? (v: number) => onRateChange(roundMoney(v * ppp, PRICE_DECIMAL_PLACES))
+    : onRateChange;
 
   return (
     <div className="space-y-2 rounded-lg border border-border-subtle bg-slate-50/80 p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-foreground">Pricing per {uom}</p>
+        <p className="text-xs font-semibold text-foreground">
+          {ppp ? "Pricing per PCS" : `Pricing per ${uom}`}
+        </p>
         <span className="shrink-0 rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-semibold text-teal-800">
           Bill uses {mrpBilling ? "label MRP" : "sell price"} as Rate
         </span>
@@ -65,9 +80,14 @@ export function SaleLinePricingBlock({
             <NumericInput
               {...numericPriceProps}
               min={0}
-              value={line.mrp}
-              onChange={onMrpChange}
+              value={displayMrp}
+              onChange={handleMrpChange}
             />
+            {ppp ? (
+              <p className="mt-0.5 text-[10px] text-muted">
+                {formatPriceAmount(line.mrp)} per {uom}
+              </p>
+            ) : null}
           </FormField>
         </div>
         <div className={cn(!mrpBilling ? activeFieldClass : inactiveFieldClass)}>
@@ -78,9 +98,14 @@ export function SaleLinePricingBlock({
             <NumericInput
               {...numericPriceProps}
               min={0}
-              value={line.rate}
-              onChange={onRateChange}
+              value={displayRate}
+              onChange={handleRateChange}
             />
+            {ppp ? (
+              <p className="mt-0.5 text-[10px] text-muted">
+                {formatPriceAmount(line.rate)} per {uom}
+              </p>
+            ) : null}
           </FormField>
         </div>
       </div>

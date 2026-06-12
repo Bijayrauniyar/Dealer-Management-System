@@ -109,6 +109,7 @@ Check each row after manual testing.
 | **Products** | List, search, add, edit, archive/restore, 4-dec prices | `/app/products`, `/app/products/new`, `.../edit/:id` |
 | **Suppliers** | List, detail, add/edit (`EntityList`) | `/app/suppliers`, `…/new`, `…/:id`, `…/edit/:id` |
 | **Stock adjustment** | Manual +/- qty when enabled | `/app/stock-adjustment/new` |
+| **MRP stickers** | Saved designs (history, multi-select print), designer with live preview + A4 sheet print (`0045`) | `/app/mrp-stickers`, `…/new`, `…/edit/:id` |
 | **Sale** | New bill, edit existing (`update_sales_bill`), preview, print | `/app/sales/new`, `/app/sales/edit/:billNo` |
 | **Bill detail** | View, **Share**, Print, PDF, Return, **Collect** (green), Edit | `/app/bills/:billNo` |
 | **Payment** | Customer payment, bill allocation | `/app/payments/new` |
@@ -289,6 +290,8 @@ Automated: `npm run e2e:p0-public` (included in `e2e:phase0`). Runbook: [P0_LAUN
 | S11 | Settings → **Rate (selling price)** → Save → new sale | Line total = **Qty × Rate**; print column **Rate**; Amt = Rate × Qty |
 | S11b | Settings → **MRP + line discount** → product with line Disc% | Print shows **MRP** + **Disc%**; Amt = MRP × Qty × (1−Disc%) |
 | S11c | Reopen saved bill MXMPRV-28 (or any) → Print | MRP/Rate column matches Amt (no 100 vs 1,500 mismatch) |
+| S11d | Product with 18 PCS/Ctn → sale **1 Ctn** → Print | Rate ≈ per-PCS (e.g. 58.48); Qty `1 Ctn (18 PCS)`; Amt = internal line total; PDF download matches print |
+| S11e | Sale form pack line | MRP/sell inputs in **per PCS**; hint shows total per Ctn; line total unchanged |
 | S12 | Settings → **Purchase bill rate** = **Rate incl. VAT** → Save | Purchase detail print shows incl. rate column |
 | S13 | Settings → enable **payment QR**, **upload QR image** + **Bank details** → Save | Credit bill print shows QR block + bank line + bill ref; toggle off or fully paid bill hides QR |
 | S14 | Settings → **Product units** — add **Bag** → Save → new product form | **Bag** appears in base unit dropdown |
@@ -430,6 +433,8 @@ open     = total − paid
 |----|-------|----------|
 | PU1 | Purchase: supplier + **invoice no.** + product, qty 50, buy excl. 80 | `purchases` total incl. VAT; stock +50 |
 | PU2 | **Multi-line purchase** | Subtotal excl + VAT % = total on screen and DB |
+| PU2b | **Purchase bill discount** | 5 × 100 excl, flat discount 100 (label Scheme B4G1) → taxable 400, VAT 52, total 452; print shows discount row; edit reloads discount |
+| PU2c | **Purchase preview before save** | Eye icon on sticky bar → full-screen preview; Print / PDF / Close (same as sales invoice) |
 | PU3 | Supplier payment **500** on unpaid purchase | `purchases.paid` = 500 (or FIFO across POs) |
 | PU4 | Second PO unpaid; pay again | Older PO paid first (FIFO) — note actual behaviour |
 | PU5 | Stock page after purchase | Closing stock increased |
@@ -505,6 +510,19 @@ open     = total − paid
 | RP3 | Company overview net worth | Plausible vs manual calc |
 | RP4 | Supplier ledger from hub/drawer | Opens period/supplier view |
 | RP5 | **Help & support** from drawer only | Not under Settings tabs |
+
+---
+
+### 3.16b MRP stickers (MAN-MRP) — needs `0045`
+
+| ID | Steps | Expected |
+|----|-------|----------|
+| MRP1 | Drawer → **Tools → MRP stickers** → **New sticker**: title `MRP NRS 95/-`, 2 lines, preset Medium 45×25 | Live preview at real size; "X stickers/page · Y pages"; fonts auto-fit until edited |
+| MRP2 | **Save & print** | Browser print dialog; A4 filled with repeated sticker grid (2 mm cut gap); design appears in list with printed date |
+| MRP3 | Change qty to 130 with 65/page | Shows 2 pages; print produces 2 sheets |
+| MRP4 | Create a 2nd design (different size); tick both → **Print selected (2)** | One print job; each design starts on its own page |
+| MRP5 | Row actions: **Edit** reloads values; **Duplicate** adds copy; **Delete** asks confirm then removes | History stays tenant-scoped |
+| MRP6 | Without migration `0045` | List shows friendly "run migration 0045" error, no crash |
 
 ---
 

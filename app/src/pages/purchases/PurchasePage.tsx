@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import {Pencil, Plus, Trash2} from "lucide-react";
+import { Download, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/app/PageShell";
 import { FormField } from "@/components/app/FormField";
@@ -23,7 +23,13 @@ import {
   commitPurchaseUpdate,
 } from "@/store/domain";
 import { getVatPct, addVatToExcl, vatAmountFromExcl, purchasePriceExclFromProduct } from "@/lib/tax";
-import { numericPriceProps, numericQtyProps, roundMoney } from "@/lib/money";
+import {
+  numericMoneyProps,
+  numericPercentProps,
+  numericPriceProps,
+  numericQtyProps,
+  roundMoney,
+} from "@/lib/money";
 import { fetchPurchaseDetailLive } from "@/lib/live/domainLive";
 import type { Product, PurchaseDetail } from "@/domain/types";
 import {
@@ -31,11 +37,13 @@ import {
   billQtyToBaseUnits,
   conversionLabel,
   lineUomQtyHint,
-  priceForPackFromBase,
   productUomChoices,
 } from "@/lib/uom";
 import { npr, nprNum, toDateInput } from "@/lib/utils";
-import { FormPageHeader } from "@/components/app/patterns";
+import { PurchaseBillView } from "@/components/app/PurchaseBillView";
+import { FormPageHeader, PreviewToolbar } from "@/components/app/patterns";
+import { downloadDocumentPdf } from "@/lib/documentExport";
+import { printPurchaseBill } from "@/lib/printBill";
 import { PageBackLink } from "@/components/app/PageBackLink";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import {
@@ -120,11 +128,11 @@ function costExclForProductUom(product: Product, uom: string, vatPct: number): n
   const unit = uom.trim() || product.uom || "PCS";
   const baseIncl = product.costPrice;
   const conv = product.uomConversion;
-  let incl = baseIncl;
   if (conv && unit === conv.packUom && baseIncl > 0) {
-    incl = priceForPackFromBase({ mrp: baseIncl, sellingPrice: baseIncl }, conv.piecesPerPack).sellingPrice;
+    const baseExcl = purchasePriceExclFromProduct(baseIncl, vatPct);
+    return baseExcl * conv.piecesPerPack;
   }
-  return purchasePriceExclFromProduct(incl, vatPct);
+  return purchasePriceExclFromProduct(baseIncl, vatPct);
 }
 
 /** Compact label + control (less vertical space than FormField). */
@@ -165,6 +173,11 @@ export const PurchasePage = () => {
   const [date, setDate] = useState(toDateInput());
   const [dueDate, setDueDate] = useState("");
   const [lines, setLines] = useState<Line[]>([mkLine()]);
+  const [discountType, setDiscountType] = useState<"percent" | "flat">("flat");
+  const [discountValue, setDiscountValue] = useState("");
+  const [discountLabel, setDiscountLabel] = useState("");
+  const [previewing, setPreviewing] = useState(false);
+  const [exportingPreview, setExportingPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveConfirm, setSaveConfirm] = useState<FinancialSaveConfirmConfig | null>(null);
   const [editLinesRaw, setEditLinesRaw] = useState<DetailLine[] | null>(null);
@@ -179,6 +192,28 @@ export const PurchasePage = () => {
   } | null>(null);
   const prevProductPriceSigRef = useRef<Map<string, string>>(new Map());
   const catalogAtUnmountRef = useRef<Map<string, string>>(new Map());
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const focusNextField = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter") return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === "SELECT") return;
+    if (target instanceof HTMLInputElement && target.type === "date") return;
+    const form = formRef.current;
+    if (!form) return;
+    const nodes = form.querySelectorAll<HTMLElement>(
+      'input:not([type="hidden"]):not([type="date"]):not([disabled]):not([readonly]), select:not([disabled])',
+    );
+    const idx = Array.from(nodes).indexOf(target);
+    if (idx >= 0 && idx < nodes.length - 1) {
+      e.preventDefault();
+      const next = nodes[idx + 1];
+      next.focus();
+      if (next instanceof HTMLInputElement) {
+        next.select();
+      }
+    }
+  }, []);
 
   /** When product master buy price changes (in-place or after returning from product form), refresh line costs. */
   useEffect(() => {
@@ -241,6 +276,17 @@ export const PurchasePage = () => {
         setPaidOnPurchase(detail.paid);
         setDate(detail.date.slice(0, 10));
         setDueDate(detail.dueDate?.slice(0, 10) ?? "");
+        setDiscountType(detail.discountType === "percent" ? "percent" : "flat");
+        setDiscountValue(
+          detail.discountAmount > 0
+            ? String(
+                detail.discountType === "percent"
+                  ? detail.discountValue
+                  : detail.discountAmount,
+              )
+            : "",
+        );
+        setDiscountLabel(detail.discountLabel ?? "");
         setEditLinesRaw(detail.lines.length ? detail.lines : null);
         if (!detail.lines.length) setLines([mkLine()]);
       })
@@ -258,7 +304,7 @@ export const PurchasePage = () => {
   }, [isEdit, editPurchaseId]);
 
   useEffect(() => {
-    if (!editLinesRaw?.length) return;
+    if (!editLinesRaw?.length || !PRODUCTS.length) return;
     setLines(
       editLinesRaw.map((l, i) =>
         purchaseLineFromDetail(l, i, PRODUCTS.find((p) => p.id === l.productId), vatPct),
@@ -275,7 +321,7 @@ export const PurchasePage = () => {
     setPendingLineProduct(null);
   }, [pendingLineProduct, PRODUCTS]);
 
-  const lineExcl = (l: Line, qty: number) => qty * l.cost;
+  const lineExcl = (l: Line, qty: number) => roundMoney(qty * l.cost);
   const lineVat = (l: Line, qty: number) => vatAmountFromExcl(lineExcl(l, qty), vatPct);
   const lineIncl = (l: Line, qty: number) => lineExcl(l, qty) + lineVat(l, qty);
   const totalInvoicedExcl = lines.reduce((s, l) => s + lineExcl(l, l.invoiceQty), 0);
@@ -286,6 +332,18 @@ export const PurchasePage = () => {
     totalInvoicedExcl + lines.reduce((s, l) => s + lineVat(l, l.invoiceQty), 0);
   const shortLines = lines.filter((l) => l.receivedQty < l.invoiceQty && l.productId);
   const hasShort = shortLines.length > 0;
+
+  const subtotalExclBase = hasShort ? totalReceivedExcl : totalInvoicedExcl;
+  const discountAmt = (() => {
+    const v = Number(discountValue) || 0;
+    if (v <= 0) return 0;
+    if (discountType === "percent") return roundMoney((subtotalExclBase * v) / 100);
+    return Math.min(roundMoney(v), subtotalExclBase);
+  })();
+  const taxableExcl = roundMoney(subtotalExclBase - discountAmt);
+  const headerVatAmt =
+    vatPct > 0 ? roundMoney(taxableExcl * vatPct / 100) : 0;
+  const totalIncl = roundMoney(taxableExcl + headerVatAmt);
 
   const addLine = () => setLines((ls) => [...ls, mkLine()]);
   const removeLine = (id: number) => setLines((ls) => ls.filter((l) => l.id !== id));
@@ -298,7 +356,8 @@ export const PurchasePage = () => {
       updateLine(lineId, { productId, productName, uom: "PCS", cost: 0 });
       return;
     }
-    const uom = product.uom || "PCS";
+    const conv = product.uomConversion;
+    const uom = conv?.packUom ?? (product.uom || "PCS");
     updateLine(lineId, {
       productId,
       productName,
@@ -322,11 +381,13 @@ export const PurchasePage = () => {
       product.uom,
       product.uomConversion ?? null,
     );
+    const conv = product.uomConversion;
     const newQty = Math.max(
       0,
-      baseUnitsToBillQty(baseQty, newUom, product.uom, product.uomConversion ?? null),
+      baseUnitsToBillQty(baseQty, newUom, product.uom, conv),
     );
-    const qty = Number.isInteger(newQty) ? newQty : roundMoney(newQty);
+    const snap = conv && newUom === conv.packUom && newQty > 0 ? Math.max(1, newQty) : newQty;
+    const qty = Number.isInteger(snap) ? snap : roundMoney(snap);
     updateLine(lineId, {
       uom: newUom,
       invoiceQty: qty,
@@ -354,7 +415,7 @@ export const PurchasePage = () => {
       product.uom,
       product.uomConversion ?? null,
     );
-    const lineTotalExcl = line.receivedQty * line.cost;
+    const lineTotalExcl = roundMoney(line.receivedQty * line.cost);
     const rateExclPerBase = baseQty > 0 ? roundMoney(lineTotalExcl / baseQty) : line.cost;
     return { receivedQty: baseQty, rateExcl: rateExclPerBase };
   };
@@ -367,14 +428,14 @@ export const PurchasePage = () => {
         return { productId: l.productId, receivedQty, rateExcl };
       });
 
-  const paidWillCap = isEdit && totalReceivedIncl + 0.01 < paidOnPurchase;
+  const paidWillCap = isEdit && totalIncl + 0.01 < paidOnPurchase;
 
   const resolveSaveConfirm = (): FinancialSaveConfirmConfig | null => {
     if (paidWillCap) {
-      return purchasePaidAdjustmentConfirm(totalReceivedIncl, paidOnPurchase);
+      return purchasePaidAdjustmentConfirm(totalIncl, paidOnPurchase);
     }
     if (!isEdit && isPurchaseDueDateSettled(dueDate)) {
-      return purchaseDueDateSettledConfirm(totalReceivedIncl, dueDate);
+      return purchaseDueDateSettledConfirm(totalIncl, dueDate);
     }
     return null;
   };
@@ -391,6 +452,8 @@ export const PurchasePage = () => {
           purchaseDate: date,
           dueDate: dueDate || null,
           lines: rpcLines,
+          discountAmount: discountAmt,
+          discountLabel: discountLabel.trim() || null,
           ...(!invoiceLocked && normalizedInvoice
             ? { supplierInvoiceNo: normalizedInvoice }
             : {}),
@@ -409,8 +472,10 @@ export const PurchasePage = () => {
           purchaseDate: date,
           supplierInvoiceNo: normalizedInvoice,
           dueDate: dueDate || null,
-          totalReceived: totalReceivedIncl,
+          totalReceived: totalIncl,
           lines: rpcLines,
+          discountAmount: discountAmt,
+          discountLabel: discountLabel.trim() || null,
         });
         const label = normalizedInvoice;
         toast.success(
@@ -429,6 +494,92 @@ export const PurchasePage = () => {
     } finally {
       setSaving(false);
       setSaveConfirm(null);
+    }
+  };
+
+  const supplier = useMemo(
+    () => SUPPLIERS.find((s) => s.id === supplierId),
+    [SUPPLIERS, supplierId],
+  );
+
+  const canPreview = Boolean(supplierId && supplier && lines.some((l) => l.productId));
+
+  const buildPurchaseDraft = (): PurchaseDetail => {
+    const draftLines = lines
+      .filter((l) => l.productId && l.receivedQty > 0)
+      .map((l) => {
+        const product = PRODUCTS.find((p) => p.id === l.productId);
+        const qty = hasShort ? l.receivedQty : l.invoiceQty;
+        const excl = roundMoney(qty * l.cost);
+        const vat = vatAmountFromExcl(excl, vatPct);
+        const rateExcl = l.cost;
+        const rateIncl = addVatToExcl(l.cost, vatPct);
+        const baseUom = product?.uom?.trim() || "PCS";
+        const baseQty = product
+          ? billQtyToBaseUnits(qty, l.uom, baseUom, product.uomConversion ?? null)
+          : qty;
+        return {
+          productId: l.productId,
+          productName: l.productName,
+          qty,
+          uom: l.uom,
+          baseQty,
+          baseUom,
+          qtyAlt: null,
+          rateExcl,
+          rateIncl,
+          vatAmount: vat,
+          amount: roundMoney(excl + vat),
+        };
+      });
+
+    const paid =
+      isEdit
+        ? paidOnPurchase
+        : isPurchaseDueDateSettled(dueDate)
+          ? totalIncl
+          : 0;
+    const paymentStatus: PurchaseDetail["paymentStatus"] =
+      paid >= totalIncl - 0.01 ? "paid" : paid > 0 ? "partial" : "unpaid";
+
+    return {
+      id: editPurchaseId ?? "draft",
+      purchaseNo: "",
+      supplierInvoiceNo: normalizeInvoiceNoSpoken(invoiceNo) || "",
+      date,
+      dueDate: dueDate || undefined,
+      total: totalIncl,
+      supplierId,
+      supplierName: supplier?.name ?? "",
+      paid,
+      paymentStatus,
+      subtotalExcl: subtotalExclBase,
+      discountType: discountAmt > 0 ? discountType : "none",
+      discountValue: Number(discountValue) || 0,
+      discountAmount: discountAmt,
+      discountLabel: discountLabel.trim(),
+      taxableExcl,
+      vatAmount: headerVatAmt,
+      subtotal: subtotalExclBase,
+      notes: "",
+      lines: draftLines,
+    };
+  };
+
+  const handlePreviewDownload = async () => {
+    const draft = buildPurchaseDraft();
+    setExportingPreview(true);
+    try {
+      const ref = draft.supplierInvoiceNo?.trim() || "purchase-draft";
+      await downloadDocumentPdf(
+        "purchase-bill-print-root",
+        `${ref.replace(/[^\w.-]+/g, "_")}.pdf`,
+      );
+      toast.success("Purchase PDF downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setExportingPreview(false);
     }
   };
 
@@ -474,6 +625,45 @@ export const PurchasePage = () => {
 
   return (
     <PageShell stickyBar>
+      {previewing && supplier ? (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm print:relative print:inset-auto print:bg-white print:block">
+          <div className="bill-preview-chrome flex items-center justify-between bg-white px-4 py-3 shadow-sm shrink-0 print:hidden">
+            <p className="text-sm font-semibold text-foreground">Purchase preview</p>
+            <PreviewToolbar>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={exportingPreview}
+                onClick={() => printPurchaseBill()}
+              >
+                Print
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={exportingPreview}
+                onClick={() => void handlePreviewDownload()}
+              >
+                <Download size={13} aria-hidden />
+                {exportingPreview ? "…" : "PDF"}
+              </Button>
+              <Button type="button" size="sm" onClick={() => setPreviewing(false)}>
+                <X size={13} aria-hidden /> Close
+              </Button>
+            </PreviewToolbar>
+          </div>
+          <div className="bill-print-zone flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4 print:flex print:justify-center print:overflow-visible print:p-0">
+            <PurchaseBillView
+              purchase={buildPurchaseDraft()}
+              supplier={supplier}
+              business={business}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <FormPageHeader
         backTo="/app/purchases"
         backLabel="Purchases"
@@ -485,7 +675,7 @@ export const PurchasePage = () => {
         }
       />
 
-      <div className="space-y-3">
+      <div className="space-y-3" onKeyDown={focusNextField} ref={formRef}>
         <FormField label="Supplier" required>
           <EntityPicker
             placeholder="Search supplier"
@@ -619,10 +809,10 @@ export const PurchasePage = () => {
                           value={line.invoiceQty}
                           onChange={(v) => {
                             const invoiceQty = Math.max(0, v);
+                            const wasInSync = line.receivedQty === line.invoiceQty;
                             updateLine(line.id, {
                               invoiceQty,
-                              receivedQty:
-                                line.receivedQty > invoiceQty ? invoiceQty : line.receivedQty,
+                              receivedQty: wasInSync ? invoiceQty : Math.min(line.receivedQty, invoiceQty),
                             });
                           }}
                         />
@@ -722,6 +912,52 @@ export const PurchasePage = () => {
           </Button>
         </div>
 
+        <Card>
+          <CardContent className="space-y-2 p-3">
+            <p className="text-xs font-medium text-foreground">Bill discount (optional)</p>
+            <p className="text-[10px] text-muted">
+              Applied before VAT — e.g. supplier scheme B4G1 as flat NPR or percent.
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <CompactField label="Type">
+                <Select
+                  className={inputCompact}
+                  value={discountType}
+                  onChange={(e) => setDiscountType(e.target.value as "percent" | "flat")}
+                >
+                  <option value="flat">Flat (NPR)</option>
+                  <option value="percent">Percent (%)</option>
+                </Select>
+              </CompactField>
+              <CompactField label={discountType === "percent" ? "Discount %" : "Discount (NPR)"}>
+                <NumericInput
+                  {...(discountType === "percent" ? numericPercentProps : numericMoneyProps)}
+                  className={inputCompact}
+                  min={0}
+                  max={discountType === "percent" ? 100 : subtotalExclBase}
+                  value={Number(discountValue) || 0}
+                  onChange={(v) => setDiscountValue(v === 0 ? "" : String(v))}
+                />
+              </CompactField>
+              <CompactField label="Label (e.g. Scheme B4G1)" className="col-span-2 sm:col-span-1">
+                <Input
+                  className={inputCompact}
+                  placeholder="Optional"
+                  value={discountLabel}
+                  onChange={(e) => setDiscountLabel(e.target.value)}
+                />
+              </CompactField>
+            </div>
+            {discountAmt > 0 && (
+              <p className="text-[10px] text-success-foreground">
+                {discountType === "percent"
+                  ? `${discountValue}% → − ${npr(discountAmt)} off ${npr(subtotalExclBase)} excl.`
+                  : `Flat → − ${npr(discountAmt)} off ${npr(subtotalExclBase)} excl.`}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {hasShort && (
           <div className="flex flex-wrap gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
             <span className="text-[10px] font-semibold text-amber-900">Short receive:</span>
@@ -737,25 +973,37 @@ export const PurchasePage = () => {
           <div className="rounded-lg border border-dashed border-teal-200/80 bg-teal-50/30 px-3 py-2 text-xs leading-relaxed space-y-1">
             <div className="flex justify-between gap-2">
               <span className="text-muted">Subtotal (excl. VAT)</span>
-              <span className="font-semibold tabular-nums">
-                {npr(hasShort ? totalReceivedExcl : totalInvoicedExcl)}
-              </span>
+              <span className="font-semibold tabular-nums">{npr(subtotalExclBase)}</span>
             </div>
+            {discountAmt > 0 && (
+              <div className="flex justify-between gap-2 text-amber-800">
+                <span>
+                  {discountLabel.trim()
+                    ? discountLabel.trim()
+                    : discountType === "percent"
+                      ? `Discount (${discountValue}%)`
+                      : "Discount"}
+                </span>
+                <span className="font-semibold tabular-nums">− {npr(discountAmt)}</span>
+              </div>
+            )}
+            {discountAmt > 0 && (
+              <div className="flex justify-between gap-2">
+                <span className="text-muted">Taxable (excl.)</span>
+                <span className="font-semibold tabular-nums">{npr(taxableExcl)}</span>
+              </div>
+            )}
             {vatPct > 0 && (
               <div className="flex justify-between gap-2">
                 <span className="text-muted">VAT ({vatPct}%)</span>
-                <span className="font-semibold tabular-nums">
-                  {npr(hasShort ? totalReceivedVat : totalInvoicedExcl > 0 ? totalInvoicedIncl - totalInvoicedExcl : 0)}
-                </span>
+                <span className="font-semibold tabular-nums">{npr(headerVatAmt)}</span>
               </div>
             )}
             <div className="flex justify-between gap-2 border-t border-teal-200/60 pt-1">
               <span className="font-semibold text-foreground">
                 {vatPct > 0 ? `Total (incl. ${vatPct}% VAT)` : "Total"}
               </span>
-              <span className="font-bold tabular-nums">
-                {npr(hasShort ? totalReceivedIncl : totalInvoicedIncl)}
-              </span>
+              <span className="font-bold tabular-nums">{npr(totalIncl)}</span>
             </div>
             {hasShort && (
               <p className="text-amber-800 text-[10px]">
@@ -792,16 +1040,28 @@ export const PurchasePage = () => {
 
       <StickyBar
         compact
+        previewLabel={canPreview ? "Preview purchase" : undefined}
+        onPreview={canPreview ? () => setPreviewing(true) : undefined}
         rows={[
-          ...(vatPct > 0
+          ["Subtotal excl.", npr(subtotalExclBase)],
+          ...(discountAmt > 0
             ? ([
-                ["Subtotal excl.", npr(hasShort ? totalReceivedExcl : totalInvoicedExcl)],
-                [`VAT (${vatPct}%)`, npr(hasShort ? totalReceivedVat : totalInvoicedIncl - totalInvoicedExcl)],
+                [
+                  discountLabel.trim()
+                    ? discountLabel.trim()
+                    : discountType === "percent"
+                      ? `Discount (${discountValue}%)`
+                      : "Discount",
+                  `− ${npr(discountAmt)}`,
+                ],
               ] as [string, string][])
+            : []),
+          ...(vatPct > 0
+            ? ([[`VAT (${vatPct}%)`, npr(headerVatAmt)]] as [string, string][])
             : []),
           [
             vatPct > 0 ? `Total (incl. ${vatPct}% VAT)` : "Total",
-            npr(hasShort ? totalReceivedIncl : totalInvoicedIncl),
+            npr(totalIncl),
           ],
         ]}
         action={isEdit ? "Update purchase" : "Save"}

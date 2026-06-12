@@ -33,6 +33,9 @@ export interface CommitPurchaseOpts {
   dueDate?: string | null;
   lines: { productId: string; receivedQty: number; rateExcl: number }[];
   totalReceived: number;
+  /** Resolved bill discount NPR (excl. VAT base). */
+  discountAmount?: number;
+  discountLabel?: string | null;
 }
 
 export interface CommitPurchaseUpdateOpts {
@@ -44,6 +47,8 @@ export interface CommitPurchaseUpdateOpts {
   dueDate?: string | null;
   notes?: string | null;
   lines: { productId: string; receivedQty: number; rateExcl: number }[];
+  discountAmount?: number;
+  discountLabel?: string | null;
 }
 
 export interface CommitSupplierPaymentOpts {

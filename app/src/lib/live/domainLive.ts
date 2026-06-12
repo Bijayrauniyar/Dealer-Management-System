@@ -42,6 +42,7 @@ import { linePricingForProduct, productFromSalesEmbed } from "@/lib/uom";
 import { saleLineToRpcItem } from "@/lib/uom";
 import { parseUomConversion, parseUomPrices, toDbUomConversion, toDbUomPrices } from "@/lib/uom";
 import { purchaseLineQtyDisplay } from "@/lib/purchaseLineDisplay";
+import type { MrpStickerDesign, MrpStickerDraft } from "@/lib/mrpSticker";
 import { getTenantIdForCurrentUser } from "@/lib/tenantUser";
 
 /** v2: client tenant_id scope on reads (super_admin RLS no longer merges all shops). */
@@ -978,6 +979,8 @@ export async function commitPurchaseLive(opts: {
   dueDate?: string | null;
   lines: { productId: string; receivedQty: number; rateExcl: number }[];
   totalReceived: number;
+  discountAmount?: number;
+  discountLabel?: string | null;
 }): Promise<{ purchaseNo: string; purchaseId: string }> {
   const due =
     opts.dueDate?.trim()?.slice(0, 10) || null;
@@ -990,6 +993,8 @@ export async function commitPurchaseLive(opts: {
       ? normalizeInvoiceNoSpoken(opts.supplierInvoiceNo) || null
       : null,
     p_due_date: due,
+    p_discount: opts.discountAmount ?? 0,
+    p_discount_label: opts.discountLabel?.trim() || null,
   });
   if (error) throw purchaseRpcError(error, { settingInvoice: Boolean(opts.supplierInvoiceNo?.trim()) });
   const row = Array.isArray(data) ? data[0] : data;
@@ -1008,6 +1013,8 @@ export async function commitPurchaseUpdateLive(opts: {
   dueDate?: string | null;
   notes?: string | null;
   lines: { productId: string; receivedQty: number; rateExcl: number }[];
+  discountAmount?: number;
+  discountLabel?: string | null;
 }): Promise<{ purchaseNo: string }> {
   const inv =
     opts.supplierInvoiceNo !== undefined && opts.supplierInvoiceNo !== null
@@ -1023,6 +1030,8 @@ export async function commitPurchaseUpdateLive(opts: {
     p_purchase_date: opts.purchaseDate,
     p_lines: purchaseLinesToRpc(opts.lines),
     p_notes: opts.notes ?? null,
+    p_discount: opts.discountAmount ?? 0,
+    p_discount_label: opts.discountLabel?.trim() || null,
     ...(opts.dueDate !== undefined ? { p_due_date: due } : {}),
     ...(inv !== null ? { p_supplier_invoice_no: inv } : {}),
   });
@@ -1735,7 +1744,7 @@ export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
 
 export async function fetchPurchaseDetailLive(purchaseId: string): Promise<PurchaseDetail | null> {
   const detailSelect =
-    `${PURCHASE_LIST_SELECT}, subtotal, subtotal_excl, vat_amount, notes`;
+    `${PURCHASE_LIST_SELECT}, subtotal, subtotal_excl, discount, discount_label, vat_amount, notes`;
   let header: unknown = null;
   let error: { message?: string } | null = null;
   const full = await supabase
@@ -1750,13 +1759,19 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
     (isMissingColumnError(error, "supplier_invoice_no") ||
       isMissingColumnError(error, "due_date") ||
       isMissingColumnError(error, "subtotal_excl") ||
+      isMissingColumnError(error, "discount") ||
+      isMissingColumnError(error, "discount_label") ||
       isMissingColumnError(error, "vat_amount"))
   ) {
     let legacySel = purchaseSelectWithoutInvoiceCol(detailSelect);
     if (isMissingColumnError(error, "due_date")) {
       legacySel = legacySel.replace("due_date, ", "").replace(", due_date", "");
     }
-    legacySel = legacySel.replace(", subtotal_excl, vat_amount", "").replace("subtotal_excl, vat_amount, ", "");
+    legacySel = legacySel
+      .replace(", discount, discount_label", "")
+      .replace("discount, discount_label, ", "")
+      .replace(", subtotal_excl, vat_amount", "")
+      .replace("subtotal_excl, vat_amount, ", "");
     const legacy = await supabase
       .from("purchases")
       .select(legacySel)
@@ -1798,6 +1813,8 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
   const h = header as {
     subtotal: number;
     subtotal_excl?: number | null;
+    discount?: number | null;
+    discount_label?: string | null;
     vat_amount?: number | null;
     notes: string | null;
   };
@@ -1843,6 +1860,12 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
     h.subtotal_excl != null
       ? Number(h.subtotal_excl)
       : lines.reduce((s, l) => s + l.qty * l.rateExcl, 0);
+  const discountAmount = Number(h.discount ?? 0) || 0;
+  const { discountType, discountValue } = inferBillDiscountFromStored(
+    subtotalExcl,
+    discountAmount,
+  );
+  const taxableExcl = roundMoney(Math.max(0, subtotalExcl - discountAmount));
   const vatAmount =
     h.vat_amount != null
       ? Number(h.vat_amount)
@@ -1851,6 +1874,11 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
   return {
     ...base,
     subtotalExcl,
+    discountType,
+    discountValue,
+    discountAmount,
+    discountLabel: h.discount_label?.trim() ?? "",
+    taxableExcl,
     vatAmount,
     subtotal: Number(h.subtotal) || subtotalExcl + vatAmount,
     notes: h.notes?.trim() ?? "",
@@ -2030,4 +2058,122 @@ export async function insertCapitalEntryLive(p: {
   if (error) throw error;
   void queryClient.invalidateQueries({ queryKey: CAPITAL_QUERY_KEY });
   return data.id as string;
+}
+
+// ── MRP sticker designs (0045) ──────────────────────────────────────
+
+type MrpStickerRow = {
+  id: string;
+  title: string;
+  lines: unknown;
+  width_mm: number;
+  height_mm: number;
+  title_size: number;
+  line_size: number;
+  title_bold: boolean;
+  border: boolean;
+  align: string | null;
+  qty: number;
+  updated_at: string;
+  last_printed_at: string | null;
+};
+
+function mapMrpStickerRow(r: MrpStickerRow): MrpStickerDesign {
+  return {
+    id: r.id,
+    title: r.title,
+    lines: Array.isArray(r.lines) ? r.lines.map((l) => String(l)) : [],
+    widthMm: Number(r.width_mm) || 45,
+    heightMm: Number(r.height_mm) || 25,
+    titleSize: Number(r.title_size) || 14,
+    lineSize: Number(r.line_size) || 8,
+    titleBold: Boolean(r.title_bold),
+    border: Boolean(r.border),
+    align: r.align === "left" || r.align === "right" ? r.align : "center",
+    qty: Number(r.qty) || 1,
+    updatedAt: r.updated_at,
+    lastPrintedAt: r.last_printed_at,
+  };
+}
+
+function mrpStickerError(error: { message?: string; code?: string }): Error {
+  const msg = error.message ?? "";
+  // 42P01 / PGRST205 = table missing; 42703 = column missing (older copy of 0045 applied).
+  if (error.code === "42P01" || /could not find the table.*mrp_sticker_designs/i.test(msg)) {
+    return new Error("MRP sticker table missing — run migration 0045_mrp_sticker_designs.sql in Supabase.");
+  }
+  if (error.code === "42703" || /column .*mrp_sticker_designs/i.test(msg)) {
+    return new Error("MRP sticker table outdated — re-run the current 0045_mrp_sticker_designs.sql in Supabase (adds new columns).");
+  }
+  return new Error(msg || "MRP sticker request failed");
+}
+
+export async function fetchMrpStickerDesignsLive(): Promise<MrpStickerDesign[]> {
+  const tenantId = await tenantIdForCurrentUser();
+  const { data, error } = await supabase
+    .from("mrp_sticker_designs")
+    .select(
+      "id, title, lines, width_mm, height_mm, title_size, line_size, title_bold, border, align, qty, updated_at, last_printed_at",
+    )
+    .eq("tenant_id", tenantId)
+    .order("updated_at", { ascending: false })
+    .limit(200);
+  if (error) throw mrpStickerError(error);
+  return (data ?? []).map((r) => mapMrpStickerRow(r as MrpStickerRow));
+}
+
+export async function upsertMrpStickerDesignLive(draft: MrpStickerDraft): Promise<string> {
+  const tenantId = await tenantIdForCurrentUser();
+  const row = {
+    title: draft.title.trim(),
+    lines: draft.lines.map((l) => l.trim()).filter(Boolean),
+    width_mm: draft.widthMm,
+    height_mm: draft.heightMm,
+    title_size: draft.titleSize,
+    line_size: draft.lineSize,
+    title_bold: draft.titleBold,
+    border: draft.border,
+    align: draft.align,
+    qty: Math.max(1, Math.round(draft.qty)),
+    updated_at: new Date().toISOString(),
+  };
+
+  if (draft.id) {
+    const { error } = await supabase
+      .from("mrp_sticker_designs")
+      .update(row)
+      .eq("id", draft.id)
+      .eq("tenant_id", tenantId);
+    if (error) throw mrpStickerError(error);
+    return draft.id;
+  }
+
+  const { data, error } = await supabase
+    .from("mrp_sticker_designs")
+    .insert({ tenant_id: tenantId, ...row })
+    .select("id")
+    .single();
+  if (error) throw mrpStickerError(error);
+  return data.id as string;
+}
+
+export async function deleteMrpStickerDesignLive(id: string): Promise<void> {
+  const tenantId = await tenantIdForCurrentUser();
+  const { error } = await supabase
+    .from("mrp_sticker_designs")
+    .delete()
+    .eq("id", id)
+    .eq("tenant_id", tenantId);
+  if (error) throw mrpStickerError(error);
+}
+
+export async function markMrpStickerPrintedLive(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const tenantId = await tenantIdForCurrentUser();
+  const { error } = await supabase
+    .from("mrp_sticker_designs")
+    .update({ last_printed_at: new Date().toISOString() })
+    .in("id", ids)
+    .eq("tenant_id", tenantId);
+  if (error) throw mrpStickerError(error);
 }

@@ -15,8 +15,11 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   billLineAmount,
+  billLineRateColumnValue,
   lineAmountFromMrp,
   hydrateBillLineFromDbItem,
+  packPiecesPerPackForLine,
+  ratePerBaseUnitForPrint,
   sumBillLineAmounts,
 } from "./lib/bill-print-math.mjs";
 import {
@@ -165,6 +168,31 @@ function runUnitTests() {
   const opts = buildSaleProductPickerOptions([pOut, pLow, pOk], ["a"]);
   r.assertEq(opts.find((o) => o.id === "a")?.disabled, false, "picker.line exception");
   r.assertEq(opts.find((o) => o.id === "b")?.tone, "low", "picker.low tone");
+
+  r.assertClose(
+    billLineRateColumnValue({ qty: 6, mrp: 1052.64, rate: 1052.64 }, "mrp", 18),
+    58.48,
+    "pack line print rate per PCS",
+  );
+  r.assertClose(
+    billLineAmount({ qty: 6, rate: 1052.64, mrp: 1052.64 }),
+    6315.84,
+    "pack line amount still qty×rate per Ctn",
+  );
+  r.assertClose(
+    billLineRateColumnValue({ qty: 10, mrp: 58.48, rate: 58.48 }, "mrp", undefined),
+    58.48,
+    "PCS line rate unchanged without pack factor",
+  );
+
+  const packProduct = {
+    id: "p1",
+    uom: "PCS",
+    uomConversion: { packUom: "Ctn", piecesPerPack: 18 },
+  };
+  r.assertEq(packPiecesPerPackForLine("Ctn", packProduct), 18, "packPiecesPerPackForLine Ctn");
+  r.assertEq(packPiecesPerPackForLine("PCS", packProduct), undefined, "packPiecesPerPackForLine PCS");
+  r.assertClose(ratePerBaseUnitForPrint(1052.64, 18), 58.48, "purchase rate per PCS");
 }
 
 // ── 2. Source: layout contracts for print + PDF capture ─────────────────────
@@ -172,6 +200,9 @@ function runSourceTests() {
   const billView = readFileSync(resolve(SRC, "components/app/BillPrintView.tsx"), "utf8");
   const purchaseBill = readFileSync(resolve(SRC, "components/app/PurchaseBillView.tsx"), "utf8");
   const billPriceDisplay = readFileSync(resolve(SRC, "lib/billPriceDisplay.ts"), "utf8");
+  const saleLineMath = readFileSync(resolve(SRC, "lib/saleLineMath.ts"), "utf8");
+  const purchaseLineDisplay = readFileSync(resolve(SRC, "lib/purchaseLineDisplay.ts"), "utf8");
+  const billDetail = readFileSync(resolve(SRC, "pages/bills/BillDetailPage.tsx"), "utf8");
   const settingsPage = readFileSync(resolve(SRC, "pages/settings/SettingsPage.tsx"), "utf8");
   const saleEntry = readFileSync(resolve(SRC, "pages/sales/SaleEntryPage.tsx"), "utf8");
   const entityPicker = readFileSync(resolve(SRC, "components/app/EntityPicker.tsx"), "utf8");
@@ -195,7 +226,14 @@ function runSourceTests() {
     ["BillPrintView", "billLineUnitPriceDisplay", billView],
     ["BillPrintView", "bill-payment-qr", billView],
     ["billPriceDisplay", "salesBillUnitPriceHeaderPrint", billPriceDisplay],
-    ["billPriceDisplay", "saleLineDisplayMrp", billPriceDisplay],
+    ["billPriceDisplay", "piecesPerPack", billPriceDisplay],
+    ["saleLineMath", "saleLineDisplayMrp", saleLineMath],
+    ["saleLineMath", "billLineRateColumnValue", saleLineMath],
+    ["billPdfDocument", "billLineQtyDisplay", billPdf],
+    ["BillDetailPage", "products: PRODUCTS", billDetail],
+    ["SaleEntryPage", "products: PRODUCTS", saleEntry],
+    ["PurchaseBillView", "packPiecesPerPackForLine", purchaseBill],
+    ["PurchaseBillView", "ratePerBaseUnitForPrint", purchaseBill],
     ["billDisplay", "inferBillDiscountFromStored", readFileSync(resolve(SRC, "lib/billDisplay.ts"), "utf8")],
     ["domainLive", "inferBillDiscountFromStored", domainLive],
     ["billPriceDisplay", "showsSalesBillPaymentQr", billPriceDisplay],

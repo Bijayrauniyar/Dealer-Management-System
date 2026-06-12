@@ -1,5 +1,24 @@
 import type { Product, ProductUomConversion } from "@/domain/types";
+import { roundMoney } from "@/lib/money";
 import { billQtyToBaseUnits } from "@/lib/uom";
+
+/** Pack factor when bill line UOM matches product pack UOM. */
+export function packPiecesPerPackForLine(
+  billUom: string,
+  product: Product | null | undefined,
+): number | undefined {
+  const conv = product?.uomConversion;
+  if (!conv || conv.piecesPerPack < 2) return undefined;
+  const u = (billUom || "").trim();
+  if (u === conv.packUom) return conv.piecesPerPack;
+  return undefined;
+}
+
+/** Normalize a per-pack rate to per base unit (PCS) for print. */
+export function ratePerBaseUnitForPrint(rate: number, piecesPerPack?: number): number {
+  if (piecesPerPack && piecesPerPack > 1) return roundMoney(rate / piecesPerPack);
+  return rate;
+}
 
 /** Bill/print row: prefer pack qty when base qty divides evenly. */
 export function purchaseLineQtyDisplay(

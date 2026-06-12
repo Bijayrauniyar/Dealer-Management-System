@@ -41,6 +41,8 @@
     "e2e:phase0:live": "node scripts/e2e-phase0.mjs --live",
     "e2e:suppliers": "node scripts/e2e-supplier-invoices.mjs",
     "e2e:suppliers:live": "node scripts/e2e-supplier-invoices.mjs --live",
+    "e2e:mrp": "node scripts/e2e-mrp-stickers.mjs",
+    "e2e:mrp:live": "node scripts/e2e-mrp-stickers.mjs --live",
     "e2e:bill:ui": "node --experimental-strip-types scripts/e2e-bill-print.mjs --ui",
     "e2e:bill:full": "node --experimental-strip-types scripts/e2e-bill-print.mjs --live --ui",
     "e2e:bill:visual": "node scripts/e2e-bill-visual.mjs",

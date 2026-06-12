@@ -149,12 +149,14 @@ One row per tenant — stores the full business profile that appears on invoices
 
 **On a sales bill line (printed invoice):**
 ```
-S.N | Particulars | MRP | Qty | Unit | Disc% | Amount
+S.N | Particulars | Rate | Qty | [Disc%] | Amount
 ```
-- **MRP** — snapshot from `products.mrp` at billing (editable on sale screen).
-- **Disc%** — snapshot of `products.discount_pct`. Column shown only when ≥ 1 line has a discount.
-- **Amount** — `qty × mrp × (1 − discount_pct / 100)`. Rounded to 2 decimal places (paisa) in app via `roundMoney`.
-- **Rate (DB only)** — `sales_items.rate` stores effective unit price `round(Amount / qty)` so server `subtotal = sum(qty×rate)` matches the UI. Dealer sell price is kept in the app for margin reference only, not printed.
+- **Rate** — Settings picks label MRP or sell price per **base unit (PCS)** when line UOM is pack (e.g. Ctn); otherwise per bill UOM. Header always **Rate**.
+- **Qty** — entered UOM + count (e.g. `1 Ctn`) with base PCS subline when pack conversion applies (e.g. `(18 PCS)`). Unit column merged into Qty on print/PDF.
+- **Disc%** — line discount when set. Column shown only when ≥ 1 line has a discount.
+- **Amount** — `qty × per-UOM rate` (unchanged in DB/RPC). Print math: **Rate (per PCS) × base PCS = Amt** when pack UOM.
+- **Sale entry form** — when line UOM is pack, MRP/sell inputs show **per PCS** with hint `X per Ctn`; stored values remain per pack UOM.
+- **Rate (DB)** — `sales_items.rate` stores effective unit price per **bill UOM** so server `subtotal = sum(qty×rate)` matches the UI.
 
 Then at bill footer:
 ```
@@ -358,6 +360,25 @@ RPC: `record_stock_adjustment`. UI: `StockAdjustmentPage` when `tenant_settings.
 
 ---
 
+### `mrp_sticker_designs` (`0045`)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | RLS `current_tenant_id()` |
+| title | text NOT NULL | Big label line, e.g. `MRP NRS 95/-` |
+| lines | jsonb | Array of description strings (importer, Exim code, batch…) |
+| width_mm / height_mm | numeric | Sticker size; presets 25×15 / 35×20 / 45×25 / 60×30 or custom |
+| title_size / line_size | numeric | Font sizes (pt); auto-suggested from height until user overrides |
+| title_bold / border | boolean | |
+| align | text | `left` / `center` / `right` (default center) |
+| qty | integer | Stickers needed → pages = ceil(qty / per-page) |
+| created_at / updated_at | timestamptz | |
+| last_printed_at | timestamptz | Set when printed from list/designer |
+
+No RPC — direct tenant-scoped CRUD in `domainLive.ts` (`fetchMrpStickerDesignsLive`, `upsertMrpStickerDesignLive`, `deleteMrpStickerDesignLive`, `markMrpStickerPrintedLive`). UI: `/app/mrp-stickers` (history, multi-select print — each design on its own A4 page(s), grid fills 186×263 mm print area with 2 mm cut gap) + `/app/mrp-stickers/new|edit/:designId` designer. Layout math in `lib/mrpSticker.ts`.
+
+---
+
 ### `purchases` *(implemented — see also [Purchase reference numbers](../PURCHASE_REFERENCE_NUMBERS.md))*
 
 | Column | Type | Notes |
@@ -369,9 +390,11 @@ RPC: `record_stock_adjustment`. UI: `StockAdjustmentPage` when `tenant_settings.
 | supplier_invoice_no | text | Supplier’s bill number (`0014`); immutable after first save (`0015`/`0016`) |
 | purchase_date | date NOT NULL | |
 | due_date | date | |
-| subtotal_excl | numeric | Sum of line excl. amounts (`0017`) |
-| vat_amount | numeric | VAT on purchase (`0017`) |
-| subtotal / total | numeric | Incl. VAT totals |
+| subtotal_excl | numeric | Sum of line excl. amounts (`0017`) — before bill discount |
+| discount | numeric DEFAULT 0 | Bill-level discount NPR (excl. base), before VAT (`0044`) |
+| discount_label | text | Optional print label e.g. Scheme (B4G1) (`0044`) |
+| vat_amount | numeric | VAT on `(subtotal_excl − discount)` (`0044`; was per-line sum in `0017`) |
+| subtotal / total | numeric | `total` = taxable excl + VAT |
 | paid | numeric | Supplier payments applied |
 | payment_status | text | paid / partial / unpaid |
 | notes | text | |
@@ -390,6 +413,8 @@ RPC: `record_stock_adjustment`. UI: `StockAdjustmentPage` when `tenant_settings.
 | rate_excl | numeric | Unit cost excl. VAT (`0017`) |
 | rate | numeric | Unit cost incl. VAT per unit |
 | unit | text | UOM when multi-UOM enabled |
+
+**Bill discount flow (`0044`):** `subtotal_excl` = Σ(qty × rate_excl); `discount` = flat NPR (app resolves %); `vat_amount` = round((subtotal_excl − discount) × vat_pct / 100); `total` = taxable excl + VAT. Line rates unchanged — discount is header-only (e.g. supplier B4G1).
 
 RPCs: `record_purchase`, `update_purchase` (from `0013`+). UI: `PurchasePage`, `PurchaseBillView`.
 

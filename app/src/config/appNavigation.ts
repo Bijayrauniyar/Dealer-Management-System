@@ -16,6 +16,7 @@ import {
   RotateCcw,
   ShoppingCart,
   SlidersHorizontal,
+  Tag,
   Truck,
   Users,
 } from "lucide-react";
@@ -33,7 +34,7 @@ export type HomeOverviewSection = {
   items: HomeNavShortcut[];
 };
 
-/** Home — daily voucher entry (6 tiles, 3×2). */
+/** Home — daily voucher entry (3-column tiles). */
 export const HOME_QUICK_ACTIONS: HomeNavShortcut[] = [
   { label: "Sales invoice", to: "/app/sales/new", icon: ShoppingCart, color: "bg-teal-100 text-teal-700" },
   { label: "Payment in", to: "/app/payments/new", icon: CreditCard, color: "bg-green-100 text-green-700" },
@@ -41,6 +42,7 @@ export const HOME_QUICK_ACTIONS: HomeNavShortcut[] = [
   { label: "Return", to: "/app/returns/new", icon: RotateCcw, color: "bg-rose-100 text-rose-700" },
   { label: "Expense", to: "/app/expenses/new", icon: DollarSign, color: "bg-orange-100 text-orange-700" },
   { label: "Payment out", to: "/app/supplier-payments/new", icon: Truck, color: "bg-purple-100 text-purple-700" },
+  { label: "MRP stickers", to: "/app/mrp-stickers", icon: Tag, color: "bg-amber-100 text-amber-700" },
 ];
 
 /** Home — categorized review shortcuts (list rows below quick actions). */
@@ -122,12 +124,18 @@ export const NAV_DRAWER_GROUPS: NavDrawerGroup[] = [
       { label: "Expense", to: "/app/expenses/new", icon: DollarSign },
       { label: "Payment out", to: "/app/supplier-payments/new", icon: Truck },
       { label: "Daily cash", to: "/app/daily-cash", icon: Calculator },
+      { label: "Scheme", to: "/app/schemes/new", icon: Tag },
     ],
   },
   {
     id: "reports",
     title: "Reports",
     items: [{ label: "Reports hub", to: "/app/reports", icon: BarChart2 }],
+  },
+  {
+    id: "tools",
+    title: "Tools",
+    items: [{ label: "MRP stickers", to: "/app/mrp-stickers", icon: Tag }],
   },
   {
     id: "support",
@@ -148,6 +156,7 @@ export const QUICK_ENTRY_ACTIONS: { label: string; to: string }[] = [
   { label: "New product", to: "/app/products/new" },
   { label: "New customer", to: "/app/customers/new" },
   { label: "New supplier", to: "/app/suppliers/new" },
+  { label: "Scheme", to: "/app/schemes/new" },
 ];
 
 export function filterDrawerGroups(

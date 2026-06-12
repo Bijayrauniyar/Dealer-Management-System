@@ -191,6 +191,57 @@ function runSourceChecks() {
     r.fail("PurchasePage supplier invoice", "missing supplierInvoiceNo on create");
   }
 
+  if (
+    purchasePage &&
+    purchasePage.includes("Bill discount") &&
+    purchasePage.includes("discountAmount") &&
+    purchasePage.includes("discountLabel")
+  ) {
+    r.pass("PurchasePage bill discount (flat/percent + label)");
+  } else if (purchasePage) {
+    r.fail("PurchasePage bill discount", "missing discount UI or commit payload");
+  }
+
+  if (
+    purchasePage &&
+    purchasePage.includes("Preview purchase") &&
+    purchasePage.includes("PurchaseBillView") &&
+    purchasePage.includes("buildPurchaseDraft")
+  ) {
+    r.pass("PurchasePage preview before save (eye + draft bill)");
+  } else if (purchasePage) {
+    r.fail("PurchasePage preview", "missing preview toolbar or draft builder");
+  }
+
+  if (domainLive && domainLive.includes("p_discount") && domainLive.includes("p_discount_label")) {
+    r.pass("domainLive passes p_discount to purchase RPCs");
+  } else if (domainLive) {
+    r.fail("domainLive purchase discount RPC", "missing p_discount / p_discount_label");
+  }
+
+  const purchaseBillView = readSrc("components/app/PurchaseBillView.tsx");
+  if (
+    purchaseBillView &&
+    purchaseBillView.includes("purchaseShowsFooterDiscount") &&
+    purchaseBillView.includes("purchaseFooterDiscountLabel")
+  ) {
+    r.pass("PurchaseBillView footer discount rows");
+  } else if (purchaseBillView) {
+    r.fail("PurchaseBillView discount", "missing footer discount helpers");
+  }
+
+  const migration = resolve(APP, "supabase/migrations/0044_purchase_bill_discount.sql");
+  if (existsSync(migration)) {
+    const sql = readFileSync(migration, "utf8");
+    if (sql.includes("v_taxable_excl") && sql.includes("p_discount")) {
+      r.pass("0044 migration: discount before VAT on taxable excl");
+    } else {
+      r.fail("0044 migration", "missing taxable excl discount math");
+    }
+  } else {
+    r.fail("0044 migration", "file missing");
+  }
+
   if (purchasePage && purchasePage.includes("purchaseDisplayTitle")) {
     r.fail("PurchasePage", "should not import purchaseDisplayTitle (PO hidden from form)");
   }
@@ -248,10 +299,14 @@ function runSourceChecks() {
     r.fail("PurchaseBillView", "missing");
   }
 
-  if (purchaseBill && purchaseBill.includes("qtyAlt")) {
-    r.pass("PurchaseBillView dual UOM qtyAlt subline");
+  if (
+    purchaseBill &&
+    purchaseBill.includes("billLineQtyDisplay") &&
+    !purchaseBill.includes(">UOM<")
+  ) {
+    r.pass("PurchaseBillView merged qty + UOM (no separate UOM column)");
   } else if (purchaseBill) {
-    r.fail("PurchaseBillView dual UOM", "missing qtyAlt");
+    r.fail("PurchaseBillView qty column", "expected billLineQtyDisplay without UOM column");
   }
 
   if (purchasePage && !purchasePage.includes("InvoiceNoField")) {

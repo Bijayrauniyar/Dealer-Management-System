@@ -77,6 +77,8 @@ Agents: see `.cursor/rules/docs-on-change.mdc` (always applied).
 | `npm run e2e:phase0:live` | Tier A/B/C live (B includes full `e2e:stock:live`) |
 | `npm run e2e:suppliers` | **Supplier invoices** — routes, button wiring, types (no login) |
 | `npm run e2e:suppliers:live` | Same + DB: `supplier_invoice_no`, purchase lines, `update_purchase`, `payment_status` |
+| `npm run e2e:mrp` | **MRP stickers** — lib/layout math, designer + list pages, routes, drawer, `0045` (source) |
+| `npm run e2e:mrp:live` | Same + `mrp_sticker_designs` table probe (needs `0045` applied) |
 | `npm run e2e:bill:visual` | **Screenshots** (mobile + desktop) + **PDF download** text check (`test-output/`) |
 | `npm run e2e:ui` | **Browser UI** — forms + navigation (needs `npm run dev`) |
 | `npm run e2e:ui:setup` | Install Playwright Chromium (once) |

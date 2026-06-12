@@ -70,6 +70,7 @@ export const PURCHASE_REGISTER_COLUMNS = [
   "supplier_name",
   "supplier_invoice_no",
   "subtotal_excl",
+  "discount",
   "vat_amount",
   "total",
   "paid",

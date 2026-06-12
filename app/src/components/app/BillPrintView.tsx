@@ -99,6 +99,8 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
   const letterhead = sellerLetterheadFromBusiness(business);
   const unitPriceHeader = salesBillUnitPriceHeaderPrint(business);
   const priceColPct = "16%";
+  const qtyColPct = hasLineDisc ? "16%" : "18%";
+  const amtColPct = hasLineDisc ? "16.5%" : "20%";
   const nameColPct = hasLineDisc ? "31%" : "35%";
   const showPaymentQr = showsSalesBillPaymentQr(business, sale.balance);
   const [qrImageSrc, setQrImageSrc] = useState("");
@@ -192,13 +194,12 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
         <div className="mt-1 w-full min-w-0">
           <table className="bill-lines-table w-full table-fixed border-collapse text-[8px] leading-normal sm:text-[10px]">
             <colgroup>
-              <col className="bill-col-sn" style={{ width: hasLineDisc ? "7%" : "8%" }} />
+              <col className="bill-col-sn" style={{ width: hasLineDisc ? "7.5%" : "9%" }} />
               <col style={{ width: nameColPct }} />
               <col style={{ width: priceColPct }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "11%" }} />
+              <col style={{ width: qtyColPct }} />
               {hasLineDisc ? <col style={{ width: "9%" }} /> : null}
-              <col style={{ width: hasLineDisc ? "16%" : "20%" }} />
+              <col style={{ width: amtColPct }} />
             </colgroup>
             <thead>
               <tr className="bg-teal-600 font-bold uppercase text-white">
@@ -214,9 +215,6 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
                       {unitPriceHeader}
                     </span>
                   </BillCellInner>
-                </th>
-                <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
-                  <BillCellInner align="center">Unit</BillCellInner>
                 </th>
                 <th className="bill-cell whitespace-nowrap border border-teal-700 p-0">
                   <BillCellInner align="center">Qty</BillCellInner>
@@ -235,8 +233,11 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
               {lines.map((line, i) => {
                 const foc = isFocSaleLine(line);
                 const { title, subtitle } = billLineParticulars(line);
-                const unitPriceCell = billLineUnitPriceDisplay(line, business.salesBillPriceMode);
                 const product = PRODUCTS.find((p) => p.id === line.productId);
+                const ppp = product?.uomConversion && line.uom === product.uomConversion.packUom
+                  ? product.uomConversion.piecesPerPack
+                  : undefined;
+                const unitPriceCell = billLineUnitPriceDisplay(line, business.salesBillPriceMode, ppp);
                 const qtyDisp = billLineQtyDisplay(line.qty, line.uom || "PCS", product);
                 return (
                 <tr key={i} className={foc ? "bg-pink-50/50 text-gray-700" : "even:bg-gray-50/60"}>
@@ -258,13 +259,10 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
                   <td className="bill-cell border border-gray-300 p-0 tabular-nums text-gray-700">
                     <BillCellInner align="center">{unitPriceCell}</BillCellInner>
                   </td>
-                  <td className="bill-cell border border-gray-300 p-0 text-[7px] text-gray-600 sm:text-[8px]">
-                    <BillCellInner align="center">{qtyDisp.uom}</BillCellInner>
-                  </td>
                   <td className="bill-cell border border-gray-300 p-0 tabular-nums">
                     <BillCellInner align="center">
                       <span className="block leading-tight">
-                        <span>{nprNum(qtyDisp.qty)}</span>
+                        <span>{nprNum(qtyDisp.qty)} {qtyDisp.uom}</span>
                         {qtyDisp.sub ? (
                           <span className="mt-0.5 block text-[7px] font-normal text-gray-500">
                             ({qtyDisp.sub})
@@ -419,7 +417,7 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
         </p>
 
         {/* ── Signatures ── */}
-        <div className="bill-signatures mt-2 grid grid-cols-2 gap-3 border-t border-dashed border-gray-300 pt-2 sm:mt-1.5 sm:pt-1.5">
+        {/* <div className="bill-signatures mt-2 grid grid-cols-2 gap-3 border-t border-dashed border-gray-300 pt-2 sm:mt-1.5 sm:pt-1.5">
           <div className="text-center">
             <div className="mb-0.5 min-h-[1rem] border-b border-gray-400" />
             <p className="text-[9px] font-medium text-gray-600">Authorised signature</p>
@@ -428,7 +426,8 @@ export const BillPrintView = ({ sale, customer, isPreview }: Props) => {
             <div className="mb-0.5 min-h-[1rem] border-b border-gray-400" />
             <p className="text-[9px] font-medium text-gray-600">Received by</p>
           </div>
-        </div>
+        </div> */}
+
       </div>
     </div>
   );

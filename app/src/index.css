@@ -119,10 +119,6 @@
     padding: 10px 0 8px !important;
   }
 
-  .bill-print-a4 .bill-signatures {
-    margin-top: 12px !important;
-    padding-top: 10px !important;
-  }
 }
 
 /* PDF download clone — match print preview (@media print bill) */
@@ -307,10 +303,6 @@
     margin-bottom: 2px;
   }
 
-  .bill-print-a4 .bill-signatures {
-    margin-top: 10px !important;
-    padding-top: 8px !important;
-  }
 }
 
 :root {

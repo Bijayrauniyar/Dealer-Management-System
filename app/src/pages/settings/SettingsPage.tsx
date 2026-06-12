@@ -139,7 +139,7 @@ export function SettingsPage() {
   const [dueSoonDays, setDueSoonDays] = useState(3);
   const [defaultMarkupPct, setDefaultMarkupPct] = useState(0);
   const [defaultMinQty, setDefaultMinQty] = useState(20);
-  const [defaultMinPackQty, setDefaultMinPackQty] = useState(2);
+  const [defaultMinPackQty, setDefaultMinPackQty] = useState(1);
   const [defaultVatPct, setDefaultVatPct] = useState(13);
   const [productCategories, setProductCategories] = useState<string[]>(["General"]);
   const [productUnits, setProductUnits] = useState<string[]>(["PCS", "Pkt", "Box", "Ctn", "Doz", "Ltr", "Kg"]);

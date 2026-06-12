@@ -1,4 +1,4 @@
-import type { BusinessSettings, Sale, SaleLine } from "@/domain/types";
+import type { BusinessSettings, PurchaseDetail, Sale, SaleLine } from "@/domain/types";
 import { roundMoney } from "@/lib/money";
 import { saleLineDisplayMrp } from "@/lib/saleLineMath";
 import { DEFAULT_VAT_PCT, getVatPct } from "@/lib/tax";
@@ -115,6 +115,24 @@ export function billFooterDiscountLabel(
   sale: Pick<Sale, "discountType" | "discountValue">,
 ): string {
   if (sale.discountType === "percent") return `Discount (${sale.discountValue}%)`;
+  return "Discount";
+}
+
+export function purchaseShowsFooterDiscount(
+  purchase: Pick<PurchaseDetail, "discountAmount" | "discountType">,
+): boolean {
+  return (
+    purchase.discountAmount > 0 &&
+    (purchase.discountType === "percent" || purchase.discountType === "flat")
+  );
+}
+
+export function purchaseFooterDiscountLabel(
+  purchase: Pick<PurchaseDetail, "discountLabel" | "discountType" | "discountValue">,
+): string {
+  const custom = purchase.discountLabel?.trim();
+  if (custom) return custom;
+  if (purchase.discountType === "percent") return `Discount (${purchase.discountValue}%)`;
   return "Discount";
 }
 

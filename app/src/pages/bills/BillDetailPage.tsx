@@ -16,6 +16,7 @@ import {
   useCustomers,
   useDomainBundleLoadState,
   useBusinessSettings,
+  useProductsCatalog,
 } from "@/store/domain";
 import { DateDisplay } from "@/components/app/DateDisplay";
 import { npr, fmtDateDualBs } from "@/lib/utils";
@@ -72,13 +73,14 @@ export const BillDetailPage = () => {
   const payments  = PAYMENTS.filter((p) => p.billNo === billNo);
   const customer  = sale ? CUSTOMERS.find((c) => c.id === sale.customerId) : undefined;
   const business  = useBusinessSettings();
+  const PRODUCTS  = useProductsCatalog();
   const [exporting, setExporting] = useState(false);
 
   const handleDownload = async () => {
     if (!sale) return;
     setExporting(true);
     try {
-      await downloadBillPdf({ sale, customer, business });
+      await downloadBillPdf({ sale, customer, business, products: PRODUCTS });
       toast.success("Bill downloaded");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Download failed");
@@ -91,7 +93,7 @@ export const BillDetailPage = () => {
     if (!sale) return;
     setExporting(true);
     try {
-      const result = await shareBillPdf({ sale, customer, business });
+      const result = await shareBillPdf({ sale, customer, business, products: PRODUCTS });
       if (result === "shared") toast.success("Shared");
       else toast.success("PDF downloaded — share from your files");
     } catch (e) {

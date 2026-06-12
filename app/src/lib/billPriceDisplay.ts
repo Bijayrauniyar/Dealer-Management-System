@@ -31,11 +31,16 @@ export function salesBillUnitPriceHeaderPrint(
 /**
  * Rate column value on printed bill.
  * Settings picks the number: label MRP (Disc% when set) or catalog sell price.
- * Invariant: Rate × Qty (× (1−Disc%) for MRP billing + disc) = Amt.
+ * Stored line amount still uses qty × per-UOM rate; print may show Rate per PCS when
+ * line UOM is pack — then Amt = Rate (per PCS) × base PCS (see Qty subline).
  */
-export function billLineUnitPriceDisplay(line: SaleLine, mode: SalesBillPriceMode): string {
+export function billLineUnitPriceDisplay(
+  line: SaleLine,
+  mode: SalesBillPriceMode,
+  piecesPerPack?: number,
+): string {
   if (isFocSaleLine(line)) return "FOC";
-  const unit = billLineRateColumnValue(line, mode);
+  const unit = billLineRateColumnValue(line, mode, piecesPerPack);
   return unit > 0 ? nprNum(unit) : "—";
 }
 

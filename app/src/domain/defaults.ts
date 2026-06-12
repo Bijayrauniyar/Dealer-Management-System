@@ -40,7 +40,7 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   dueSoonDays: 3,
   defaultMarkupPct: 15,
   defaultMinQty: 20,
-  defaultMinPackQty: 2,
+  defaultMinPackQty: 1,
   productCategories: ["General"],
   productUnits: ["PCS", "Pkt", "Box", "Ctn", "Doz", "Ltr", "Kg"],
   allowStockAdjustment: false,
