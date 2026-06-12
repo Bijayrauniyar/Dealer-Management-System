@@ -200,7 +200,7 @@ export async function buildPurchasesRegisterExport(range: ExportDateRange): Prom
     supabase
       .from("purchases")
       .select(
-        "purchase_date, subtotal_excl, vat_amount, total, paid, supplier_invoice_no, suppliers(name)",
+        "purchase_date, subtotal_excl, discount, vat_amount, total, paid, supplier_invoice_no, suppliers(name)",
       )
       .gte("purchase_date", range.from)
       .lte("purchase_date", range.to)
@@ -217,6 +217,7 @@ export async function buildPurchasesRegisterExport(range: ExportDateRange): Prom
       supplier_name: supplierName ?? "",
       supplier_invoice_no: String(r.supplier_invoice_no ?? ""),
       subtotal_excl: num(r.subtotal_excl),
+      discount: num(r.discount),
       vat_amount: num(r.vat_amount),
       total,
       paid,

@@ -1,20 +1,25 @@
 #Todo List 
 
 #Todo
-- in purchase invoice by default optoin to show pack uom and in bill pcs is okay  with 1 by default dont conver it . 
+done -----------
+- in purchase invoice by default optoin to show pack uom and in bill pcs is okay  with 1 by default.
+
+- when entring and click enter it should goes to next field section so user enter the balue by enter witout mouse 
+and  in purchage form or bill form or any where in whole app flow same this rule in all form
+
+- by default what ever enter in inv quantity it shoudl reflect in recv quanity witohut entring and  if user want it  will be change by user  
+
+-in product form add and edit form  when pcs and ctn are in same quantity means not conversion saving with 1 but show by defult 2 while saving it  should  save 1. 
+-------done 
 
 done------ 
 - fix ctn and pcs price calculation issue why pcs calcluation working well but not ctn 
 - why totaling calculation is not wrong after point . eg when it convert ctn and base unit is given in pcs eg. buy price 58.48 per pcs and in ctn 18 pcs so that total price of 6 ctn should be (6x18)x58.48=6315.84 but it showing 6315.82 why ?? but when we are doing pcs it shows correct. 
---------done
+--------done 
 
-- when etring and click enter ti should goes to next field section so user enter the balue by enter witout mouse 
-
-- by default what ever enter in inv q shoudl reflect in recv q if not it will be change by use 
-
-- when pcs and ctn are in same quantity means not conversion saving with 1 bu show by defult 2 while saving it shoule save 1. 
-
-done - check why scheme feature  is not showing... earilier it was therey can you check for it 
+done -------
+ - check why scheme feature  is not showing... earilier it was therey can you check for it 
+ -----done
 
 ---done 
 - in purchase also able to give discount on total bill after discount minus total vat will be applied meand total minus 
@@ -32,7 +37,7 @@ MRP pringitng feature
 Build a feature called MRP Sticker Generator for BikriKhata.com.
 
 Goal:
-Allow any business in Nepal (importer, manufacturer, wholesaler, retailer, small shop owner) to easily create printable MRP stickers on A4 paper without needing Microsoft Word or design software.
+Allow any business in Nepal (importer, manufacturer, wholesaler, retailer, small shop owner) to easily create printalso able MRP stickers on A4 paper without needing Microsoft Word or design software.
 
 Focus ONLY on MRP sticker generation in V1.
 
@@ -290,3 +295,9 @@ Create Sticker
 No complicated forms.
 
 The product should feel like Canva but specifically for MRP sticker creation.
+
+also update doc and maintain the document as we are doing from
+  erlier you can go through whole project and see how we are
+  doiing how codument each and everythin that needed in future
+  and how we are writen test script for all the feature after
+  development  

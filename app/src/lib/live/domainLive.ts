@@ -978,6 +978,8 @@ export async function commitPurchaseLive(opts: {
   dueDate?: string | null;
   lines: { productId: string; receivedQty: number; rateExcl: number }[];
   totalReceived: number;
+  discountAmount?: number;
+  discountLabel?: string | null;
 }): Promise<{ purchaseNo: string; purchaseId: string }> {
   const due =
     opts.dueDate?.trim()?.slice(0, 10) || null;
@@ -990,6 +992,8 @@ export async function commitPurchaseLive(opts: {
       ? normalizeInvoiceNoSpoken(opts.supplierInvoiceNo) || null
       : null,
     p_due_date: due,
+    p_discount: opts.discountAmount ?? 0,
+    p_discount_label: opts.discountLabel?.trim() || null,
   });
   if (error) throw purchaseRpcError(error, { settingInvoice: Boolean(opts.supplierInvoiceNo?.trim()) });
   const row = Array.isArray(data) ? data[0] : data;
@@ -1008,6 +1012,8 @@ export async function commitPurchaseUpdateLive(opts: {
   dueDate?: string | null;
   notes?: string | null;
   lines: { productId: string; receivedQty: number; rateExcl: number }[];
+  discountAmount?: number;
+  discountLabel?: string | null;
 }): Promise<{ purchaseNo: string }> {
   const inv =
     opts.supplierInvoiceNo !== undefined && opts.supplierInvoiceNo !== null
@@ -1023,6 +1029,8 @@ export async function commitPurchaseUpdateLive(opts: {
     p_purchase_date: opts.purchaseDate,
     p_lines: purchaseLinesToRpc(opts.lines),
     p_notes: opts.notes ?? null,
+    p_discount: opts.discountAmount ?? 0,
+    p_discount_label: opts.discountLabel?.trim() || null,
     ...(opts.dueDate !== undefined ? { p_due_date: due } : {}),
     ...(inv !== null ? { p_supplier_invoice_no: inv } : {}),
   });
@@ -1735,7 +1743,7 @@ export async function fetchPurchasesListLive(): Promise<PurchaseListItem[]> {
 
 export async function fetchPurchaseDetailLive(purchaseId: string): Promise<PurchaseDetail | null> {
   const detailSelect =
-    `${PURCHASE_LIST_SELECT}, subtotal, subtotal_excl, vat_amount, notes`;
+    `${PURCHASE_LIST_SELECT}, subtotal, subtotal_excl, discount, discount_label, vat_amount, notes`;
   let header: unknown = null;
   let error: { message?: string } | null = null;
   const full = await supabase
@@ -1750,13 +1758,19 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
     (isMissingColumnError(error, "supplier_invoice_no") ||
       isMissingColumnError(error, "due_date") ||
       isMissingColumnError(error, "subtotal_excl") ||
+      isMissingColumnError(error, "discount") ||
+      isMissingColumnError(error, "discount_label") ||
       isMissingColumnError(error, "vat_amount"))
   ) {
     let legacySel = purchaseSelectWithoutInvoiceCol(detailSelect);
     if (isMissingColumnError(error, "due_date")) {
       legacySel = legacySel.replace("due_date, ", "").replace(", due_date", "");
     }
-    legacySel = legacySel.replace(", subtotal_excl, vat_amount", "").replace("subtotal_excl, vat_amount, ", "");
+    legacySel = legacySel
+      .replace(", discount, discount_label", "")
+      .replace("discount, discount_label, ", "")
+      .replace(", subtotal_excl, vat_amount", "")
+      .replace("subtotal_excl, vat_amount, ", "");
     const legacy = await supabase
       .from("purchases")
       .select(legacySel)
@@ -1798,6 +1812,8 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
   const h = header as {
     subtotal: number;
     subtotal_excl?: number | null;
+    discount?: number | null;
+    discount_label?: string | null;
     vat_amount?: number | null;
     notes: string | null;
   };
@@ -1843,6 +1859,12 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
     h.subtotal_excl != null
       ? Number(h.subtotal_excl)
       : lines.reduce((s, l) => s + l.qty * l.rateExcl, 0);
+  const discountAmount = Number(h.discount ?? 0) || 0;
+  const { discountType, discountValue } = inferBillDiscountFromStored(
+    subtotalExcl,
+    discountAmount,
+  );
+  const taxableExcl = roundMoney(Math.max(0, subtotalExcl - discountAmount));
   const vatAmount =
     h.vat_amount != null
       ? Number(h.vat_amount)
@@ -1851,6 +1873,11 @@ export async function fetchPurchaseDetailLive(purchaseId: string): Promise<Purch
   return {
     ...base,
     subtotalExcl,
+    discountType,
+    discountValue,
+    discountAmount,
+    discountLabel: h.discount_label?.trim() ?? "",
+    taxableExcl,
     vatAmount,
     subtotal: Number(h.subtotal) || subtotalExcl + vatAmount,
     notes: h.notes?.trim() ?? "",

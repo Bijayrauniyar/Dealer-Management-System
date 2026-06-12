@@ -824,7 +824,7 @@ export const SaleEntryPage = () => {
               {discountAmt > 0 && (
                 <div className="flex justify-between gap-2 text-amber-800">
                   <span>
-                    {discountType === "percent" ? `Discount (${discountValue}%)` : "Discount (flat)"}
+                    {discountType === "percent" ? `Discount (${discountValue}%)` : "Discount"}
                   </span>
                   <span className="font-medium tabular-nums">− {npr(discountAmt)}</span>
                 </div>
@@ -893,7 +893,7 @@ export const SaleEntryPage = () => {
           ["Subtotal", npr(subtotal)],
           ...(discountAmt > 0
             ? [[
-                discountType === "percent" ? `Discount (${discountValue}%)` : "Discount (flat)",
+                discountType === "percent" ? `Discount (${discountValue}%)` : "Discount",
                 `− ${npr(discountAmt)}`,
               ] as [string, string]]
             : []),

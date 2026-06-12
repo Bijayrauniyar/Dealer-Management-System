@@ -371,9 +371,11 @@ RPC: `record_stock_adjustment`. UI: `StockAdjustmentPage` when `tenant_settings.
 | supplier_invoice_no | text | Supplier’s bill number (`0014`); immutable after first save (`0015`/`0016`) |
 | purchase_date | date NOT NULL | |
 | due_date | date | |
-| subtotal_excl | numeric | Sum of line excl. amounts (`0017`) |
-| vat_amount | numeric | VAT on purchase (`0017`) |
-| subtotal / total | numeric | Incl. VAT totals |
+| subtotal_excl | numeric | Sum of line excl. amounts (`0017`) — before bill discount |
+| discount | numeric DEFAULT 0 | Bill-level discount NPR (excl. base), before VAT (`0044`) |
+| discount_label | text | Optional print label e.g. Scheme (B4G1) (`0044`) |
+| vat_amount | numeric | VAT on `(subtotal_excl − discount)` (`0044`; was per-line sum in `0017`) |
+| subtotal / total | numeric | `total` = taxable excl + VAT |
 | paid | numeric | Supplier payments applied |
 | payment_status | text | paid / partial / unpaid |
 | notes | text | |
@@ -392,6 +394,8 @@ RPC: `record_stock_adjustment`. UI: `StockAdjustmentPage` when `tenant_settings.
 | rate_excl | numeric | Unit cost excl. VAT (`0017`) |
 | rate | numeric | Unit cost incl. VAT per unit |
 | unit | text | UOM when multi-UOM enabled |
+
+**Bill discount flow (`0044`):** `subtotal_excl` = Σ(qty × rate_excl); `discount` = flat NPR (app resolves %); `vat_amount` = round((subtotal_excl − discount) × vat_pct / 100); `total` = taxable excl + VAT. Line rates unchanged — discount is header-only (e.g. supplier B4G1).
 
 RPCs: `record_purchase`, `update_purchase` (from `0013`+). UI: `PurchasePage`, `PurchaseBillView`.
 

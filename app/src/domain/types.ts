@@ -264,6 +264,12 @@ export type PurchaseLineDetail = {
 
 export type PurchaseDetail = PurchaseListItem & {
   subtotalExcl: number;
+  discountType: "none" | "flat" | "percent";
+  discountValue: number;
+  discountAmount: number;
+  /** Optional print label e.g. Scheme (B4G1). */
+  discountLabel: string;
+  taxableExcl: number;
   vatAmount: number;
   subtotal: number;
   notes: string;

@@ -200,6 +200,11 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Open: app/supabase/migrations/0043_customer_advance_payments.sql
    - Copy entire file → Paste → Run → Success.
    - Adds `payments.reversed_at` / `reversal_reason`, `record_customer_advance`, `reverse_customer_payment`, and auto-apply advance in `create_sales_bill`.
+
+41. Migration 0044 (purchase bill discount before VAT)
+   - Open: app/supabase/migrations/0044_purchase_bill_discount.sql
+   - Copy entire file → Paste → Run → Success.
+   - Adds `purchases.discount` + `discount_label`; `record_purchase` / `update_purchase` apply discount before VAT.
    - If you see error `cannot change name of view column "last_payment_date"`: you ran an older copy — re-run the **current** 0043 file (it drops/recreates `v_customer_balance` + `v_overdue_customers`).
    - If reversal fails in the app but columns exist: confirm the full file ran (RPCs at bottom), not only the `ALTER TABLE` part.
    - If error `42P13: cannot change return type of existing function` on `create_sales_bill`: re-run the **current** 0043 file (includes `DROP FUNCTION` before the new `create_sales_bill`).

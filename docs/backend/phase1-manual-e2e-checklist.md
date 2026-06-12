@@ -432,6 +432,8 @@ open     = total − paid
 |----|-------|----------|
 | PU1 | Purchase: supplier + **invoice no.** + product, qty 50, buy excl. 80 | `purchases` total incl. VAT; stock +50 |
 | PU2 | **Multi-line purchase** | Subtotal excl + VAT % = total on screen and DB |
+| PU2b | **Purchase bill discount** | 5 × 100 excl, flat discount 100 (label Scheme B4G1) → taxable 400, VAT 52, total 452; print shows discount row; edit reloads discount |
+| PU2c | **Purchase preview before save** | Eye icon on sticky bar → full-screen preview; Print / PDF / Close (same as sales invoice) |
 | PU3 | Supplier payment **500** on unpaid purchase | `purchases.paid` = 500 (or FIFO across POs) |
 | PU4 | Second PO unpaid; pay again | Older PO paid first (FIFO) — note actual behaviour |
 | PU5 | Stock page after purchase | Closing stock increased |

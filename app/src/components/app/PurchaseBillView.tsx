@@ -1,14 +1,22 @@
 import type { BusinessSettings, PurchaseDetail, Supplier } from "@/domain/types";
 import { useProductsCatalog } from "@/store/domain";
-import { sellerLetterheadFromBusiness } from "@/lib/billDisplay";
-import { packPiecesPerPackForLine, ratePerBaseUnitForPrint } from "@/lib/purchaseLineDisplay";
+import {
+  purchaseFooterDiscountLabel,
+  purchaseShowsFooterDiscount,
+  sellerLetterheadFromBusiness,
+} from "@/lib/billDisplay";
+import {
+  billLineQtyDisplay,
+  packPiecesPerPackForLine,
+  ratePerBaseUnitForPrint,
+} from "@/lib/purchaseLineDisplay";
 import { BillLetterhead } from "@/components/app/BillLetterhead";
 import { getVatPct } from "@/lib/tax";
 import { purchaseDisplayTitle } from "@/lib/purchaseDisplay";
 import { purchaseBillRateHeader } from "@/lib/billPriceDisplay";
 import { IRD_PURCHASE_BILL_DISCLAIMER } from "@/lib/irdDisclaimer";
 import { DateDisplay } from "@/components/app/DateDisplay";
-import { fmtDate, npr, toMiti } from "@/lib/utils";
+import { fmtDate, npr, nprNum, toMiti } from "@/lib/utils";
 
 type Props = {
   purchase: PurchaseDetail;
@@ -98,8 +106,7 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
             <thead>
               <tr className="border-b border-gray-300 bg-gray-50 text-gray-600">
                 <th className="px-1 py-1 text-left font-semibold">Item</th>
-                <th className="px-1 py-1 text-right font-semibold">Qty</th>
-                <th className="px-1 py-1 text-left font-semibold">UOM</th>
+                <th className="px-1 py-1 text-center font-semibold">Qty</th>
                 <th className="px-1 py-1 text-right font-semibold">{rateHeader}</th>
                 {vatPct > 0 ? (
                   <th className="px-1 py-1 text-right font-semibold">VAT</th>
@@ -115,25 +122,25 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
                   showInclRate ? line.rateIncl : line.rateExcl,
                   ppp,
                 );
+                const qtyDisp = billLineQtyDisplay(line.qty, line.uom, product);
                 return (
                 <tr key={`${line.productId}-${line.qty}`} className="border-b border-gray-100">
                   <td className="px-1 py-1 align-top">
                     <BillCell>{line.productName}</BillCell>
                   </td>
                   <td className="px-1 py-1">
-                    <BillCell align="right">
+                    <BillCell align="center">
                       <span className="block leading-tight">
-                        <span>{line.qty}</span>
-                        {line.qtyAlt ? (
-                          <span className="block text-[8px] font-normal text-gray-500">
-                            ({line.qtyAlt})
+                        <span>
+                          {nprNum(qtyDisp.qty)} {qtyDisp.uom}
+                        </span>
+                        {qtyDisp.sub ? (
+                          <span className="mt-0.5 block text-[7px] font-normal text-gray-500">
+                            ({qtyDisp.sub})
                           </span>
                         ) : null}
                       </span>
                     </BillCell>
-                  </td>
-                  <td className="px-1 py-1">
-                    <BillCell>{line.uom}</BillCell>
                   </td>
                   <td className="px-1 py-1">
                     <BillCell align="right">
@@ -162,6 +169,18 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
               <span className="text-gray-600">Subtotal (excl. VAT)</span>
               <span className="font-semibold tabular-nums">{npr(purchase.subtotalExcl)}</span>
             </div>
+            {purchaseShowsFooterDiscount(purchase) && (
+              <div className="flex justify-between gap-2 text-amber-900">
+                <span>{purchaseFooterDiscountLabel(purchase)}</span>
+                <span className="font-semibold tabular-nums">− {npr(purchase.discountAmount)}</span>
+              </div>
+            )}
+            {purchaseShowsFooterDiscount(purchase) && (
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-600">Taxable (excl.)</span>
+                <span className="font-semibold tabular-nums">{npr(purchase.taxableExcl)}</span>
+              </div>
+            )}
             {vatPct > 0 && (
               <div className="flex justify-between gap-2">
                 <span className="text-gray-600">VAT ({vatPct}%)</span>
