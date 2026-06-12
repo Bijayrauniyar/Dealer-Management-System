@@ -21,6 +21,7 @@
 | **WEB-1** | Marketing site + `/app` SPA |
 | **LIC-1** | Trial / license expiry, banners, `approve_tenant` |
 | **HSN-1** | Optional HSN on product (`0034`) |
+| **MRP-STK-1** | MRP sticker generator (`0045`, `/app/mrp-stickers`) |
 | **UI-1** | Symmetric UI — patterns, EntityList, Settings tabs |
 | **DEL-1** | Archive/restore masters (`0037`) |
 | **BILL-QR-1** | Payment QR + bank on balance-due bills (`0035`–`0036`) |
@@ -91,6 +92,7 @@ Full rows: [§ Master register](#master-register). Execution order: [FIRST_LAUNC
 | **PRICE-4DEC** | Product + line prices up to 4 decimals | 1.0 | — | **done** | 2026-06-05 — `0039` on prod |
 | **UNITS-1** | Custom units catalog in Settings | 1.0 | 2–3 d | **done** | 2026-06-05 — `0038` |
 | **HSN-1** | HSN code on products (optional field) | 1.0 | — | **done** | `0034`; no Settings toggle — see § HSN-1 below |
+| **MRP-STK-1** | MRP sticker generator — saved designs, A4 grid print | 1.0 | 1–2 d | **done** | 2026-06-12 — `0045`, `/app/mrp-stickers`, drawer Tools group, `e2e:mrp` |
 | **SF-0** | Salesman on invoice only | 1.0 | 3–5 d | backlog | No order tables |
 | **ORD-1** | Sales order draft | 1.0 | 3–4 d | backlog | No stock move |
 | **ORD-2** | Convert order → sales bill (full) | 1.0 | 2–3 d | backlog | |

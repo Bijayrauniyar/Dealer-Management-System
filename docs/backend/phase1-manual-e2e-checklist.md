@@ -109,6 +109,7 @@ Check each row after manual testing.
 | **Products** | List, search, add, edit, archive/restore, 4-dec prices | `/app/products`, `/app/products/new`, `.../edit/:id` |
 | **Suppliers** | List, detail, add/edit (`EntityList`) | `/app/suppliers`, `…/new`, `…/:id`, `…/edit/:id` |
 | **Stock adjustment** | Manual +/- qty when enabled | `/app/stock-adjustment/new` |
+| **MRP stickers** | Saved designs (history, multi-select print), designer with live preview + A4 sheet print (`0045`) | `/app/mrp-stickers`, `…/new`, `…/edit/:id` |
 | **Sale** | New bill, edit existing (`update_sales_bill`), preview, print | `/app/sales/new`, `/app/sales/edit/:billNo` |
 | **Bill detail** | View, **Share**, Print, PDF, Return, **Collect** (green), Edit | `/app/bills/:billNo` |
 | **Payment** | Customer payment, bill allocation | `/app/payments/new` |
@@ -509,6 +510,19 @@ open     = total − paid
 | RP3 | Company overview net worth | Plausible vs manual calc |
 | RP4 | Supplier ledger from hub/drawer | Opens period/supplier view |
 | RP5 | **Help & support** from drawer only | Not under Settings tabs |
+
+---
+
+### 3.16b MRP stickers (MAN-MRP) — needs `0045`
+
+| ID | Steps | Expected |
+|----|-------|----------|
+| MRP1 | Drawer → **Tools → MRP stickers** → **New sticker**: title `MRP NRS 95/-`, 2 lines, preset Medium 45×25 | Live preview at real size; "X stickers/page · Y pages"; fonts auto-fit until edited |
+| MRP2 | **Save & print** | Browser print dialog; A4 filled with repeated sticker grid (2 mm cut gap); design appears in list with printed date |
+| MRP3 | Change qty to 130 with 65/page | Shows 2 pages; print produces 2 sheets |
+| MRP4 | Create a 2nd design (different size); tick both → **Print selected (2)** | One print job; each design starts on its own page |
+| MRP5 | Row actions: **Edit** reloads values; **Duplicate** adds copy; **Delete** asks confirm then removes | History stays tenant-scoped |
+| MRP6 | Without migration `0045` | List shows friendly "run migration 0045" error, no crash |
 
 ---
 

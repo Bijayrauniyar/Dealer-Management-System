@@ -360,6 +360,25 @@ RPC: `record_stock_adjustment`. UI: `StockAdjustmentPage` when `tenant_settings.
 
 ---
 
+### `mrp_sticker_designs` (`0045`)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| tenant_id | uuid FK | RLS `current_tenant_id()` |
+| title | text NOT NULL | Big label line, e.g. `MRP NRS 95/-` |
+| lines | jsonb | Array of description strings (importer, Exim code, batch…) |
+| width_mm / height_mm | numeric | Sticker size; presets 25×15 / 35×20 / 45×25 / 60×30 or custom |
+| title_size / line_size | numeric | Font sizes (pt); auto-suggested from height until user overrides |
+| title_bold / border | boolean | |
+| align | text | `left` / `center` / `right` (default center) |
+| qty | integer | Stickers needed → pages = ceil(qty / per-page) |
+| created_at / updated_at | timestamptz | |
+| last_printed_at | timestamptz | Set when printed from list/designer |
+
+No RPC — direct tenant-scoped CRUD in `domainLive.ts` (`fetchMrpStickerDesignsLive`, `upsertMrpStickerDesignLive`, `deleteMrpStickerDesignLive`, `markMrpStickerPrintedLive`). UI: `/app/mrp-stickers` (history, multi-select print — each design on its own A4 page(s), grid fills 186×263 mm print area with 2 mm cut gap) + `/app/mrp-stickers/new|edit/:designId` designer. Layout math in `lib/mrpSticker.ts`.
+
+---
+
 ### `purchases` *(implemented — see also [Purchase reference numbers](../PURCHASE_REFERENCE_NUMBERS.md))*
 
 | Column | Type | Notes |

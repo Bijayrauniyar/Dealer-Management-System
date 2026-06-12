@@ -8,6 +8,7 @@ import {
   DollarSign,
   Download,
   LayoutDashboard,
+  Tag,
   TrendingUp,
 } from "lucide-react";
 import { PageShell } from "@/components/app/PageShell";
@@ -63,6 +64,12 @@ const SECTIONS: HubSection[] = [
     title: "Data",
     items: [
       { label: "Export data", to: "/app/settings", icon: Download, settingsTab: "data" },
+    ],
+  },
+  {
+    title: "Tools",
+    items: [
+      { label: "MRP sticker printing", to: "/app/mrp-stickers", icon: Tag },
     ],
   },
 ];

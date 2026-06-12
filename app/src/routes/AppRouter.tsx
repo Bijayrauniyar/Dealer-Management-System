@@ -30,6 +30,8 @@ import { SupplierFormPage } from "@/pages/suppliers/SupplierFormPage";
 import { SupplierDetailPage } from "@/pages/suppliers/SupplierDetailPage";
 import { SupplierInvoicesPage } from "@/pages/suppliers/SupplierInvoicesPage";
 import { StockAdjustmentPage } from "@/pages/stock/StockAdjustmentPage";
+import { MrpStickerListPage } from "@/pages/mrp/MrpStickerListPage";
+import { MrpStickerDesignerPage } from "@/pages/mrp/MrpStickerDesignerPage";
 import { ReportsHubPage } from "@/pages/reports/ReportsHubPage";
 import { SupportPage } from "@/pages/support/SupportPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
@@ -104,6 +106,9 @@ const AppRoutesInner = () => (
       <Route path="suppliers/:supplierId/invoices" element={<SupplierInvoicesPage />} />
       <Route path="suppliers/:supplierId" element={<SupplierDetailPage />} />
       <Route path="stock-adjustment/new" element={<StockAdjustmentPage />} />
+      <Route path="mrp-stickers" element={<MrpStickerListPage />} />
+      <Route path="mrp-stickers/new" element={<MrpStickerDesignerPage />} />
+      <Route path="mrp-stickers/edit/:designId" element={<MrpStickerDesignerPage />} />
       <Route path="stock" element={<Navigate to="/app/products" replace />} />
       <Route path="company" element={<CompanyOverviewPage />} />
       <Route path="capital" element={<CapitalListPage />} />

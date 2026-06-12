@@ -205,6 +205,12 @@ METHOD A — SQL Editor (recommended; ~10 minutes)
    - Open: app/supabase/migrations/0044_purchase_bill_discount.sql
    - Copy entire file → Paste → Run → Success.
    - Adds `purchases.discount` + `discount_label`; `record_purchase` / `update_purchase` apply discount before VAT.
+
+42. Migration 0045 (MRP sticker designs)
+   - Open: app/supabase/migrations/0045_mrp_sticker_designs.sql
+   - Copy entire file → Paste → Run → Success.
+   - Adds `mrp_sticker_designs` table (tenant RLS) for saved MRP sticker label designs — history, reprint, edit at /app/mrp-stickers.
+   - If app says "MRP sticker table outdated": re-run this file — the `alter table … add column if not exists align` at the top is safe to repeat.
    - If you see error `cannot change name of view column "last_payment_date"`: you ran an older copy — re-run the **current** 0043 file (it drops/recreates `v_customer_balance` + `v_overdue_customers`).
    - If reversal fails in the app but columns exist: confirm the full file ran (RPCs at bottom), not only the `ALTER TABLE` part.
    - If error `42P13: cannot change return type of existing function` on `create_sales_bill`: re-run the **current** 0043 file (includes `DROP FUNCTION` before the new `create_sales_bill`).
