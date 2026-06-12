@@ -149,12 +149,14 @@ One row per tenant — stores the full business profile that appears on invoices
 
 **On a sales bill line (printed invoice):**
 ```
-S.N | Particulars | MRP | Qty | Unit | Disc% | Amount
+S.N | Particulars | Rate | Qty | [Disc%] | Amount
 ```
-- **MRP** — snapshot from `products.mrp` at billing (editable on sale screen).
-- **Disc%** — snapshot of `products.discount_pct`. Column shown only when ≥ 1 line has a discount.
-- **Amount** — `qty × mrp × (1 − discount_pct / 100)`. Rounded to 2 decimal places (paisa) in app via `roundMoney`.
-- **Rate (DB only)** — `sales_items.rate` stores effective unit price `round(Amount / qty)` so server `subtotal = sum(qty×rate)` matches the UI. Dealer sell price is kept in the app for margin reference only, not printed.
+- **Rate** — Settings picks label MRP or sell price per **base unit (PCS)** when line UOM is pack (e.g. Ctn); otherwise per bill UOM. Header always **Rate**.
+- **Qty** — entered UOM + count (e.g. `1 Ctn`) with base PCS subline when pack conversion applies (e.g. `(18 PCS)`). Unit column merged into Qty on print/PDF.
+- **Disc%** — line discount when set. Column shown only when ≥ 1 line has a discount.
+- **Amount** — `qty × per-UOM rate` (unchanged in DB/RPC). Print math: **Rate (per PCS) × base PCS = Amt** when pack UOM.
+- **Sale entry form** — when line UOM is pack, MRP/sell inputs show **per PCS** with hint `X per Ctn`; stored values remain per pack UOM.
+- **Rate (DB)** — `sales_items.rate` stores effective unit price per **bill UOM** so server `subtotal = sum(qty×rate)` matches the UI.
 
 Then at bill footer:
 ```

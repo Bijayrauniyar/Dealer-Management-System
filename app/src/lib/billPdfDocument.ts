@@ -2,7 +2,7 @@
  * Vector PDF bill — standard A4, symmetric margins (Preview-safe).
  */
 import { jsPDF } from "jspdf";
-import type { BusinessSettings, Customer, Sale, SaleLine } from "@/domain/types";
+import type { BusinessSettings, Customer, Product, Sale, SaleLine } from "@/domain/types";
 import {
   billDocumentTitleDisplay,
   billBalanceDueLabel,
@@ -22,12 +22,14 @@ import {
   showsSalesBillPaymentQr,
 } from "@/lib/billPriceDisplay";
 import { IRD_SALES_BILL_DISCLAIMER } from "@/lib/irdDisclaimer";
+import { billLineQtyDisplay } from "@/lib/purchaseLineDisplay";
 import { amountInWords, fmtDate, nprNum, toMiti } from "@/lib/utils";
 
 export type BillPdfInput = {
   sale: Sale;
   customer?: Customer;
   business: BusinessSettings;
+  products?: Product[];
 };
 
 const PAGE_W = 210;
@@ -59,10 +61,9 @@ function buildCols(lines: SaleLine[], sale: Sale, business: BusinessSettings): C
   const unitLabel = salesBillUnitPriceHeaderPrint(business).toUpperCase();
   const cols: Col[] = [
     { key: "sn", label: "S.N.", w: 11, align: "center" },
-    { key: "name", label: "PARTICULARS", w: hasDisc ? 48 : 58, align: "center" },
+    { key: "name", label: "PARTICULARS", w: hasDisc ? 48 : 54, align: "center" },
     { key: "unitPrice", label: unitLabel, w: 20, align: "right" },
-    { key: "unit", label: "UNIT", w: 14, align: "center" },
-    { key: "qty", label: "QTY", w: 14, align: "right" },
+    { key: "qty", label: "QTY", w: hasDisc ? 22 : 24, align: "center" },
   ];
   if (hasDisc) cols.push({ key: "disc", label: "DISC%", w: 13, align: "right" });
   cols.push({ key: "amt", label: "AMOUNT", w: 22, align: "right" });
@@ -76,18 +77,26 @@ function cellText(
   i: number,
   key: string,
   priceMode: BusinessSettings["salesBillPriceMode"],
-): string {
+  products?: Product[],
+): string | string[] {
   switch (key) {
     case "sn":
       return String(i + 1);
     case "name":
       return line.productName || "—";
-    case "unitPrice":
-      return billLineUnitPriceDisplay(line, priceMode);
-    case "qty":
-      return nprNum(line.qty);
-    case "unit":
-      return line.uom || "PCS";
+    case "unitPrice": {
+      const prod = products?.find((p) => p.id === line.productId);
+      const ppp = prod?.uomConversion && line.uom === prod.uomConversion.packUom
+        ? prod.uomConversion.piecesPerPack : undefined;
+      return billLineUnitPriceDisplay(line, priceMode, ppp);
+    }
+    case "qty": {
+      const prod = products?.find((p) => p.id === line.productId);
+      const qtyDisp = billLineQtyDisplay(line.qty, line.uom || "PCS", prod);
+      const main = `${nprNum(qtyDisp.qty)} ${qtyDisp.uom}`;
+      if (qtyDisp.sub) return [main, `(${qtyDisp.sub})`];
+      return main;
+    }
     case "disc":
       return lineDiscPct(line) > 0 ? `${lineDiscPct(line)}%` : "—";
     case "amt":
@@ -144,7 +153,7 @@ function drawTotalRow(
 }
 
 /** Build A4 PDF (always 210×297 mm — no custom size that clips in Preview). */
-export function createBillPdf({ sale, customer, business }: BillPdfInput): jsPDF {
+export function createBillPdf({ sale, customer, business, products }: BillPdfInput): jsPDF {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const lines = Array.isArray(sale.lines) ? sale.lines : [];
   const cols = buildCols(lines, sale, business);
@@ -257,7 +266,7 @@ export function createBillPdf({ sale, customer, business }: BillPdfInput): jsPDF
       const content =
         col.key === "name"
           ? nameLines
-          : cellText(line, i, col.key, business.salesBillPriceMode);
+          : cellText(line, i, col.key, business.salesBillPriceMode, products);
       drawInCell(pdf, content, cx, col.w, y, col.align, 8);
       cx += col.w;
     }
@@ -381,14 +390,15 @@ export function createBillPdf({ sale, customer, business }: BillPdfInput): jsPDF
   pdf.setLineDashPattern([], 0);
   y += 10;
 
-  const sigW = (CONTENT_W - 6) / 2;
-  pdf.setDrawColor(120);
-  pdf.line(MARGIN, y, MARGIN + sigW, y);
-  pdf.line(MARGIN + sigW + 6, y, RIGHT, y);
-  pdf.setFontSize(8);
-  pdf.setTextColor(80, 80, 80);
-  pdf.text("Authorised signature", MARGIN + sigW / 2, y + 4, { align: "center" });
-  pdf.text("Received by", MARGIN + sigW + 6 + sigW / 2, y + 4, { align: "center" });
+  // ── Signatures (commented — not an official invoice) ──
+  // const sigW = (CONTENT_W - 6) / 2;
+  // pdf.setDrawColor(120);
+  // pdf.line(MARGIN, y, MARGIN + sigW, y);
+  // pdf.line(MARGIN + sigW + 6, y, RIGHT, y);
+  // pdf.setFontSize(8);
+  // pdf.setTextColor(80, 80, 80);
+  // pdf.text("Authorised signature", MARGIN + sigW / 2, y + 4, { align: "center" });
+  // pdf.text("Received by", MARGIN + sigW + 6 + sigW / 2, y + 4, { align: "center" });
 
   return pdf;
 }

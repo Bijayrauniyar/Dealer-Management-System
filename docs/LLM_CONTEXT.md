@@ -403,6 +403,7 @@ Add one line under **Changelog** yourself:
 
 ## Changelog (newest first)
 
+- **2026-06-12** — **Bill print per-PCS rate (pack UOM):** Sales/purchase print + vector PDF show Rate per PCS when line is Ctn/pack; Qty column merges unit + count; sale form edits MRP/sell in PCS with per-pack hint; PDF export passes product catalog for correct rates; `e2e:bill` pack math unit tests.
 - **2026-06-05** — **Product edit load fix:** edit form waited for catalog then syncs min qty / pricing from DB (was showing Settings defaults like random 20); Company **Add capital** button nowrap.
 - **2026-06-05** — **Product form:** new product pre-fills **Default sell markup (%)** from Settings (matches min qty behaviour); buy price recalculates sell using that markup.
 - **2026-06-05** — **UX-HUB-1 backlog:** One app-wide entity hub pattern (list + Add on top, save→hub, inline sheet for masters, row edit/archive) — [BACKLOG § UX-HUB-1](BACKLOG.md#detail--ux-hub-1-entity-hub--entry-flow--one-standard-for-whole-app).

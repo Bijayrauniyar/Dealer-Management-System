@@ -143,3 +143,32 @@ export function hydrateBillLineFromDbItem(it) {
 export function sumBillLineAmounts(lines) {
   return lines.reduce((s, l) => s + billLineAmount(l), 0);
 }
+
+/** Print Rate column — per PCS when pack factor supplied (sync with saleLineMath.ts). */
+export function billLineRateColumnValue(line, mode, piecesPerPack) {
+  const raw =
+    mode === "selling_price"
+      ? Number(line.rate) > 0
+        ? Number(line.rate)
+        : Number(line.mrp) || 0
+      : Number(line.mrp) > 0
+        ? Number(line.mrp)
+        : Number(line.rate) || 0;
+  if (piecesPerPack && piecesPerPack > 1) {
+    return roundMoney(raw / piecesPerPack);
+  }
+  return raw;
+}
+
+export function packPiecesPerPackForLine(billUom, product) {
+  const conv = product?.uomConversion;
+  if (!conv || conv.piecesPerPack < 2) return undefined;
+  const u = (billUom || "").trim();
+  if (u === conv.packUom) return conv.piecesPerPack;
+  return undefined;
+}
+
+export function ratePerBaseUnitForPrint(rate, piecesPerPack) {
+  if (piecesPerPack && piecesPerPack > 1) return roundMoney(rate / piecesPerPack);
+  return rate;
+}

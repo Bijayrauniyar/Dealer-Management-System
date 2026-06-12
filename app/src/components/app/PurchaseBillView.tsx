@@ -1,5 +1,7 @@
 import type { BusinessSettings, PurchaseDetail, Supplier } from "@/domain/types";
+import { useProductsCatalog } from "@/store/domain";
 import { sellerLetterheadFromBusiness } from "@/lib/billDisplay";
+import { packPiecesPerPackForLine, ratePerBaseUnitForPrint } from "@/lib/purchaseLineDisplay";
 import { BillLetterhead } from "@/components/app/BillLetterhead";
 import { getVatPct } from "@/lib/tax";
 import { purchaseDisplayTitle } from "@/lib/purchaseDisplay";
@@ -41,6 +43,7 @@ function supplierTaxId(s: Supplier): { label: "VAT" | "PAN"; number: string } | 
 }
 
 export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
+  const PRODUCTS = useProductsCatalog();
   const vatPct = getVatPct(business);
   const letterhead = sellerLetterheadFromBusiness(business);
   const supTax = supplierTaxId(supplier);
@@ -105,7 +108,14 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
               </tr>
             </thead>
             <tbody>
-              {purchase.lines.map((line) => (
+              {purchase.lines.map((line) => {
+                const product = PRODUCTS.find((p) => p.id === line.productId);
+                const ppp = packPiecesPerPackForLine(line.uom, product);
+                const rateDisplay = ratePerBaseUnitForPrint(
+                  showInclRate ? line.rateIncl : line.rateExcl,
+                  ppp,
+                );
+                return (
                 <tr key={`${line.productId}-${line.qty}`} className="border-b border-gray-100">
                   <td className="px-1 py-1 align-top">
                     <BillCell>{line.productName}</BillCell>
@@ -127,7 +137,7 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
                   </td>
                   <td className="px-1 py-1">
                     <BillCell align="right">
-                      {npr(showInclRate ? line.rateIncl : line.rateExcl)}
+                      {npr(rateDisplay)}
                     </BillCell>
                   </td>
                   {vatPct > 0 ? (
@@ -141,7 +151,7 @@ export const PurchaseBillView = ({ purchase, supplier, business }: Props) => {
                     </BillCell>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>

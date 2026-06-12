@@ -53,6 +53,24 @@ export function billLineRateColumnValue(
     amount?: number;
   },
   mode: SalesBillPriceMode,
+  piecesPerPack?: number,
+): number {
+  const raw = _billLineRateColumnRaw(line, mode);
+  if (piecesPerPack && piecesPerPack > 1) {
+    return roundMoney(raw / piecesPerPack);
+  }
+  return raw;
+}
+
+function _billLineRateColumnRaw(
+  line: {
+    qty: number;
+    mrp?: number;
+    rate: number;
+    discountPct?: number;
+    amount?: number;
+  },
+  mode: SalesBillPriceMode,
 ): number {
   if (mode === "selling_price") {
     return Number(line.rate) > 0 ? Number(line.rate) : Number(line.mrp) || 0;

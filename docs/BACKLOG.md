@@ -46,6 +46,7 @@
 | **NOTIF-SOUND** | Optional alert sound when urgent bell count rises | backlog |
 | **LOAD-1** | Branded logo loader while app/data loads | todo |
 | **THEME-1** | Dark / light theme toggle | todo |
+| **ENTER-NAV-1** | Enter-to-next-field on all data-entry forms (2 done, 11 remaining) | backlog |
 | **WEB-CTA-1** | Landing: keep **1–2** free-trial CTAs only | todo |
 | **WEB-MEDIA-1** | Demo videos + new UI screenshots + feature explain section | todo |
 | **WEB-AUDIT-1** | Full landing audit after WEB-MEDIA-1 + pilot | todo |
@@ -127,6 +128,7 @@ Full rows: [§ Master register](#master-register). Execution order: [FIRST_LAUNC
 | **NAV-HUB-1** | Stock hub, Home dashboard, bottom nav, drawer dedupe | 1.0 | — | **done** | 2026-06-05 — `/app/products`; was “NAV-P1” in FIRST_LAUNCH |
 | **SUP-APP** | In-app support inquiry form + WhatsApp | 1.0 | — | **done** | 2026-06-05 — `AppSupportInquiryForm` |
 | **DATE-AD** | Dual BS+AD dates (AD picker + BS line below) | 1.0 | — | **done** | 2026-06-05 — upgrade = **DATE-BS-1** |
+| **ENTER-NAV-1** | **Enter-to-next-field** on all data-entry forms — Done: PurchasePage, SaleEntryPage. Remaining 11 forms: PaymentPage (~3 min), SupplierPaymentPage (~3 min), ExpensePage (~3 min), DamagePage (~3 min), ReturnsPage (~3 min), DailyCashPage (~3 min), CapitalEntryPage (~3 min), SchemePage (~3 min), ProductFormPage (~5–8 min), CustomerFormPage (~5 min), SupplierFormPage (~5 min) | 1.0 | ~1 h total | **backlog** | Pattern: add `formRef` + `focusNextField` + `onKeyDown`/`ref` to form wrapper. Skip selects/date inputs. |
 | **NAV-P1** | Delivery note from invoice | 1 | 2–3 d | backlog | Not shipped — distinct from **NAV-HUB-1** |
 | **WEB-1** | Marketing site + `/app` route | 0 launch | — | **done** | [FIRST_LAUNCH § Website](FIRST_LAUNCH.md#website-bikrikhatacom--app) |
 | **MIG-0012** | Scheme Box→PCS columns | opt | 10 min | backlog | Only if cross-UOM schemes |

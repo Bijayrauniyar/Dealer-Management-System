@@ -289,6 +289,8 @@ Automated: `npm run e2e:p0-public` (included in `e2e:phase0`). Runbook: [P0_LAUN
 | S11 | Settings → **Rate (selling price)** → Save → new sale | Line total = **Qty × Rate**; print column **Rate**; Amt = Rate × Qty |
 | S11b | Settings → **MRP + line discount** → product with line Disc% | Print shows **MRP** + **Disc%**; Amt = MRP × Qty × (1−Disc%) |
 | S11c | Reopen saved bill MXMPRV-28 (or any) → Print | MRP/Rate column matches Amt (no 100 vs 1,500 mismatch) |
+| S11d | Product with 18 PCS/Ctn → sale **1 Ctn** → Print | Rate ≈ per-PCS (e.g. 58.48); Qty `1 Ctn (18 PCS)`; Amt = internal line total; PDF download matches print |
+| S11e | Sale form pack line | MRP/sell inputs in **per PCS**; hint shows total per Ctn; line total unchanged |
 | S12 | Settings → **Purchase bill rate** = **Rate incl. VAT** → Save | Purchase detail print shows incl. rate column |
 | S13 | Settings → enable **payment QR**, **upload QR image** + **Bank details** → Save | Credit bill print shows QR block + bank line + bill ref; toggle off or fully paid bill hides QR |
 | S14 | Settings → **Product units** — add **Bag** → Save → new product form | **Bag** appears in base unit dropdown |

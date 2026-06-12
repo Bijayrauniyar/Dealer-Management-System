@@ -446,7 +446,7 @@ export const SaleEntryPage = () => {
   const handlePreviewDownload = async () => {
     setExportingPreview(true);
     try {
-      await downloadBillPdf({ sale: buildSale(), customer, business });
+      await downloadBillPdf({ sale: buildSale(), customer, business, products: PRODUCTS });
       toast.success("Bill downloaded");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Download failed");
@@ -678,6 +678,11 @@ export const SaleEntryPage = () => {
                       vatPct={vatPct}
                       onMrpChange={(v) => updateLine(line.id, { mrp: v })}
                       onRateChange={(v) => updateLine(line.id, { rate: v })}
+                      piecesPerPack={(() => {
+                        const prod = PRODUCTS.find((p) => p.id === line.productId);
+                        return prod?.uomConversion && line.uom === prod.uomConversion.packUom
+                          ? prod.uomConversion.piecesPerPack : undefined;
+                      })()}
                     />
                   ) : null}
                   {lines.filter((l) => !l.isSchemeFree).length > 1 && (
